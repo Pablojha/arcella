@@ -11,21 +11,23 @@ export const UPLOAD_DIR = env.uploadDir ? path.resolve(env.uploadDir) : fileURLT
 const useCloud = Object.values(env.cloudinary).every(Boolean);
 if (useCloud) cloudinary.config({ ...env.cloudinary, secure: true });
 
-const toCloud = (file, folder) =>
-  new Promise((resolve, reject) => {
-    cloudinary.uploader
-      .upload_stream({ folder: `arcella/${folder}`, resource_type: 'auto' }, (err, result) => (err ? reject(err) : resolve(result.secure_url)))
-      .end(file.buffer);
+function toCloud(file, folder) {
+  const options = { folder: `arcella/${folder}`, resource_type: 'auto' };
+  if (file.path) return cloudinary.uploader.upload(file.path, options).then((result) => result.secure_url);
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_stream(options, (err, result) => (err ? reject(err) : resolve(result.secure_url))).end(file.buffer);
   });
+}
 
 async function toDisk(file, folder) {
   const name = crypto.randomUUID() + path.extname(file.originalname).toLowerCase();
-  await fs.mkdir(path.join(UPLOAD_DIR, folder), { recursive: true });
-  await fs.writeFile(path.join(UPLOAD_DIR, folder, name), file.buffer);
+  const target = path.join(UPLOAD_DIR, folder, name);
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  await (file.path ? fs.copyFile(file.path, target) : fs.writeFile(target, file.buffer));
   return `/uploads/${folder}/${name}`;
 }
 
-/** Stores a multer file on Cloudinary (when configured) or local disk and returns its URL. */
+/** Stores a multer file (held in memory or staged on disk) on Cloudinary when configured, else local disk, and returns its URL. */
 export const saveFile = (file, folder) => (useCloud ? toCloud(file, folder) : toDisk(file, folder));
 
 export const saveFiles = (files = [], folder) => Promise.all(files.map((file) => saveFile(file, folder)));

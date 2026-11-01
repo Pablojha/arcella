@@ -11,6 +11,7 @@ import Button from '../ui/Button';
 import ImagePicker from '../ui/ImagePicker';
 import Sheet from '../ui/Sheet';
 import UploadBar from '../ui/UploadBar';
+import VideoPicker from '../ui/VideoPicker';
 
 const SHORTCUTS = [
   { label: 'Story', icon: Clock, story: true },
@@ -28,6 +29,7 @@ export default function CreatePost({ open, onClose, onCreated, college, onStory 
   const upload = useUploadProgress();
   const [text, setText] = useState('');
   const [images, setImages] = useState([]);
+  const [video, setVideo] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const shortcut = (item) => {
@@ -40,10 +42,11 @@ export default function CreatePost({ open, onClose, onCreated, college, onStory 
     event.preventDefault();
     setBusy(true);
     try {
-      const post = await api.post('/posts', toFormData({ text, college, images }), upload.config);
+      const post = await api.post('/posts', toFormData({ text, college, images, video }), upload.config);
       onCreated(post);
       setText('');
       setImages([]);
+      setVideo(null);
       onClose();
       toast.success(college ? 'Posted to your college group' : 'Posted');
     } catch (error) {
@@ -83,11 +86,17 @@ export default function CreatePost({ open, onClose, onCreated, college, onStory 
           </div>
         </div>
         <textarea value={text} onChange={(event) => setText(event.target.value)} rows={5} maxLength={3000} placeholder="Share a sketch, a site visit, a jury moment…" className="input resize-none" />
-        <ImagePicker files={images} onChange={setImages} max={4} />
-        {images.length > 0 && <UploadBar progress={upload.progress} />}
+        {video ? (
+          <VideoPicker file={video} onChange={setVideo} />
+        ) : (
+          <ImagePicker files={images} onChange={setImages} max={4}>
+            {!images.length && <VideoPicker onChange={setVideo} />}
+          </ImagePicker>
+        )}
+        {(images.length > 0 || video) && <UploadBar progress={upload.progress} />}
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs tabular-nums text-muted">{text.length}/3000</span>
-          <Button type="submit" loading={busy} disabled={!text.trim() && !images.length}>
+          <Button type="submit" loading={busy} disabled={!text.trim() && !images.length && !video}>
             Post
           </Button>
         </div>

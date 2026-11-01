@@ -129,6 +129,39 @@ test('reviews an uploaded document and deletes it after review', async () => {
   await call('GET', `/verification/${items[0]._id}/document`, { token: tokenOf('admin'), status: 410 });
   const group = await call('POST', '/posts', { token: tokenOf('bilal'), body: { text: 'Studio swap?', college: people.iitr._id } });
   await call('GET', `/posts/${group._id}`, { token: tokenOf('chitra'), status: 403 });
+  people.bilal.group = group;
+});
+
+test('posts a video, saves privately and reposts with or without words', async () => {
+  const { asha, bilal } = people;
+  const video = (name) => new File([Buffer.from('not really a video')], name, { type: 'video/mp4' });
+  const clip = await call('POST', '/posts', { token: asha.token, form: { text: 'Model walkthrough', video: video('walk.mp4') } });
+  assert.match(clip.video, /^\/uploads\/posts\/.+\.mp4$/);
+  await call('POST', '/posts', { token: asha.token, form: { video: file('clip.png', 'image/png') }, status: 400 });
+  await call('POST', '/posts', { token: asha.token, form: { images: [file('a.png', 'image/png')], video: video('b.mp4') }, status: 400 });
+
+  assert.deepEqual(await call('POST', `/posts/${clip._id}/save`, { token: bilal.token }), { saved: true });
+  const saved = await call('GET', '/posts?saved=1', { token: bilal.token });
+  assert.deepEqual(saved.items.map((post) => [post._id, post.saved, 'saves' in post]), [[clip._id, true, false]]);
+  assert.equal((await call('GET', `/posts/${clip._id}`, { token: asha.token })).saved, false);
+
+  assert.deepEqual(await call('POST', `/posts/${clip._id}/repost`, { token: bilal.token }), { repostsCount: 1 });
+  await call('POST', `/posts/${clip._id}/repost`, { token: bilal.token, status: 409 });
+  await call('POST', `/posts/${clip._id}/repost`, { token: bilal.token, body: { text: 'Brilliant detailing' } });
+  await call('POST', `/posts/${bilal.group._id}/repost`, { token: bilal.token, status: 400 });
+  const [quote, plain] = (await call('GET', `/posts?author=${bilal.user._id}`, { token: asha.token })).items;
+  assert.equal(quote.text, 'Brilliant detailing');
+  assert.equal(plain.repostOf._id, clip._id);
+  assert.equal(plain.repostOf.repostsCount, 2);
+  assert.equal((await call('GET', `/posts/${clip._id}`, { token: bilal.token })).reposted, true);
+  assert.ok((await call('GET', '/notifications', { token: asha.token })).items.some((note) => note.type === 'repost'));
+
+  assert.deepEqual(await call('DELETE', `/posts/${clip._id}/repost`, { token: bilal.token }), { repostsCount: 1 });
+  assert.deepEqual(await call('POST', `/posts/${quote._id}/repost`, { token: bilal.token }), { repostsCount: 2 });
+  await call('DELETE', `/posts/${clip._id}`, { token: asha.token });
+  const left = (await call('GET', `/posts?author=${bilal.user._id}`, { token: asha.token })).items;
+  assert.deepEqual(left.map((post) => [post.text, post.repostOf]), [['Brilliant detailing', null]]);
+  assert.deepEqual((await call('GET', '/posts?saved=1', { token: bilal.token })).items, []);
 });
 
 test('resets a forgotten password with a code and signs out older sessions', async () => {

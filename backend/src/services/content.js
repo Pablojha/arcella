@@ -16,7 +16,7 @@ import { removeFiles } from './storage.js';
 
 /** Reportable things: [model, fields shown to moderators, path of the author]. */
 export const CONTENT = {
-  post: [Post, 'text images author', 'author'],
+  post: [Post, 'text images video author', 'author'],
   comment: [Comment, 'text post author', 'author'],
   project: [Project, 'title images owner', 'owner'],
   story: [Story, 'image caption author', 'author'],
@@ -35,7 +35,10 @@ const REMOVE = {
     const post = await Post.findByIdAndDelete(id);
     if (!post) return;
     await Comment.deleteMany({ post: id });
-    await removeFiles(post.images);
+    if (post.repostOf) await Post.updateOne({ _id: post.repostOf }, { $inc: { repostsCount: -1 } });
+    // Plain reposts only point at this post, so they go with it; reposts with the reposter's own words stay.
+    for (const repost of await Post.find({ repostOf: id, text: null }).select('_id').lean()) await REMOVE.post(repost._id);
+    await removeFiles([...post.images, post.video]);
   },
   async comment(id) {
     const comment = await Comment.findByIdAndDelete(id);

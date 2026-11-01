@@ -19,6 +19,16 @@ export function mediaUrl(url, width) {
   return width && url.includes('/image/upload/') ? url.replace('/image/upload/', `/image/upload/f_auto,q_auto,c_limit,w_${width}/`) : url;
 }
 
+/**
+ * Cloudinary videos stream as a 720px MP4 every phone can play (iPhones record .mov); `poster` gives their
+ * first frame as an image instead. Local uploads play as they are and have no poster.
+ */
+export function videoUrl(url, poster = false) {
+  if (!url?.includes('/video/upload/')) return poster ? '' : mediaUrl(url);
+  const variant = url.replace('/video/upload/', `/video/upload/${poster ? 'so_0,' : ''}q_auto,c_limit,w_720/`);
+  return variant.replace(/\.\w+$/, poster ? '.jpg' : '.mp4');
+}
+
 /** Compact age for bylines: "now", "5m", "3d". */
 export function timeAgo(date) {
   const seconds = (Date.now() - new Date(date)) / 1000;

@@ -7,6 +7,7 @@ import VerifiedBadge from '../ui/VerifiedBadge';
 
 const LINKS = [
   { label: 'My portfolio', icon: FolderOpen, to: (user) => `/u/${user.username}?tab=portfolio` },
+  { label: 'Saved posts', icon: Bookmark, to: () => '/saved' },
   { label: 'Saved resources', icon: Bookmark, to: () => '/resources?saved=1' },
   { label: 'Mentorship', icon: HandHeart, to: () => '/mentors' },
   { label: 'Events', icon: CalendarDays, to: () => '/events' },

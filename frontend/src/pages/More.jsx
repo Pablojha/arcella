@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Bell, BookOpen, Building, CalendarDays, ChevronRight, Compass, HandHeart, LogOut, MessageCircleQuestionMark, Settings, ShieldCheck, Shield } from 'lucide-react';
+import { Bell, BookOpen, Bookmark, Building, CalendarDays, ChevronRight, Compass, HandHeart, LogOut, MessageCircleQuestionMark, Settings, ShieldCheck, Shield } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Avatar from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
@@ -17,6 +17,7 @@ const MODULES = [
   { to: '/events', label: 'Events', text: 'Visits, juries, webinars', icon: CalendarDays },
   { to: '/qa', label: 'Q&A', text: 'Ask the community', icon: MessageCircleQuestionMark },
   { to: '/resources', label: 'Resources', text: 'Notes and CAD blocks', icon: BookOpen },
+  { to: '/saved', label: 'Saved', text: 'Posts you bookmarked', icon: Bookmark },
   { to: '/notifications', label: 'Notifications', text: 'Your updates', icon: Bell, badge: 'notifications' },
   { to: '/settings', label: 'Settings', text: 'Password, privacy, account', icon: Settings },
 ];

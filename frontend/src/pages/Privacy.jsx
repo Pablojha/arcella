@@ -6,7 +6,7 @@ const SECTIONS = [
   ['What we collect', [
     'Account details: your name, email address and a securely hashed password.',
     'Profile details you choose to add: photo, cover, headline, bio, location, website, software, skills and experience.',
-    'What you share: posts, comments, stories, projects, critiques, questions, answers, resources, events, job posts, firm pages and messages.',
+    'What you share: posts (with photos or videos), comments, reposts, stories, projects, critiques, questions, answers, resources, events, job posts, firm pages and messages.',
     'College verification: your college, role and batch year, plus either your college email address (to send a code) or a document you upload.',
   ]],
   ['How we use it', [
@@ -16,7 +16,8 @@ const SECTIONS = [
   ]],
   ['Who can see what', [
     'Signed-in members can see your profile, public posts, projects, questions and answers. Projects also appear in the public Explore gallery.',
-    'College group posts and college-only events are visible only to verified members of that college.',
+    'College group posts and college-only events are visible only to verified members of that college, and group posts cannot be reposted.',
+    'Posts you save are visible only to you.',
     'Stories are visible to your connections and college mates for 24 hours.',
     'Messages are visible only to you and the person you are talking to.',
     'Your email address is never shown to other members.',

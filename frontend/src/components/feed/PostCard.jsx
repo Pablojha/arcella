@@ -1,25 +1,33 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Ban, Flag, MessageSquare, Share2, Trash } from 'lucide-react';
+import { Ban, Flag, Repeat2, Trash } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useBlock } from '../../hooks/useBlock';
 import api from '../../lib/api';
 import { timeAgo } from '../../lib/format';
 import ReportSheet from '../ReportSheet';
+import FeedVideo from '../ui/FeedVideo';
 import ImageGrid from '../ui/ImageGrid';
-import LikeButton from '../ui/LikeButton';
 import MoreMenu from '../ui/MoreMenu';
 import UserChip from '../ui/UserChip';
 import Comments from './Comments';
+import PostActions from './PostActions';
+import QuotedPost from './QuotedPost';
 
 const LONG_POST = 320;
 
-export default function PostCard({ post, onDeleted, onAuthorBlocked, showComments = false, canModerate = false }) {
+/** A plain repost (no words of its own) shows the original under a "reposted" line, and every action acts on the original. */
+export default function PostCard({ post, ...props }) {
+  if (post.repostOf !== undefined && !post.text) return post.repostOf && <PostBody post={post.repostOf} repost={post} {...props} />;
+  return <PostBody post={post} {...props} />;
+}
+
+function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = false, canModerate = false }) {
   const { user } = useAuth();
   const toast = useToast();
   const toggleBlock = useBlock();
-  const [like, setLike] = useState({ active: post.liked, count: post.likesCount });
   const [commentsOpen, setCommentsOpen] = useState(showComments);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount);
   const [expanded, setExpanded] = useState(false);
@@ -32,37 +40,13 @@ export default function PostCard({ post, onDeleted, onAuthorBlocked, showComment
     if (await toggleBlock(post.author)) onAuthorBlocked?.(post.author._id);
   };
 
-  const toggleLike = async () => {
-    const previous = like;
-    setLike({ active: !like.active, count: like.count + (like.active ? -1 : 1) });
-    try {
-      const result = await api.post(`/posts/${post._id}/like`);
-      setLike({ active: result.liked, count: result.likesCount });
-    } catch (error) {
-      setLike(previous);
-      toast.error(error.message);
-    }
-  };
-
-  const share = async () => {
-    const url = `${window.location.origin}/posts/${post._id}`;
-    try {
-      if (navigator.share) await navigator.share({ title: 'Arcella', text: post.text?.slice(0, 80), url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast.success('Link copied');
-      }
-    } catch {
-      // Share sheet dismissed.
-    }
-  };
-
   const remove = async () => {
     if (!window.confirm('Delete this post?')) return;
     try {
       await api.delete(`/posts/${post._id}`);
       toast.success('Post deleted');
       onDeleted?.(post._id);
+      if (repost) onDeleted?.(repost._id);
     } catch (error) {
       toast.error(error.message);
     }
@@ -70,6 +54,17 @@ export default function PostCard({ post, onDeleted, onAuthorBlocked, showComment
 
   return (
     <article className="card space-y-3 p-4">
+      {repost && (
+        <p className="-mb-1 flex items-center gap-1.5 text-[13px] text-muted">
+          <Repeat2 size={15} className="shrink-0" />
+          <span className="truncate">
+            <Link to={`/u/${repost.author?.username}`} className="font-medium text-ink hover:underline">
+              {repost.author?.name}
+            </Link>{' '}
+            reposted
+          </span>
+        </p>
+      )}
       <header className="flex items-start justify-between gap-3">
         <UserChip user={post.author} sub={`${post.author?.headline ? `${post.author.headline} · ` : ''}${timeAgo(post.createdAt)}`} size={44} />
         <MoreMenu
@@ -94,17 +89,15 @@ export default function PostCard({ post, onDeleted, onAuthorBlocked, showComment
       )}
 
       <ImageGrid images={post.images} />
+      {post.video && <FeedVideo src={post.video} />}
+      {post.repostOf !== undefined && <QuotedPost post={post.repostOf} />}
 
-      <footer className="-mx-2 flex items-center gap-1">
-        <LikeButton active={like.active} count={like.count} onToggle={toggleLike} />
-        <button type="button" onClick={() => setCommentsOpen((open) => !open)} className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted transition hover:bg-ink/5 hover:text-ink">
-          <MessageSquare size={18} />
-          {commentsCount > 0 && <span className="tabular-nums">{commentsCount}</span>}
-        </button>
-        <button type="button" onClick={share} aria-label="Share" className="ml-auto inline-flex h-9 items-center rounded-full px-3 text-muted transition hover:bg-ink/5 hover:text-ink">
-          <Share2 size={17} />
-        </button>
-      </footer>
+      <PostActions
+        post={post}
+        commentsCount={commentsCount}
+        onComments={() => setCommentsOpen((open) => !open)}
+        onUnreposted={() => repost?.author?._id === user._id && onDeleted?.(repost._id)}
+      />
 
       <AnimatePresence initial={false}>
         {commentsOpen && (

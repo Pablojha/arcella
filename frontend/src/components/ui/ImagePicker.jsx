@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ImagePlus, X } from 'lucide-react';
 import { compressImage } from '../../lib/files';
 
-export default function ImagePicker({ files, onChange, max = 4 }) {
+/** Photo previews plus an add tile; `children` (e.g. a video tile) sit after it in the same grid. */
+export default function ImagePicker({ files, onChange, max = 4, children }) {
   const previews = useMemo(() => files.map((file) => URL.createObjectURL(file)), [files]);
 
   useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews]);
@@ -35,6 +36,7 @@ export default function ImagePicker({ files, onChange, max = 4 }) {
           <input type="file" accept="image/*" multiple hidden onChange={add} />
         </label>
       )}
+      {children}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 # arcella.
 
-A professional network for architecture students, alumni, faculty and firms in India: portfolios with critiques, private college groups with verified membership, stories, jobs, firm pages, mentorship, events, Q&A, study resources and direct messages. It works as a website, an installable PWA and an Android app.
+A professional network for architecture students, alumni, faculty and firms in India: a feed of photo and video posts with likes, comments, reposts and saves, portfolios with critiques, private college groups with verified membership, stories, jobs, firm pages, mentorship, events, Q&A, study resources and direct messages. It works as a website, an installable PWA and an Android app.
 
 It also includes what a public launch needs: email verification with a one-time code at sign-up, search across the whole network, password reset by code, account deletion, reporting and blocking with an admin moderation queue, a privacy page, and anti-spam rate limits.
 
@@ -88,7 +88,7 @@ Notes:
 
 - The service runs in Render's **Singapore** region, the closest to India.
 - Render's free instance sleeps after about 15 idle minutes and takes 30–60 seconds to wake. The workflow in `.github/workflows/keep-api-awake.yml` pings it every 10 minutes from 06:30 to 01:30 IST, which keeps it awake through the day while using about 600 of the workspace's 750 free hours a month, so another free service still fits. For all-day pings, change the cron hours `1-19` to `*`. If your Render URL is not `https://arcella-api-pablojha.onrender.com`, set a repository variable `API_URL` on GitHub. GitHub pauses scheduled workflows after 60 days without commits.
-- Render's disk is wiped on every deploy and restart, so set up **Cloudinary** (free) for uploads in production. Its free plan caps raw files (DWG, ZIP, XLSX) at 10 MB, and PDF/ZIP delivery must be enabled under *Settings → Security*.
+- Render's disk is wiped on every deploy and restart, so set up **Cloudinary** (free) for uploads in production. Its free plan caps raw files (DWG, ZIP, XLSX) at 10 MB, and PDF/ZIP delivery must be enabled under *Settings → Security*. Post videos are capped at 40 MB, the largest its free plan converts on the fly into the phone-friendly MP4 the feed plays.
 - Verification documents are stored in MongoDB rather than on disk. Only admins and that college's moderators can open them, and they are deleted as soon as a request is approved or rejected.
 
 ### 3. Web app: Vercel

@@ -40,6 +40,7 @@ const ProjectDetail = page(() => import('./pages/ProjectDetail'));
 const QuestionDetail = page(() => import('./pages/QuestionDetail'));
 const Questions = page(() => import('./pages/Questions'));
 const Resources = page(() => import('./pages/Resources'));
+const Saved = page(() => import('./pages/Saved'));
 const Search = page(() => import('./pages/Search'));
 const Settings = page(() => import('./pages/Settings'));
 const Verify = page(() => import('./pages/Verify'));
@@ -73,6 +74,7 @@ const PROTECTED = [
   ['messages', Messages],
   ['messages/:userId', Messages],
   ['notifications', Notifications],
+  ['saved', Saved],
   ['search', Search],
   ['settings', Settings],
   ['more', More],

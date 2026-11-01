@@ -67,7 +67,7 @@ export default function ReportsAdmin() {
                 <div className="flex gap-3 rounded-xl bg-ink/[0.04] p-3">
                   {thumbnail && <img src={mediaUrl(thumbnail, 160)} alt="" className="size-14 shrink-0 rounded-lg object-cover" />}
                   <div className="min-w-0 text-sm">
-                    {report.type === 'user' ? <UserChip user={content} link={false} /> : <p className="line-clamp-3 break-words">{summary(content) || 'No text'}</p>}
+                    {report.type === 'user' ? <UserChip user={content} link={false} /> : <p className="line-clamp-3 break-words">{summary(content) || (content.video ? 'Video' : 'No text')}</p>}
                     {authorOf(content)?.name && <p className="mt-1 text-xs text-muted">by {authorOf(content).name}</p>}
                   </div>
                 </div>
