@@ -1,0 +1,30 @@
+import { Schema, model } from 'mongoose';
+import { COLLEGE_ROLES, DOC_TYPES } from '../config/constants.js';
+import { ref } from './types.js';
+
+const verificationSchema = new Schema(
+  {
+    user: ref('User', { required: true }),
+    college: ref('College', { required: true }),
+    role: { type: String, enum: COLLEGE_ROLES, required: true },
+    batch: Number,
+    method: { type: String, enum: ['email', 'document', 'manual'], required: true },
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    email: { type: String, lowercase: true },
+    codeHash: { type: String, select: false },
+    expiresAt: Date,
+    attempts: { type: Number, default: 0 },
+    docType: { type: String, enum: DOC_TYPES },
+    docData: { type: Buffer, select: false },
+    docMime: String,
+    reviewer: ref('User'),
+    note: String,
+    reviewedAt: Date,
+  },
+  { timestamps: true },
+);
+
+verificationSchema.index({ user: 1, status: 1 });
+verificationSchema.index({ status: 1, method: 1, college: 1 });
+
+export default model('Verification', verificationSchema);

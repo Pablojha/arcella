@@ -1,0 +1,137 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --paper: #f7f5f0;
+  --card: #fffefa;
+  --ink: #1a1918;
+  --muted: #6f6a61;
+  --line: #e6e1d6;
+  --brand: #1d6b47;
+  --on-brand: #ffffff;
+  --accent: #c2522b;
+  --on-accent: #ffffff;
+  --grid: rgb(26 25 24 / 0.045);
+  --grid-major: rgb(26 25 24 / 0.07);
+  color-scheme: light;
+}
+
+.dark {
+  --paper: #121311;
+  --card: #1a1b19;
+  --ink: #ecebe5;
+  --muted: #a29e94;
+  --line: #2c2d29;
+  --brand: #5bbf8e;
+  --on-brand: #0b1d14;
+  --accent: #e58a63;
+  --on-accent: #2a1006;
+  --grid: rgb(236 235 229 / 0.03);
+  --grid-major: rgb(236 235 229 / 0.05);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-on-brand: var(--on-brand);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+}
+
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Space Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply grid-paper;
+    background-color: var(--paper);
+    color: var(--ink);
+    overflow-x: clip;
+    overscroll-behavior-y: contain;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button,
+  [role='button'],
+  label[for] {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--brand) 25%, transparent);
+  }
+}
+
+@utility grid-paper {
+  background-image:
+    linear-gradient(var(--grid-major) 1px, transparent 1px), linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:
+    120px 120px,
+    120px 120px,
+    24px 24px,
+    24px 24px;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer components {
+  .card {
+    background-color: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 1.25rem;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-base text-ink outline-none transition placeholder:text-muted/70 focus:border-brand focus:ring-4 focus:ring-brand/15 md:text-[15px];
+  }
+
+  .chip {
+    @apply inline-flex max-w-full items-center gap-1 rounded-full bg-ink/5 px-2.5 py-1 text-xs font-medium text-ink/80;
+  }
+
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--card) 70%, transparent), transparent);
+    animation: shimmer 1.4s infinite;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}

@@ -1,0 +1,45 @@
+import { Router } from 'express';
+import adminRoutes from './admin.routes.js';
+import authRoutes from './auth.routes.js';
+import collegeRoutes from './colleges.routes.js';
+import connectionRoutes from './connections.routes.js';
+import eventRoutes from './events.routes.js';
+import firmRoutes from './firms.routes.js';
+import jobRoutes from './jobs.routes.js';
+import mentorshipRoutes from './mentorship.routes.js';
+import messageRoutes from './messages.routes.js';
+import notificationRoutes from './notifications.routes.js';
+import postRoutes from './posts.routes.js';
+import projectRoutes from './projects.routes.js';
+import questionRoutes from './questions.routes.js';
+import reportRoutes from './reports.routes.js';
+import resourceRoutes from './resources.routes.js';
+import searchRoutes from './search.routes.js';
+import storyRoutes from './stories.routes.js';
+import userRoutes from './users.routes.js';
+import verificationRoutes from './verification.routes.js';
+
+const router = Router();
+
+router.get('/health', (req, res) => res.json({ ok: true }));
+router.use('/auth', authRoutes);
+router.use('/users', userRoutes);
+router.use('/connections', connectionRoutes);
+router.use('/posts', postRoutes);
+router.use('/stories', storyRoutes);
+router.use('/projects', projectRoutes);
+router.use('/jobs', jobRoutes);
+router.use('/firms', firmRoutes);
+router.use('/mentorship', mentorshipRoutes);
+router.use('/events', eventRoutes);
+router.use('/questions', questionRoutes);
+router.use('/resources', resourceRoutes);
+router.use('/colleges', collegeRoutes);
+router.use('/verification', verificationRoutes);
+router.use('/messages', messageRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/search', searchRoutes);
+router.use('/reports', reportRoutes);
+router.use('/admin', adminRoutes);
+
+export default router;

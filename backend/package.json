@@ -1,0 +1,30 @@
+{
+  "name": "arcella-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Arcella API: professional network for Indian architecture students, alumni, faculty and firms",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
+    "compression": "^1.8.2",
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.24.7",
+    "multer": "^2.5.0",
+    "nodemailer": "^10.3.1",
+    "zod": "^3.25.76"
+  }
+}
