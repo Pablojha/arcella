@@ -1,10 +1,11 @@
 # Render's free plan sleeps after 15 idle minutes and takes 30-60 seconds to wake.
-# Pinging every 10 minutes keeps the API answering instantly (one service fits in the free 750 hours/month).
+# Pinging every 10 minutes from 06:30 to 01:30 IST (01:00-19:59 UTC) keeps it answering instantly through the day
+# while using about 600 of the workspace's 750 free hours a month, so another free service still fits.
 name: Keep API awake
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/10 1-19 * * *'
   workflow_dispatch:
 
 jobs:

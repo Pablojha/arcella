@@ -75,7 +75,7 @@ Register with the address in `ADMIN_EMAIL` to become a site admin. If you regist
 
 1. Create a free M0 cluster at [mongodb.com/atlas](https://www.mongodb.com/atlas), on AWS in **Singapore** so it sits next to the API.
 2. Under **Database Access**, add a user with a password.
-3. Under **Network Access**, allow `0.0.0.0/0` (Render's free tier has no fixed IP).
+3. Under **Network Access**, add the Render service's outbound IP ranges, found in the Render dashboard under your service → **Connect** → **Outbound**. They appear once the service exists (section 2), and its first deploy fails until they are added.
 4. **Connect → Drivers** gives a URI like `mongodb+srv://user:pass@cluster.xxxx.mongodb.net/arcella`. Keep `/arcella` as the database name.
 
 ### 2. API: Render
@@ -87,7 +87,7 @@ Register with the address in `ADMIN_EMAIL` to become a site admin. If you regist
 Notes:
 
 - The service runs in Render's **Singapore** region, the closest to India.
-- Render's free instance sleeps after about 15 idle minutes and takes 30–60 seconds to wake. The workflow in `.github/workflows/keep-api-awake.yml` pings it every 10 minutes so it stays awake. If your Render URL is not `https://arcella-api-pablojha.onrender.com`, set a repository variable `API_URL` on GitHub. GitHub pauses scheduled workflows after 60 days without commits.
+- Render's free instance sleeps after about 15 idle minutes and takes 30–60 seconds to wake. The workflow in `.github/workflows/keep-api-awake.yml` pings it every 10 minutes from 06:30 to 01:30 IST, which keeps it awake through the day while using about 600 of the workspace's 750 free hours a month, so another free service still fits. For all-day pings, change the cron hours `1-19` to `*`. If your Render URL is not `https://arcella-api-pablojha.onrender.com`, set a repository variable `API_URL` on GitHub. GitHub pauses scheduled workflows after 60 days without commits.
 - Render's disk is wiped on every deploy and restart, so set up **Cloudinary** (free) for uploads in production. Its free plan caps raw files (DWG, ZIP, XLSX) at 10 MB, and PDF/ZIP delivery must be enabled under *Settings → Security*.
 - Verification documents are stored in MongoDB rather than on disk. Only admins and that college's moderators can open them, and they are deleted as soon as a request is approved or rejected.
 
