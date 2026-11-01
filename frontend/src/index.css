@@ -12,6 +12,8 @@
   --on-brand: #ffffff;
   --accent: #c2522b;
   --on-accent: #ffffff;
+  --alert: #d92d20;
+  --on-alert: #ffffff;
   --grid: rgb(26 25 24 / 0.045);
   --grid-major: rgb(26 25 24 / 0.07);
   color-scheme: light;
@@ -27,6 +29,8 @@
   --on-brand: #0b1d14;
   --accent: #e58a63;
   --on-accent: #2a1006;
+  --alert: #f97066;
+  --on-alert: #2b0806;
   --grid: rgb(236 235 229 / 0.03);
   --grid-major: rgb(236 235 229 / 0.05);
   color-scheme: dark;
@@ -42,6 +46,8 @@
   --color-on-brand: var(--on-brand);
   --color-accent: var(--accent);
   --color-on-accent: var(--on-accent);
+  --color-alert: var(--alert);
+  --color-on-alert: var(--on-alert);
 }
 
 @theme {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Briefcase, GraduationCap, House, LayoutGrid, MessageCircle, Search, Users } from 'lucide-react';
+import { Bell, Briefcase, Clapperboard, GraduationCap, House, LayoutGrid, MessageCircle, Search, Users } from 'lucide-react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useBadges } from '../../context/BadgeContext';
@@ -14,6 +14,7 @@ const NAV = [
   { to: '/', label: 'Home', icon: House, end: true },
   { to: '/network', label: 'Network', icon: Users, badge: 'requests' },
   { to: '/college', label: 'College', icon: GraduationCap },
+  { to: '/reels', label: 'Reels', icon: Clapperboard },
   { to: '/jobs', label: 'Jobs', icon: Briefcase },
   { to: '/messages', label: 'Messages', icon: MessageCircle, badge: 'messages' },
   { to: '/notifications', label: 'Alerts', icon: Bell, badge: 'notifications' },

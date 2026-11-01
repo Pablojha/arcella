@@ -36,7 +36,7 @@ export default function VerifyStatus() {
           </h1>
           <p className="mx-auto mt-2 max-w-md text-muted">
             {pending
-              ? `A moderator of ${request.college?.name} will check your document soon (submitted ${ago(request.createdAt)}). You'll get a notification.`
+              ? `An admin of ${request.college?.name} will check your document soon (submitted ${ago(request.createdAt)}). You'll get a notification.`
               : rejected
                 ? request.note || 'The reviewer could not confirm your membership from the document. You can try again with a clearer document.'
                 : 'Verify that you study, studied or teach at a college to join its members-only space.'}

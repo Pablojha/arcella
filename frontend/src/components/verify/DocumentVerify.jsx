@@ -12,7 +12,7 @@ import UploadBar from '../ui/UploadBar';
 
 const MAX_MB = 5;
 
-/** Uploads an ID card, marksheet or degree for review by admins and college moderators. */
+/** Uploads an ID card, marksheet or degree for review by Arcella admins and the college's admins. */
 export default function DocumentVerify({ details, onSubmitted }) {
   const toast = useToast();
   const upload = useUploadProgress();
@@ -61,7 +61,7 @@ export default function DocumentVerify({ details, onSubmitted }) {
       </label>
       <p className="flex gap-2 rounded-xl bg-brand/10 px-3.5 py-3 text-xs text-ink/80">
         <Lock size={14} className="mt-px shrink-0 text-brand" />
-        Only site admins and your college's moderators can see this document, and it is deleted as soon as it has been reviewed.
+        Only Arcella admins and your college's admin and co-admin can see this document, and it is deleted as soon as it has been reviewed.
       </p>
       <UploadBar progress={upload.progress} />
       <Button type="submit" size="lg" className="w-full" loading={busy} disabled={!file}>

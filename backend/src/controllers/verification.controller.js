@@ -4,10 +4,10 @@ import User from '../models/User.js';
 import Verification from '../models/Verification.js';
 import { CARD } from '../config/constants.js';
 import { grantMembership } from '../services/membership.js';
-import { notify } from '../services/notify.js';
+import { notify, notifyMany } from '../services/notify.js';
 import { checkCode, resendCode } from '../services/otp.js';
 import { profileOf } from '../services/profile.js';
-import { assertModerator } from '../utils/access.js';
+import { assertModerator, runBy } from '../utils/access.js';
 import { ApiError, found } from '../utils/errors.js';
 
 const DOC_MIME = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
@@ -46,7 +46,7 @@ export async function confirmCode(req, res) {
 export async function uploadDocument(req, res) {
   assertNotVerified(req.user);
   if (!req.file) throw new ApiError(400, 'Attach a photo or PDF of your document');
-  const college = found(await College.findById(req.body.college).select('name moderators'), 'College');
+  const college = found(await College.findById(req.body.college).select('name admin coAdmin'), 'College');
   await Verification.deleteMany({ user: req.user._id, status: 'pending' });
   const request = await Verification.create({
     ...req.body,
@@ -55,18 +55,14 @@ export async function uploadDocument(req, res) {
     docData: req.file.buffer,
     docMime: DOC_MIME[path.extname(req.file.originalname).slice(1).toLowerCase()],
   });
-  await Promise.all(
-    college.moderators.map((moderator) =>
-      notify({ user: moderator, actor: req.user._id, type: 'verify_request', text: college.name, link: '/college?tab=review' }),
-    ),
-  );
+  await notifyMany({ users: [college.admin, college.coAdmin].filter(Boolean), actor: req.user._id, type: 'verify_request', text: college.name, link: '/college?tab=review' });
   res.status(201).json({ verification: { _id: request._id, status: request.status, method: request.method, college: { _id: college._id, name: college.name } } });
 }
 
-/** Pending document requests for every college the reviewer moderates (all colleges for admins). */
+/** Pending document requests for every college the reviewer runs as admin or co-admin (all colleges for site admins). */
 export async function queue(req, res) {
   const filter = { method: 'document', status: 'pending' };
-  if (!req.user.isAdmin) filter.college = { $in: await College.find({ moderators: req.user._id }).distinct('_id') };
+  if (!req.user.isAdmin) filter.college = { $in: await College.find(runBy(req.user._id)).distinct('_id') };
   const items = await Verification.find(filter).sort({ _id: 1 }).populate('user', CARD).populate('college', 'name short').lean();
   res.json({ items });
 }

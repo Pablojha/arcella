@@ -1,10 +1,10 @@
 import Answer from '../models/Answer.js';
-import College from '../models/College.js';
 import Comment from '../models/Comment.js';
 import Connection from '../models/Connection.js';
 import Critique from '../models/Critique.js';
 import Event from '../models/Event.js';
 import Firm from '../models/Firm.js';
+import GroupMessage from '../models/GroupMessage.js';
 import Job from '../models/Job.js';
 import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
@@ -18,6 +18,7 @@ import Story from '../models/Story.js';
 import User from '../models/User.js';
 import Verification from '../models/Verification.js';
 import { removeContent } from './content.js';
+import { dropCollegeRoles } from './membership.js';
 import { removeFiles } from './storage.js';
 
 /** Content a member created: [content type, model, author field]. */
@@ -44,7 +45,6 @@ const MENTIONS = [
   [Story, 'viewers'],
   [Firm, 'team'],
   [Firm, 'followers'],
-  [College, 'moderators'],
   [User, 'blocked'],
 ];
 
@@ -60,6 +60,8 @@ export async function deleteAccount(userId) {
     ...MENTIONS.map(([Model, field]) => Model.updateMany({ [field]: userId }, { $pull: { [field]: userId } })),
     ...[Question, Answer].map((Model) => Model.updateMany({ upvotes: userId }, { $pull: { upvotes: userId }, $inc: { votes: -1 } })),
     User.updateMany({ _id: { $in: contacts } }, { $inc: { connectionsCount: -1 } }),
+    dropCollegeRoles(userId),
+    GroupMessage.deleteMany({ author: userId }),
     Critique.deleteMany({ author: userId }),
     Connection.deleteMany({ $or: [{ from: userId }, { to: userId }] }),
     Message.deleteMany({ $or: [{ from: userId }, { to: userId }] }),

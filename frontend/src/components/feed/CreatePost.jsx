@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Briefcase, CalendarDays, CircleQuestionMark, Clock, FolderPlus } from 'lucide-react';
+import { Briefcase, CalendarDays, CircleQuestionMark, Clock, FolderPlus, TriangleAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -30,7 +30,13 @@ export default function CreatePost({ open, onClose, onCreated, college, onStory 
   const [text, setText] = useState('');
   const [images, setImages] = useState([]);
   const [video, setVideo] = useState(null);
+  const [important, setImportant] = useState(false);
   const [busy, setBusy] = useState(false);
+  const audience = college
+    ? 'Everyone in your college group will be notified.'
+    : user.isAdmin
+      ? 'Everyone on Arcella will be notified.'
+      : 'Your connections will be notified. You can mark one post a day as Important.';
 
   const shortcut = (item) => {
     onClose();
@@ -42,11 +48,12 @@ export default function CreatePost({ open, onClose, onCreated, college, onStory 
     event.preventDefault();
     setBusy(true);
     try {
-      const post = await api.post('/posts', toFormData({ text, college, images, video }), upload.config);
+      const post = await api.post('/posts', toFormData({ text, college, images, video, important: important || undefined }), upload.config);
       onCreated(post);
       setText('');
       setImages([]);
       setVideo(null);
+      setImportant(false);
       onClose();
       toast.success(college ? 'Posted to your college group' : 'Posted');
     } catch (error) {
@@ -85,7 +92,7 @@ export default function CreatePost({ open, onClose, onCreated, college, onStory 
             <p className="text-xs text-muted">{college ? 'Only verified members of your college will see this' : 'Visible to everyone on Arcella'}</p>
           </div>
         </div>
-        <textarea value={text} onChange={(event) => setText(event.target.value)} rows={5} maxLength={3000} placeholder="Share a sketch, a site visit, a jury moment…" className="input resize-none" />
+        <textarea value={text} onChange={(event) => setText(event.target.value)} rows={5} maxLength={3000} placeholder="Share a sketch, a site visit, a jury moment…" className={`input resize-none ${important ? 'border-alert' : ''}`} />
         {video ? (
           <VideoPicker file={video} onChange={setVideo} />
         ) : (
@@ -94,8 +101,17 @@ export default function CreatePost({ open, onClose, onCreated, college, onStory 
           </ImagePicker>
         )}
         {(images.length > 0 || video) && <UploadBar progress={upload.progress} />}
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-xs tabular-nums text-muted">{text.length}/3000</span>
+        {important && <p className="text-xs font-medium text-alert">{audience}</p>}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setImportant((value) => !value)}
+            aria-pressed={important}
+            className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition ${important ? 'border-alert bg-alert text-on-alert' : 'border-line text-muted hover:border-alert hover:text-alert'}`}
+          >
+            <TriangleAlert size={15} /> Important
+          </button>
+          <span className="ml-auto text-xs tabular-nums text-muted">{text.length}/3000</span>
           <Button type="submit" loading={busy} disabled={!text.trim() && !images.length && !video}>
             Post
           </Button>

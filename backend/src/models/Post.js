@@ -7,6 +7,7 @@ const postSchema = new Schema(
     text: { type: String, trim: true },
     images: [String],
     video: String,
+    important: { type: Boolean, default: false },
     likes: [ref('User')],
     saves: [ref('User')],
     commentsCount: { type: Number, default: 0 },

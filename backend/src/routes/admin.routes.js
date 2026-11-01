@@ -34,7 +34,6 @@ router.post('/users/:id/verify', validate(verifySchema), ctrl.verifyUser);
 router.delete('/users/:id/verify', ctrl.revokeUser);
 router.get('/colleges', validate(listQuery(), 'query'), ctrl.colleges);
 router.patch('/colleges/:id', validate(collegeSchema), ctrl.updateCollege);
-router.post('/colleges/:id/moderators/:userId', ctrl.toggleModerator);
 router.get('/reports', validate(listQuery(), 'query'), ctrl.reports);
 router.post('/reports/:id/resolve', validate(z.object({ action: z.enum(['remove', 'dismiss']) })), ctrl.resolveReport);
 

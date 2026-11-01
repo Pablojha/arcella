@@ -12,8 +12,9 @@ import Reveal from '../ui/Reveal';
 import { ListSkeleton } from '../ui/Skeleton';
 import UserChip from '../ui/UserChip';
 
-/** Where moderators can see reported content in context. */
+/** Where admins can see reported content in context. */
 const LINKS = {
+  chat: (content) => `/college?id=${content.college}`,
   post: (content) => `/posts/${content._id}`,
   comment: (content) => `/posts/${content.post}`,
   project: (content) => `/projects/${content._id}`,

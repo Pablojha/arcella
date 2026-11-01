@@ -11,9 +11,10 @@ const feedSchema = listQuery({
   author: objectId.optional(),
   college: objectId.optional(),
   saved: bool,
+  video: bool,
 });
 
-const postSchema = z.object({ text: text(3000).optional(), college: optionalId });
+const postSchema = z.object({ text: text(3000).optional(), college: optionalId, important: bool });
 const repostSchema = z.object({ text: text(3000).optional() });
 const commentSchema = z.object({ text: required(1000) });
 

@@ -1,6 +1,6 @@
 # arcella.
 
-A professional network for architecture students, alumni, faculty and firms in India: a feed of photo and video posts with likes, comments, reposts and saves, portfolios with critiques, private college groups with verified membership, stories, jobs, firm pages, mentorship, events, Q&A, study resources and direct messages. It works as a website, an installable PWA and an Android app.
+A professional network for architecture students, alumni, faculty and firms in India: a feed of photo posts and vertical video reels with likes, comments, reposts, saves and Important alerts, portfolios with critiques, private college groups with verified membership, a group chat and their own admin and co-admin, stories, jobs, firm pages, mentorship, events, Q&A, study resources and direct messages. It works as a website, an installable PWA and an Android app.
 
 It also includes what a public launch needs: email verification with a one-time code at sign-up, search across the whole network, password reset by code, account deletion, reporting and blocking with an admin moderation queue, a privacy page, and anti-spam rate limits.
 
@@ -89,7 +89,7 @@ Notes:
 - The service runs in Render's **Singapore** region, the closest to India.
 - Render's free instance sleeps after about 15 idle minutes and takes 30–60 seconds to wake. The workflow in `.github/workflows/keep-api-awake.yml` pings it every 10 minutes from 06:30 to 01:30 IST, which keeps it awake through the day while using about 600 of the workspace's 750 free hours a month, so another free service still fits. For all-day pings, change the cron hours `1-19` to `*`. If your Render URL is not `https://arcella-api-pablojha.onrender.com`, set a repository variable `API_URL` on GitHub. GitHub pauses scheduled workflows after 60 days without commits.
 - Render's disk is wiped on every deploy and restart, so set up **Cloudinary** (free) for uploads in production. Its free plan caps raw files (DWG, ZIP, XLSX) at 10 MB, and PDF/ZIP delivery must be enabled under *Settings → Security*. Post videos are capped at 40 MB, the largest its free plan converts on the fly into the phone-friendly MP4 the feed plays.
-- Verification documents are stored in MongoDB rather than on disk. Only admins and that college's moderators can open them, and they are deleted as soon as a request is approved or rejected.
+- Verification documents are stored in MongoDB rather than on disk. Only site admins and that college's admin and co-admin can open them, and they are deleted as soon as a request is approved or rejected.
 
 ### 3. Web app: Vercel
 
@@ -112,9 +112,13 @@ Notes:
 
 1. A member picks their college (or adds a missing one), their role (student, alumni or faculty) and batch year.
 2. **College email:** offered only when an admin has set the college's official domains, e.g. `iitr.ac.in` (subdomains such as `ar.iitr.ac.in` also count). It sends a 6-digit code that expires in 10 minutes and allows 5 attempts, and the routes are rate-limited.
-3. **Document:** a college ID card, result or marksheet, or degree certificate goes into a review queue for site admins and that college's moderators, who approve or reject it with a note. The member is notified either way.
+3. **Document:** a college ID card, result or marksheet, or degree certificate goes into a review queue for site admins and that college's admin and co-admin, who approve or reject it with a note. The member is notified either way.
 
-Admins manage colleges, email domains, moderators and manual verification from **More → Admin**. Moderators review requests from their college's **Review** tab.
+Site admins manage colleges, email domains and manual verification from **More → Admin**, and can open every college group (**Admin → Colleges → Open group**). Each group has one **admin** and one **co-admin**, chosen from verified members on the group's **Members** tab: site admins choose both, and the college admin can pick their own co-admin. They review requests on the **Review** tab, remove posts and chat messages, and post Important updates to the whole group without the one-a-day limit members have.
+
+## Important posts
+
+Anyone can mark one post a day as **Important** (site admins and college admins in their group have no limit). It gets a red tag and border, and a notification goes to the author's connections, to every member of the college for a group post, or to everyone on Arcella when a site admin posts it.
 
 ## Safety and accounts
 

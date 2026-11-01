@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Ban, Flag, Repeat2, Trash } from 'lucide-react';
+import { Ban, Flag, Repeat2, Trash, TriangleAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -8,13 +8,13 @@ import { useBlock } from '../../hooks/useBlock';
 import api from '../../lib/api';
 import { timeAgo } from '../../lib/format';
 import ReportSheet from '../ReportSheet';
-import FeedVideo from '../ui/FeedVideo';
 import ImageGrid from '../ui/ImageGrid';
 import MoreMenu from '../ui/MoreMenu';
 import UserChip from '../ui/UserChip';
 import Comments from './Comments';
 import PostActions from './PostActions';
 import QuotedPost from './QuotedPost';
+import ReelVideo from './ReelVideo';
 
 const LONG_POST = 320;
 
@@ -53,7 +53,12 @@ function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = fal
   };
 
   return (
-    <article className="card space-y-3 p-4">
+    <article className={`card space-y-3 p-4 ${post.important ? 'border-alert/50 shadow-[inset_0_3px_0_var(--alert)]' : ''}`}>
+      {post.important && (
+        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-alert">
+          <TriangleAlert size={14} /> Important
+        </p>
+      )}
       {repost && (
         <p className="-mb-1 flex items-center gap-1.5 text-[13px] text-muted">
           <Repeat2 size={15} className="shrink-0" />
@@ -89,7 +94,7 @@ function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = fal
       )}
 
       <ImageGrid images={post.images} />
-      {post.video && <FeedVideo src={post.video} />}
+      {post.video && <ReelVideo post={post} />}
       {post.repostOf !== undefined && <QuotedPost post={post.repostOf} />}
 
       <PostActions

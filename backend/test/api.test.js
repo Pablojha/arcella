@@ -156,12 +156,54 @@ test('posts a video, saves privately and reposts with or without words', async (
   assert.equal((await call('GET', `/posts/${clip._id}`, { token: bilal.token })).reposted, true);
   assert.ok((await call('GET', '/notifications', { token: asha.token })).items.some((note) => note.type === 'repost'));
 
+  assert.deepEqual((await call('GET', '/posts?video=1', { token: bilal.token })).items.map((post) => post._id), [clip._id]);
   assert.deepEqual(await call('DELETE', `/posts/${clip._id}/repost`, { token: bilal.token }), { repostsCount: 1 });
   assert.deepEqual(await call('POST', `/posts/${quote._id}/repost`, { token: bilal.token }), { repostsCount: 2 });
   await call('DELETE', `/posts/${clip._id}`, { token: asha.token });
   const left = (await call('GET', `/posts?author=${bilal.user._id}`, { token: asha.token })).items;
   assert.deepEqual(left.map((post) => [post.text, post.repostOf]), [['Brilliant detailing', null]]);
   assert.deepEqual((await call('GET', '/posts?saved=1', { token: bilal.token })).items, []);
+});
+
+test('runs a college with an admin and co-admin, and a group chat for its members', async () => {
+  const { asha, bilal, chitra, iitr } = people;
+  const roles = `/colleges/${iitr._id}/roles`;
+  await call('PATCH', roles, { token: asha.token, body: { role: 'admin', user: asha.user._id }, status: 403 });
+  assert.equal((await call('PATCH', roles, { token: tokenOf('admin'), body: { role: 'admin', user: asha.user._id } })).admin._id, asha.user._id);
+  await call('PATCH', roles, { token: tokenOf('admin'), body: { role: 'coAdmin', user: chitra.user._id }, status: 400 });
+  assert.equal((await call('PATCH', roles, { token: asha.token, body: { role: 'coAdmin', user: bilal.user._id } })).coAdmin._id, bilal.user._id);
+  await call('PATCH', roles, { token: bilal.token, body: { role: 'coAdmin', user: null }, status: 403 });
+  assert.equal((await call('GET', `/colleges/${iitr._id}`, { token: bilal.token })).moderator, true);
+  assert.deepEqual((await call('GET', '/auth/me', { token: asha.token })).user.moderates.map((college) => college._id), [iitr._id]);
+  assert.ok((await call('GET', '/notifications', { token: bilal.token })).items.some((note) => note.type === 'college_role'));
+
+  const chat = `/colleges/${iitr._id}/chat`;
+  const hello = await call('POST', chat, { token: bilal.token, body: { text: 'Studio at 9?' } });
+  const spam = await call('POST', chat, { token: asha.token, body: { text: 'Buy followers now' } });
+  await call('GET', chat, { token: chitra.token, status: 403 });
+  assert.deepEqual((await call('GET', `${chat}?after=${spam._id}`, { token: bilal.token })).items, []);
+  const seen = await call('GET', chat, { token: tokenOf('admin') });
+  assert.deepEqual(seen.items.map((message) => message.text), ['Studio at 9?', 'Buy followers now']);
+  await call('DELETE', `${chat}/${spam._id}`, { token: chitra.token, status: 403 });
+  await call('DELETE', `${chat}/${hello._id}`, { token: asha.token });
+  await call('POST', '/reports', { token: bilal.token, body: { type: 'chat', target: spam._id, reason: 'spam' } });
+  const report = (await call('GET', '/admin/reports', { token: tokenOf('admin') })).items.find((item) => item.type === 'chat');
+  assert.equal(report.content.text, 'Buy followers now');
+  await call('POST', `/admin/reports/${report._id}/resolve`, { token: tokenOf('admin'), body: { action: 'remove' } });
+  assert.deepEqual((await call('GET', chat, { token: bilal.token })).items, []);
+});
+
+test('marks posts Important once a day and notifies the right people', async () => {
+  const { asha, bilal, iitr } = people;
+  const important = async (key) => (await call('GET', '/notifications', { token: people[key].token })).items.filter((note) => note.type === 'important').length;
+  const alert = await call('POST', '/posts', { token: bilal.token, body: { text: 'Jury moved to Friday', important: true } });
+  assert.equal(alert.important, true);
+  await call('POST', '/posts', { token: bilal.token, body: { text: 'Another alert', important: true }, status: 429 });
+  assert.deepEqual([await important('asha'), await important('chitra')], [1, 0]);
+  await call('POST', '/posts', { token: tokenOf('admin'), body: { text: 'Maintenance tonight', important: true } });
+  assert.deepEqual([await important('asha'), await important('chitra')], [2, 1]);
+  for (const text of ['Studio closed today', 'Studio open again']) await call('POST', '/posts', { token: asha.token, body: { text, college: iitr._id, important: true } });
+  assert.deepEqual([await important('bilal'), await important('chitra')], [3, 1]);
 });
 
 test('resets a forgotten password with a code and signs out older sessions', async () => {

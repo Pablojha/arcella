@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Bell, BookOpen, Bookmark, Building, CalendarDays, ChevronRight, Compass, HandHeart, LogOut, MessageCircleQuestionMark, Settings, ShieldCheck, Shield } from 'lucide-react';
+import { Bell, BookOpen, Bookmark, Building, CalendarDays, ChevronRight, Clapperboard, Compass, HandHeart, LogOut, MessageCircleQuestionMark, Settings, ShieldCheck, Shield } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Avatar from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
@@ -11,6 +11,7 @@ import { useBadges } from '../context/BadgeContext';
 import { useTitle } from '../hooks/useTitle';
 
 const MODULES = [
+  { to: '/reels', label: 'Reels', text: 'Short videos', icon: Clapperboard },
   { to: '/explore', label: 'Explore', text: 'Portfolio gallery', icon: Compass },
   { to: '/firms', label: 'Firms', text: 'Practices and studios', icon: Building },
   { to: '/mentors', label: 'Mentorship', text: 'Book alumni and faculty', icon: HandHeart },

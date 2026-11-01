@@ -7,6 +7,9 @@ export const USER_TYPES = [
 
 export const COLLEGE_ROLES = USER_TYPES.slice(0, 3);
 
+/** The two roles a college group can give its members. */
+export const GROUP_ROLES = { admin: 'Admin', coAdmin: 'Co-admin' };
+
 export const SOFTWARE = ['AutoCAD', 'Revit', 'Rhino', 'Grasshopper', 'SketchUp', 'ArchiCAD', 'Lumion', 'Enscape', 'V-Ray', 'D5 Render', 'Twinmotion', '3ds Max', 'Blender', 'Photoshop', 'Illustrator', 'InDesign', 'QGIS', 'Figma'];
 
 export const SKILLS = ['Design studio', 'Model making', 'Sketching', 'Parametric design', 'BIM', 'Sustainable design', 'Urban design', 'Landscape', 'Interior design', 'Conservation', 'Working drawings', 'Rendering'];

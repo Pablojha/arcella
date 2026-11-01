@@ -1,12 +1,13 @@
 import Comment from '../models/Comment.js';
 import Connection from '../models/Connection.js';
 import Post from '../models/Post.js';
+import User from '../models/User.js';
 import { CARD } from '../config/constants.js';
 import { hiddenIds } from '../services/blocks.js';
 import { removeContent } from '../services/content.js';
-import { notify } from '../services/notify.js';
+import { notify, notifyMany } from '../services/notify.js';
 import { saveFile, saveFiles } from '../services/storage.js';
-import { assertCanManage, assertMember } from '../utils/access.js';
+import { assertCanManage, assertMember, isModerator } from '../utils/access.js';
 import { ApiError, found } from '../utils/errors.js';
 import { paginate, toggle } from '../utils/query.js';
 import { has, same, withCount } from '../utils/shape.js';
@@ -14,6 +15,7 @@ import { excerpt } from '../utils/text.js';
 
 const AUTHOR = { path: 'author', select: CARD };
 const WITH_ORIGINAL = [AUTHOR, { path: 'repostOf', populate: AUTHOR }];
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Posts as a viewer sees them: like counts instead of who liked, private saved/reposted flags, and a
@@ -32,6 +34,22 @@ async function cards(viewer, posts, hidden) {
   return posts.map(card);
 }
 
+/** Members may mark one post a day as Important; site admins, and college admins in their own group, have no limit. */
+async function assertCanFlag(user, college) {
+  if (await isModerator(user, college)) return;
+  if (await Post.exists({ author: user._id, important: true, createdAt: { $gt: new Date(Date.now() - DAY_MS) } })) {
+    throw new ApiError(429, 'You can mark one post a day as Important. Try again tomorrow.');
+  }
+}
+
+/** Notifies the audience of an Important post: the whole group, everyone (site admins), or the author's connections. */
+async function announce(user, post) {
+  const audience = post.college ? User.find({ college: post.college, verified: true }).distinct('_id') : user.isAdmin ? User.find().distinct('_id') : Connection.idsOf(user._id);
+  const hidden = new Set((await hiddenIds(user)).map(String));
+  const users = (await audience).filter((id) => !hidden.has(String(id)));
+  await notifyMany({ users, actor: user._id, type: 'important', text: excerpt(post.text), link: `/posts/${post._id}` });
+}
+
 /** Loads a post the viewer may see: public posts, or group posts of their own college. */
 async function readablePost(req) {
   const post = found(await Post.findById(req.params.id), 'Post');
@@ -40,10 +58,11 @@ async function readablePost(req) {
 }
 
 export async function feed(req, res) {
-  const { scope, author, college, saved } = req.query;
+  const { scope, author, college, saved, video } = req.query;
   if (college) assertMember(req.user, college);
   const hidden = await hiddenIds(req.user);
   const filter = { college: college ?? null, author: { $nin: hidden } };
+  if (video) filter.video = { $type: 'string' };
   if (saved) {
     filter.saves = req.user._id;
     // Saved group posts stay listed only while the viewer can still read that group.
@@ -64,12 +83,14 @@ export async function get(req, res) {
 }
 
 export async function create(req, res) {
-  const { text, college } = req.body;
+  const { text, college, important } = req.body;
   const { images = [], video: [video] = [] } = req.files ?? {};
   if (!text && !images.length && !video) throw new ApiError(400, 'Write something or add a photo or video');
   if (images.length && video) throw new ApiError(400, 'Add photos or one video, not both');
   if (college) assertMember(req.user, college);
-  const post = await Post.create({ author: req.user._id, text, college, images: await saveFiles(images, 'posts'), video: video && (await saveFile(video, 'posts')) });
+  if (important) await assertCanFlag(req.user, college);
+  const post = await Post.create({ author: req.user._id, text, college, important, images: await saveFiles(images, 'posts'), video: video && (await saveFile(video, 'posts')) });
+  if (important) await announce(req.user, post);
   await post.populate(AUTHOR);
   const [card] = await cards(req.user, [post.toObject()]);
   res.status(201).json(card);

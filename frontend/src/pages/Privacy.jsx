@@ -17,13 +17,14 @@ const SECTIONS = [
   ['Who can see what', [
     'Signed-in members can see your profile, public posts, projects, questions and answers. Projects also appear in the public Explore gallery.',
     'College group posts and college-only events are visible only to verified members of that college, and group posts cannot be reposted.',
+    'College group chats are visible only to verified members of that college and Arcella admins.',
     'Posts you save are visible only to you.',
     'Stories are visible to your connections and college mates for 24 hours.',
     'Messages are visible only to you and the person you are talking to.',
     'Your email address is never shown to other members.',
   ]],
   ['Verification documents', [
-    'ID cards, marksheets and degree certificates can be seen only by site admins and the moderators of your college.',
+    'ID cards, marksheets and degree certificates can be seen only by Arcella admins and your college\'s admin and co-admin.',
     'They are deleted as soon as your request is approved or rejected.',
   ]],
   ['How long we keep data', ['Stories disappear after 24 hours and notifications after 60 days. Everything else stays until you delete it or your account.']],

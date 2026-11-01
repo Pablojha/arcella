@@ -3,6 +3,7 @@ import Comment from '../models/Comment.js';
 import Critique from '../models/Critique.js';
 import Event from '../models/Event.js';
 import Firm from '../models/Firm.js';
+import GroupMessage from '../models/GroupMessage.js';
 import Job from '../models/Job.js';
 import Message from '../models/Message.js';
 import Post from '../models/Post.js';
@@ -14,7 +15,7 @@ import User from '../models/User.js';
 import { CARD } from '../config/constants.js';
 import { removeFiles } from './storage.js';
 
-/** Reportable things: [model, fields shown to moderators, path of the author]. */
+/** Reportable things: [model, fields shown to admins, path of the author]. */
 export const CONTENT = {
   post: [Post, 'text images video author', 'author'],
   comment: [Comment, 'text post author', 'author'],
@@ -27,6 +28,7 @@ export const CONTENT = {
   event: [Event, 'title host', 'host'],
   firm: [Firm, 'name slug logo owner', 'owner'],
   message: [Message, 'text from to', 'from'],
+  chat: [GroupMessage, 'text college author', 'author'],
   user: [User, CARD, null],
 };
 
@@ -83,12 +85,15 @@ const REMOVE = {
   async message(id) {
     await Message.findByIdAndDelete(id);
   },
+  async chat(id) {
+    await GroupMessage.findByIdAndDelete(id);
+  },
 };
 
 /** Deletes one piece of content with everything hanging off it: comments, critiques, files and counters. */
 export const removeContent = (type, id) => REMOVE[type](id);
 
-/** A short preview of reported content for moderators (null when it is already gone). */
+/** A short preview of reported content for admins (null when it is already gone). */
 export function previewContent(type, id) {
   const [Model, fields, author] = CONTENT[type];
   const query = Model.findById(id).select(fields);

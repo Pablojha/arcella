@@ -9,8 +9,11 @@ export const EVENT_TYPES = ['site-visit', 'webinar', 'workshop', 'jury', 'compet
 export const SUBJECTS = ['Design', 'Structures', 'Thesis', 'Software', 'NATA', 'Careers'];
 export const RESOURCE_KINDS = ['notes', 'cad-blocks', 'sheets', 'templates', 'other'];
 export const SESSION_STATUSES = ['pending', 'accepted', 'declined', 'done', 'cancelled'];
-export const REPORT_TYPES = ['post', 'comment', 'project', 'story', 'question', 'answer', 'resource', 'job', 'event', 'firm', 'message', 'user'];
+export const REPORT_TYPES = ['post', 'comment', 'project', 'story', 'question', 'answer', 'resource', 'job', 'event', 'firm', 'message', 'chat', 'user'];
 export const REPORT_REASONS = ['spam', 'harassment', 'inappropriate', 'fake', 'other'];
 
 /** Public user fields used whenever a user is shown as a card or byline. */
 export const CARD = 'name username avatar headline type verified';
+
+/** Populates the college admin and co-admin as cards. */
+export const COLLEGE_ADMINS = ['admin', 'coAdmin'].map((path) => ({ path, select: CARD }));

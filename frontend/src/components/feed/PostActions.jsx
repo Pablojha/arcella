@@ -1,65 +1,22 @@
 import { useState } from 'react';
 import { Bookmark, MessageSquare, Repeat2, Share2 } from 'lucide-react';
-import { useToast } from '../../context/ToastContext';
-import api from '../../lib/api';
+import { usePostActions } from '../../hooks/usePostActions';
 import LikeButton from '../ui/LikeButton';
 import RepostSheet from './RepostSheet';
 
 const ACTION = 'inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium transition';
 const IDLE = 'text-muted hover:bg-ink/5 hover:text-ink';
 
-/**
- * Like, comment, repost, share and save. Likes and saves change at once and roll back if the server refuses.
- * Only original public posts can be reposted: group posts stay in their group.
- */
+/** Like, comment, repost, share and save. Only original public posts can be reposted: group posts stay in their group. */
 export default function PostActions({ post, commentsCount, onComments, onUnreposted }) {
-  const toast = useToast();
-  const [like, setLike] = useState({ active: post.liked, count: post.likesCount });
-  const [saved, setSaved] = useState(post.saved);
+  const { like, toggleLike, saved, toggleSave, share } = usePostActions(post);
   const [repost, setRepost] = useState({ active: post.reposted, count: post.repostsCount });
   const [reposting, setReposting] = useState(false);
   const canRepost = !post.college && post.repostOf === undefined;
 
-  const toggleLike = async () => {
-    const previous = like;
-    setLike({ active: !like.active, count: like.count + (like.active ? -1 : 1) });
-    try {
-      const result = await api.post(`/posts/${post._id}/like`);
-      setLike({ active: result.liked, count: result.likesCount });
-    } catch (error) {
-      setLike(previous);
-      toast.error(error.message);
-    }
-  };
-
-  const toggleSave = async () => {
-    setSaved(!saved);
-    try {
-      const result = await api.post(`/posts/${post._id}/save`);
-      setSaved(result.saved);
-      if (result.saved) toast.success('Saved. Find it under More → Saved');
-    } catch (error) {
-      setSaved(saved);
-      toast.error(error.message);
-    }
-  };
-
   const reposted = (next) => {
     setRepost(next);
     if (!next.active) onUnreposted?.();
-  };
-
-  const share = async () => {
-    const url = `${window.location.origin}/posts/${post._id}`;
-    try {
-      if (navigator.share) await navigator.share({ title: 'Arcella', text: post.text?.slice(0, 80), url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast.success('Link copied');
-      }
-    } catch {
-      // Share sheet dismissed.
-    }
   };
 
   return (

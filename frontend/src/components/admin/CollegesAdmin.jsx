@@ -27,7 +27,7 @@ export default function CollegesAdmin() {
           <span className="min-w-0 flex-1">
             <span className="block truncate font-medium">{college.name}</span>
             <span className="block truncate text-xs text-muted">
-              {college.domains.length ? college.domains.map((domain) => `@${domain}`).join(', ') : 'No email domain'} · {college.moderators.length} moderators
+              {college.domains.length ? college.domains.map((domain) => `@${domain}`).join(', ') : 'No email domain'} · {college.admin ? `Admin: ${college.admin.name}` : 'No admin yet'}
               {college.userAdded && ' · added by a member'}
             </span>
           </span>

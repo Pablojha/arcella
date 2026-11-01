@@ -1,40 +1,15 @@
 import { useState } from 'react';
-import { ShieldMinus, ShieldPlus } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
-import { useApi } from '../../hooks/useApi';
-import { useDebounce } from '../../hooks/useDebounce';
 import api from '../../lib/api';
+import { GROUP_ROLES } from '../../lib/constants';
 import Button from '../ui/Button';
 import Field from '../ui/Field';
-import SearchInput from '../ui/SearchInput';
 import Sheet from '../ui/Sheet';
 import TagInput from '../ui/TagInput';
 import UserChip from '../ui/UserChip';
 
-function ModeratorPicker({ college, onChange }) {
-  const [query, setQuery] = useState('');
-  const debounced = useDebounce(query);
-  const { data } = useApi('/admin/users', { college: college._id, q: debounced, limit: 8 });
-  const candidates = (data?.items ?? []).filter((user) => user.verified && !college.moderators.some((moderator) => moderator._id === user._id));
-  return (
-    <div className="space-y-2">
-      <SearchInput value={query} onChange={setQuery} placeholder="Search verified members to promote" />
-      {candidates.map((user) => (
-        <div key={user._id} className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <UserChip user={user} sub={user.email} size={36} link={false} />
-          </div>
-          <Button size="sm" variant="secondary" icon={ShieldPlus} onClick={() => onChange(user._id)}>
-            Promote
-          </Button>
-        </div>
-      ))}
-      {data && !candidates.length && <p className="text-xs text-muted">No verified members match.</p>}
-    </div>
-  );
-}
-
-/** Admin editor for a college: names, official email domains and moderators. */
+/** Admin editor for a college: names and official email domains, plus a way into its group to choose admins. */
 export default function EditCollege({ college, onClose, onSaved }) {
   const toast = useToast();
   const [form, setForm] = useState(() => ({ name: college.name, short: college.short ?? '', city: college.city ?? '', state: college.state ?? '', domains: college.domains }));
@@ -51,14 +26,6 @@ export default function EditCollege({ college, onClose, onSaved }) {
       toast.error(error.message);
     } finally {
       setBusy(false);
-    }
-  };
-
-  const toggleModerator = async (userId) => {
-    try {
-      onSaved(await api.post(`/admin/colleges/${college._id}/moderators/${userId}`));
-    } catch (error) {
-      toast.error(error.message);
     }
   };
 
@@ -88,19 +55,14 @@ export default function EditCollege({ college, onClose, onSaved }) {
       </form>
 
       <section className="mt-6 space-y-3 border-t border-line pt-5">
-        <h3 className="font-display font-semibold">Moderators</h3>
-        {college.moderators.map((moderator) => (
-          <div key={moderator._id} className="flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <UserChip user={moderator} size={36} />
-            </div>
-            <Button size="sm" variant="danger" icon={ShieldMinus} onClick={() => toggleModerator(moderator._id)}>
-              Remove
-            </Button>
-          </div>
-        ))}
-        {!college.moderators.length && <p className="text-sm text-muted">No moderators yet. Moderators review document verifications for this college.</p>}
-        <ModeratorPicker college={college} onChange={toggleModerator} />
+        <h3 className="font-display font-semibold">Group admins</h3>
+        {['admin', 'coAdmin'].map((role) => college[role] && <UserChip key={role} user={college[role]} sub={GROUP_ROLES[role]} size={36} />)}
+        <p className="text-sm text-muted">
+          Choose the admin and co-admin from the group&apos;s Members tab; the college admin can also pick their own co-admin. They run the chat, remove posts and review document verifications.
+        </p>
+        <Button variant="secondary" icon={Users} to={`/college?id=${college._id}&tab=members`}>
+          Open group
+        </Button>
       </section>
     </Sheet>
   );

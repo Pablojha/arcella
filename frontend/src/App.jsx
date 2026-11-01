@@ -39,6 +39,7 @@ const Profile = page(() => import('./pages/Profile'));
 const ProjectDetail = page(() => import('./pages/ProjectDetail'));
 const QuestionDetail = page(() => import('./pages/QuestionDetail'));
 const Questions = page(() => import('./pages/Questions'));
+const Reels = page(() => import('./pages/Reels'));
 const Resources = page(() => import('./pages/Resources'));
 const Saved = page(() => import('./pages/Saved'));
 const Search = page(() => import('./pages/Search'));
@@ -70,6 +71,7 @@ const PROTECTED = [
   ['events/:id', EventDetail],
   ['qa', Questions],
   ['qa/:id', QuestionDetail],
+  ['reels', Reels],
   ['resources', Resources],
   ['messages', Messages],
   ['messages/:userId', Messages],
