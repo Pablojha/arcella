@@ -26,22 +26,11 @@ export async function sendMail({ to, subject, html }) {
 }
 
 const escapeHtml = (text) => text.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
-const muted = 'color:#6f6a61;font-size:13px';
 
-const layout = (body) => `
+export const codeEmail = (code, intro) => `
   <div style="font-family:Inter,Arial,sans-serif;max-width:440px;margin:auto;padding:32px;background:#f7f5f0;color:#1a1918">
     <h2 style="margin:0 0 8px;color:#1d6b47">arcella.</h2>
-    ${body}
-  </div>`;
-
-export const otpEmail = (code, college) =>
-  layout(`
-    <p>Use this code to verify your membership of <b>${escapeHtml(college)}</b>:</p>
+    <p>${escapeHtml(intro)}</p>
     <p style="font-size:32px;letter-spacing:8px;font-weight:700;margin:24px 0">${code}</p>
-    <p style="${muted}">It expires in 10 minutes. If you did not request it, you can ignore this email.</p>`);
-
-export const resetEmail = (link) =>
-  layout(`
-    <p>Tap the button to choose a new password. The link works for 30 minutes.</p>
-    <p style="margin:24px 0"><a href="${link}" style="background:#1d6b47;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:600">Reset password</a></p>
-    <p style="${muted}">If you didn't ask for this, ignore this email and your password stays the same.</p>`);
+    <p style="color:#6f6a61;font-size:13px">It expires in 10 minutes. If you did not request it, you can ignore this email.</p>
+  </div>`;

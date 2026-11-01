@@ -1,9 +1,11 @@
 # Render Blueprint for the Arcella API (New → Blueprint → pick this repository).
+# Singapore is Render's closest region to India; create the MongoDB Atlas cluster in Singapore too.
 services:
   - type: web
-    name: arcella-api
+    name: arcella-api-pablojha
     runtime: node
     plan: free
+    region: singapore
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start

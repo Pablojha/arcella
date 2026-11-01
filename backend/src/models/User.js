@@ -9,6 +9,7 @@ const userSchema = new Schema(
     name: { type: String, required: true, trim: true },
     username: { type: String, unique: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    emailVerified: { type: Boolean, default: false },
     password: { type: String, required: true, select: false },
     type: { type: String, enum: USER_TYPES, default: 'student' },
     isAdmin: { type: Boolean, default: false },
@@ -28,8 +29,6 @@ const userSchema = new Schema(
     connectionsCount: { type: Number, default: 0 },
     mentor: { enabled: { type: Boolean, default: false }, topics: [String], slots: [String], about: String },
     blocked: { type: [ref('User')], select: false },
-    resetHash: { type: String, select: false },
-    resetExpires: { type: Date, select: false },
     passwordChangedAt: Date,
   },
   {
@@ -37,8 +36,6 @@ const userSchema = new Schema(
     toJSON: {
       transform: (doc, ret) => {
         delete ret.password;
-        delete ret.resetHash;
-        delete ret.resetExpires;
         return ret;
       },
     },

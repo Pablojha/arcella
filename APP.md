@@ -13,7 +13,7 @@ The Android app is the same React build wrapped by [Capacitor](https://capacitor
 1. **Point the app at your API.** In `frontend/.env`:
 
    ```bash
-   VITE_API_URL=https://arcella-api.onrender.com
+   VITE_API_URL=https://arcella-api-pablojha.onrender.com
    ```
 
 2. **Create the Android project** (first time only). This adds `frontend/android/`, which you should commit:

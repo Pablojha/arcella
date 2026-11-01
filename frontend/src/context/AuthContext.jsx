@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import api, { token } from '../lib/api';
+import { cache } from '../lib/cache';
 
 const AuthContext = createContext(null);
 const USER_KEY = 'arcella_user';
@@ -25,6 +26,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(
     (session) => {
+      cache.clear();
       token.set(session.token);
       setUser(session.user);
     },
@@ -32,6 +34,7 @@ export function AuthProvider({ children }) {
   );
 
   const logout = useCallback(() => {
+    cache.clear();
     token.clear();
     setUser(null);
   }, [setUser]);

@@ -14,8 +14,6 @@ export const env = {
   mongoUri: e.MONGODB_URI || 'mongodb://127.0.0.1:27017/arcella',
   jwtSecret: e.JWT_SECRET || 'dev-only-secret',
   jwtExpires: e.JWT_EXPIRES || '30d',
-  /** The first CLIENT_URL is where emailed links (password reset) point. */
-  appUrl: clientUrls[0],
   clientUrls: [...clientUrls, 'capacitor://localhost', 'https://localhost'],
   uploadDir: e.UPLOAD_DIR,
   adminEmails: list(e.ADMIN_EMAIL).map((email) => email.toLowerCase()),

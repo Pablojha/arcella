@@ -7,39 +7,45 @@ import LoadingScreen from './components/LoadingScreen';
 import OfflineBanner from './components/OfflineBanner';
 import { useAuth } from './context/AuthContext';
 
-const Admin = lazy(() => import('./pages/Admin'));
-const Auth = lazy(() => import('./pages/Auth'));
-const College = lazy(() => import('./pages/College'));
-const EventDetail = lazy(() => import('./pages/EventDetail'));
-const Events = lazy(() => import('./pages/Events'));
-const Explore = lazy(() => import('./pages/Explore'));
-const FirmDetail = lazy(() => import('./pages/FirmDetail'));
-const Firms = lazy(() => import('./pages/Firms'));
-const Home = lazy(() => import('./pages/Home'));
-const JobDetail = lazy(() => import('./pages/JobDetail'));
-const Jobs = lazy(() => import('./pages/Jobs'));
-const Landing = lazy(() => import('./pages/Landing'));
-const Mentors = lazy(() => import('./pages/Mentors'));
-const Messages = lazy(() => import('./pages/Messages'));
-const More = lazy(() => import('./pages/More'));
-const Network = lazy(() => import('./pages/Network'));
-const NewEvent = lazy(() => import('./pages/NewEvent'));
-const NewFirm = lazy(() => import('./pages/NewFirm'));
-const NewJob = lazy(() => import('./pages/NewJob'));
-const NewProject = lazy(() => import('./pages/NewProject'));
-const NotFound = lazy(() => import('./pages/NotFound'));
-const Notifications = lazy(() => import('./pages/Notifications'));
-const PasswordReset = lazy(() => import('./pages/PasswordReset'));
-const PostPage = lazy(() => import('./pages/PostPage'));
-const Privacy = lazy(() => import('./pages/Privacy'));
-const Profile = lazy(() => import('./pages/Profile'));
-const ProjectDetail = lazy(() => import('./pages/ProjectDetail'));
-const QuestionDetail = lazy(() => import('./pages/QuestionDetail'));
-const Questions = lazy(() => import('./pages/Questions'));
-const Resources = lazy(() => import('./pages/Resources'));
-const Search = lazy(() => import('./pages/Search'));
-const Settings = lazy(() => import('./pages/Settings'));
-const Verify = lazy(() => import('./pages/Verify'));
+/** A lazily loaded page that can also be fetched ahead of time. */
+const page = (load) => Object.assign(lazy(load), { preload: load });
+
+const Admin = page(() => import('./pages/Admin'));
+const Auth = page(() => import('./pages/Auth'));
+const College = page(() => import('./pages/College'));
+const EventDetail = page(() => import('./pages/EventDetail'));
+const Events = page(() => import('./pages/Events'));
+const Explore = page(() => import('./pages/Explore'));
+const FirmDetail = page(() => import('./pages/FirmDetail'));
+const Firms = page(() => import('./pages/Firms'));
+const Home = page(() => import('./pages/Home'));
+const JobDetail = page(() => import('./pages/JobDetail'));
+const Jobs = page(() => import('./pages/Jobs'));
+const Landing = page(() => import('./pages/Landing'));
+const Mentors = page(() => import('./pages/Mentors'));
+const Messages = page(() => import('./pages/Messages'));
+const More = page(() => import('./pages/More'));
+const Network = page(() => import('./pages/Network'));
+const NewEvent = page(() => import('./pages/NewEvent'));
+const NewFirm = page(() => import('./pages/NewFirm'));
+const NewJob = page(() => import('./pages/NewJob'));
+const NewProject = page(() => import('./pages/NewProject'));
+const NotFound = page(() => import('./pages/NotFound'));
+const Notifications = page(() => import('./pages/Notifications'));
+const PasswordReset = page(() => import('./pages/PasswordReset'));
+const PostPage = page(() => import('./pages/PostPage'));
+const Privacy = page(() => import('./pages/Privacy'));
+const Profile = page(() => import('./pages/Profile'));
+const ProjectDetail = page(() => import('./pages/ProjectDetail'));
+const QuestionDetail = page(() => import('./pages/QuestionDetail'));
+const Questions = page(() => import('./pages/Questions'));
+const Resources = page(() => import('./pages/Resources'));
+const Search = page(() => import('./pages/Search'));
+const Settings = page(() => import('./pages/Settings'));
+const Verify = page(() => import('./pages/Verify'));
+
+/** Pages behind the main tabs, fetched while the app is idle so they open instantly. */
+const TAB_PAGES = [Home, Network, College, Jobs, Messages, More, Notifications, Profile, Explore];
 
 const SPLASH_KEY = 'arcella_splash_seen';
 const SPLASH_MS = 2100;
@@ -75,6 +81,7 @@ const PROTECTED = [
 
 export default function App() {
   const { user, ready } = useAuth();
+  const signedIn = Boolean(user);
   const [splashDone, setSplashDone] = useState(() => sessionStorage.getItem(SPLASH_KEY) === '1');
 
   useEffect(() => {
@@ -85,6 +92,12 @@ export default function App() {
     }, SPLASH_MS);
     return () => clearTimeout(id);
   }, [splashDone]);
+
+  useEffect(() => {
+    if (!signedIn) return undefined;
+    const id = setTimeout(() => TAB_PAGES.forEach((Page) => Page.preload()), 1500);
+    return () => clearTimeout(id);
+  }, [signedIn]);
 
   return (
     <>

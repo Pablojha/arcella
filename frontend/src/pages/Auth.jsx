@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import CodeStep from '../components/auth/CodeStep';
 import AuthLayout from '../components/layout/AuthLayout';
 import Button from '../components/ui/Button';
 import Field from '../components/ui/Field';
@@ -10,12 +11,14 @@ import { useTitle } from '../hooks/useTitle';
 import api from '../lib/api';
 import { USER_TYPES } from '../lib/constants';
 
+/** Login and sign-up. Unconfirmed emails get a 6-digit code step before the session starts. */
 export default function Auth({ mode }) {
   const register = mode === 'register';
   const { user, login } = useAuth();
   const toast = useToast();
   const [params] = useSearchParams();
   const [form, setForm] = useState({ name: '', email: '', password: '', type: 'student' });
+  const [pending, setPending] = useState(null);
   const [busy, setBusy] = useState(false);
   const next = /^\/(?!\/)/.test(params.get('next') ?? '') ? params.get('next') : '/';
   const set = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
@@ -23,18 +26,41 @@ export default function Auth({ mode }) {
 
   if (user) return <Navigate to={next} replace />;
 
+  const welcome = (session) => {
+    login(session);
+    toast.success(`Welcome${register ? ' to Arcella' : ' back'}, ${session.user.name.split(' ')[0]}!`);
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     setBusy(true);
     try {
-      const session = await api.post(`/auth/${mode}`, register ? form : { email: form.email, password: form.password });
-      login(session);
-      toast.success(register ? `Welcome to Arcella, ${session.user.name.split(' ')[0]}!` : 'Welcome back');
+      const result = await api.post(`/auth/${mode}`, register ? form : { email: form.email, password: form.password });
+      if (result.verify) setPending(result);
+      else welcome(result);
     } catch (error) {
       toast.error(error.message);
+    } finally {
       setBusy(false);
     }
   };
+
+  if (pending) {
+    return (
+      <AuthLayout title="Check your email" subtitle="One quick step to confirm it's you.">
+        <div className="mt-7">
+          <CodeStep
+            email={pending.email}
+            devCode={pending.devCode}
+            submitLabel="Verify email"
+            onSubmit={async (code) => welcome(await api.post('/auth/verify-email', { email: pending.email, code }))}
+            onResend={() => api.post('/auth/resend-code', { email: pending.email })}
+            onBack={() => setPending(null)}
+          />
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout title={register ? 'Create your account' : 'Welcome back'} subtitle={register ? 'Join the network for Indian architecture.' : 'Log in to your studio.'}>

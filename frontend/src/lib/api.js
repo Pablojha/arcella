@@ -2,6 +2,9 @@ import axios from 'axios';
 
 export const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
+// Open the connection to the API while the app is still starting.
+document.head.append(Object.assign(document.createElement('link'), { rel: 'preconnect', href: API_URL, crossOrigin: 'anonymous' }));
+
 const TOKEN_KEY = 'arcella_token';
 const SLOW_MS = 6000;
 let lastSlowNotice = 0;

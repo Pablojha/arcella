@@ -2,7 +2,7 @@
 
 A professional network for architecture students, alumni, faculty and firms in India: portfolios with critiques, private college groups with verified membership, stories, jobs, firm pages, mentorship, events, Q&A, study resources and direct messages. It works as a website, an installable PWA and an Android app.
 
-It also includes what a public launch needs: search across the whole network, password reset by email, account deletion, reporting and blocking with an admin moderation queue, a privacy page, and anti-spam rate limits.
+It also includes what a public launch needs: email verification with a one-time code at sign-up, search across the whole network, password reset by code, account deletion, reporting and blocking with an admin moderation queue, a privacy page, and anti-spam rate limits.
 
 | Folder | Stack | Hosting |
 | --- | --- | --- |
@@ -39,7 +39,7 @@ npm run dev               # http://localhost:5173
 
 Register with the address in `ADMIN_EMAIL` to become a site admin. If you registered first, set the variable and log in again.
 
-**Emails in development.** With no Resend or SMTP settings, college verification codes and password-reset links are printed in the API terminal and shown on screen. In production the API refuses to send them until email is configured.
+**Codes in development.** With no Resend or SMTP settings, the 6-digit codes (sign-up, password reset, college email) are printed in the API terminal and shown on screen. In production, sign-up skips the code step until email is configured, so the site works from day one; password reset and college email codes need email.
 
 **Tests.** With MongoDB running, `cd backend && npm test` runs the API test suite against a separate `arcella_test` database (override with `MONGODB_TEST_URI`). Email and Cloudinary are switched off during tests, so nothing leaves your machine.
 
@@ -52,11 +52,11 @@ Register with the address in `ADMIN_EMAIL` to become a site admin. If you regist
 | `MONGODB_URI` | yes | MongoDB connection string |
 | `JWT_SECRET` | yes in production | Long random string used to sign sessions |
 | `JWT_EXPIRES` | no | Session length, default `30d` |
-| `CLIENT_URL` | yes | Frontend origin(s), comma-separated. The first one is used in password-reset links. `capacitor://localhost` and `https://localhost` are always allowed for the mobile app |
+| `CLIENT_URL` | yes | Frontend origin(s), comma-separated. `capacitor://localhost` and `https://localhost` are always allowed for the mobile app |
 | `ADMIN_EMAIL` | no | Comma-separated emails that become site admins |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | recommended in production | Upload storage. Without them files go to local disk |
 | `UPLOAD_DIR` | no | Folder for local uploads, default `backend/uploads` (for example a Render persistent disk) |
-| `RESEND_API_KEY` or `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | for email | College codes and password resets. Resend is tried first, then SMTP |
+| `RESEND_API_KEY` or `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | for email | One-time codes for sign-up, password reset and college email. Resend is tried first, then SMTP |
 | `MAIL_FROM` | with email | Sender, e.g. `Arcella <no-reply@yourdomain.in>` |
 | `PORT` | no | Defaults to 5000 (Render sets it automatically) |
 
@@ -64,14 +64,14 @@ Register with the address in `ADMIN_EMAIL` to become a site admin. If you regist
 
 | Variable | Purpose |
 | --- | --- |
-| `VITE_API_URL` | API base URL without `/api`, e.g. `https://arcella-api.onrender.com` |
+| `VITE_API_URL` | API base URL without `/api`, e.g. `https://arcella-api-pablojha.onrender.com` |
 | `VITE_CONTACT_EMAIL` | Optional contact address shown on the privacy page |
 
 ## Deploy
 
 ### 1. Database: MongoDB Atlas (free)
 
-1. Create a free M0 cluster at [mongodb.com/atlas](https://www.mongodb.com/atlas).
+1. Create a free M0 cluster at [mongodb.com/atlas](https://www.mongodb.com/atlas), on AWS in **Singapore** so it sits next to the API.
 2. Under **Database Access**, add a user with a password.
 3. Under **Network Access**, allow `0.0.0.0/0` (Render's free tier has no fixed IP).
 4. **Connect → Drivers** gives a URI like `mongodb+srv://user:pass@cluster.xxxx.mongodb.net/arcella`. Keep `/arcella` as the database name.
@@ -84,21 +84,22 @@ Register with the address in `ADMIN_EMAIL` to become a site admin. If you regist
 
 Notes:
 
-- Render's free instance sleeps after about 15 minutes idle and takes 30–60 seconds to wake. The app shows "Waking up the server…" instead of failing.
+- The service runs in Render's **Singapore** region, the closest to India.
+- Render's free instance sleeps after about 15 idle minutes and takes 30–60 seconds to wake. The workflow in `.github/workflows/keep-api-awake.yml` pings it every 10 minutes so it stays awake. If your Render URL is not `https://arcella-api-pablojha.onrender.com`, set a repository variable `API_URL` on GitHub. GitHub pauses scheduled workflows after 60 days without commits.
 - Render's disk is wiped on every deploy and restart, so set up **Cloudinary** (free) for uploads in production. Its free plan caps raw files (DWG, ZIP, XLSX) at 10 MB, and PDF/ZIP delivery must be enabled under *Settings → Security*.
 - Verification documents are stored in MongoDB rather than on disk. Only admins and that college's moderators can open them, and they are deleted as soon as a request is approved or rejected.
 
 ### 3. Web app: Vercel
 
 1. **Add New → Project**, import the repository and set the root directory to `frontend` (framework: Vite).
-2. Add `VITE_API_URL` = your Render URL, e.g. `https://arcella-api.onrender.com`.
+2. Add `VITE_API_URL` = your Render URL, e.g. `https://arcella-api-pablojha.onrender.com`.
 3. Deploy. `vercel.json` rewrites every route to `index.html` so deep links work.
 4. Copy the Vercel URL into `CLIENT_URL` on Render (comma-separate several, e.g. a custom domain too) and redeploy the API.
 
-### 4. Email for codes and password resets
+### 4. Email for one-time codes
 
-- **Resend:** create an API key, verify your sending domain and set `RESEND_API_KEY` and `MAIL_FROM`.
-- **SMTP:** for example a Gmail account with an app password: `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER`, `SMTP_PASS`.
+- **Gmail (easiest, about 500 emails a day):** turn on 2-Step Verification for the Gmail account, create an app password, then set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER=you@gmail.com`, `SMTP_PASS=<app password>` and `MAIL_FROM=Arcella <you@gmail.com>`.
+- **Resend:** create an API key, **verify your own domain** (without it Resend only delivers to your own address) and set `RESEND_API_KEY` and `MAIL_FROM`.
 
 ### 5. Before you go public
 
@@ -117,7 +118,7 @@ Admins manage colleges, email domains, moderators and manual verification from *
 
 - **Report and block:** members can report posts, comments, projects, questions, answers and profiles, and block other members from a post, profile or conversation. Blocking hides posts, stories and comments both ways, stops messages and connection requests, and removes any existing connection.
 - **Moderation:** open reports appear in **Admin → Reports** with a preview. Admins can remove the content (or delete the account) or dismiss the report.
-- **Accounts:** password reset by email (30-minute link), change password (signs out other devices), and **Settings → Delete account**, which removes the member and everything they created.
+- **Accounts:** new emails are confirmed with a 6-digit code. Codes expire after 10 minutes, allow 5 attempts and can be resent after 30 seconds. Password reset also uses a code. Changing your password signs out other devices, and **Settings → Delete account** removes the member and everything they created.
 - **Rate limits:** login, sign-up and password routes are limited per IP; codes, posts, comments, messages, connection requests and reports are limited per account.
 
 ## Installable app

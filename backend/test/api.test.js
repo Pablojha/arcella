@@ -43,8 +43,10 @@ async function call(method, url, { token, body, form, status = [200, 201] } = {}
   return data;
 }
 
+/** Signs up and confirms the email with the code (shown as devCode because tests send no email). */
 const join = async (key, name, type, email = `${key}@test.arcella`) => {
-  people[key] = await call('POST', '/auth/register', { body: { name, email, password: 'password123', type } });
+  const step = await call('POST', '/auth/register', { body: { name, email, password: 'password123', type } });
+  people[key] = await call('POST', '/auth/verify-email', { body: { email, code: step.devCode } });
   return people[key];
 };
 const tokenOf = (key) => people[key].token;
@@ -64,6 +66,21 @@ after(async () => {
   await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
   await fs.rm(process.env.UPLOAD_DIR, { recursive: true, force: true });
+});
+
+test('confirms new emails with a one-time code before signing in', async () => {
+  const step = await call('POST', '/auth/register', { body: { name: 'Dana Iyer', email: 'dana@test.arcella', password: 'password123', type: 'student' } });
+  assert.equal(step.verify, true);
+  assert.equal('token' in step, false);
+  const again = await call('POST', '/auth/login', { body: { email: 'dana@test.arcella', password: 'password123' } });
+  assert.equal(again.verify, true);
+  const wrong = await call('POST', '/auth/verify-email', { body: { email: 'dana@test.arcella', code: '000000' }, status: 400 });
+  assert.match(wrong.message, /4 attempts left/);
+  await call('POST', '/auth/resend-code', { body: { email: 'dana@test.arcella' }, status: 429 });
+  const session = await call('POST', '/auth/verify-email', { body: { email: 'dana@test.arcella', code: step.devCode } });
+  assert.equal(session.user.emailVerified, true);
+  await call('POST', '/auth/verify-email', { body: { email: 'dana@test.arcella', code: step.devCode }, status: 400 });
+  assert.ok((await call('POST', '/auth/login', { body: { email: 'dana@test.arcella', password: 'password123' } })).token);
 });
 
 test('registers members, keeps passwords private and grants admin by email', async () => {
@@ -114,15 +131,16 @@ test('reviews an uploaded document and deletes it after review', async () => {
   await call('GET', `/posts/${group._id}`, { token: tokenOf('chitra'), status: 403 });
 });
 
-test('resets a forgotten password and signs out older sessions', async () => {
-  const { devLink } = await call('POST', '/auth/forgot', { body: { email: 'asha@test.arcella' } });
-  const token = new URL(devLink).searchParams.get('token');
+test('resets a forgotten password with a code and signs out older sessions', async () => {
+  const email = 'asha@test.arcella';
+  const { devCode } = await call('POST', '/auth/forgot', { body: { email } });
+  assert.deepEqual(await call('POST', '/auth/forgot', { body: { email: 'nobody@test.arcella' } }), { ok: true });
   await new Promise((resolve) => setTimeout(resolve, 1100));
-  const session = await call('POST', '/auth/reset', { body: { token, password: 'newpassword1' } });
+  const session = await call('POST', '/auth/reset', { body: { email, code: devCode, password: 'newpassword1' } });
   await call('GET', '/auth/me', { token: tokenOf('asha'), status: 401 });
-  await call('POST', '/auth/reset', { body: { token, password: 'another12' }, status: 400 });
+  await call('POST', '/auth/reset', { body: { email, code: devCode, password: 'another12' }, status: 400 });
   people.asha.token = session.token;
-  await call('POST', '/auth/login', { body: { email: 'asha@test.arcella', password: 'newpassword1' } });
+  await call('POST', '/auth/login', { body: { email, password: 'newpassword1' } });
 });
 
 test('blocks members everywhere and lets people report content', async () => {
