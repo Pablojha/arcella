@@ -20,7 +20,7 @@ services:
       - key: MONGODB_URI
         sync: false
       - key: CLIENT_URL
-        sync: false
+        value: https://arcella-seven.vercel.app
       - key: ADMIN_EMAIL
         sync: false
       - key: CLOUDINARY_CLOUD_NAME

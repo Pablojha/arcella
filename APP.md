@@ -56,9 +56,9 @@ The Android app is the same React build wrapped by [Capacitor](https://capacitor
    - Feature graphic 1024 × 500
    - At least two phone screenshots (Home, a portfolio, a college group)
 4. **App content** (all required):
-   - **Privacy policy URL:** `https://<your-vercel-app>/privacy`. Review that page first and set `VITE_CONTACT_EMAIL`.
+   - **Privacy policy URL:** `https://arcella-seven.vercel.app/privacy`. Review that page first and set `VITE_CONTACT_EMAIL`.
    - **Data safety:** declare name, email, photos and videos, files and docs (verification documents, deleted after review), messages and other user-generated content, all encrypted in transit.
-   - **Account deletion:** in the app at **More → Settings → Delete account**. For the web link Play asks for, use `https://<your-vercel-app>/settings` (members sign in, then delete).
+   - **Account deletion:** in the app at **More → Settings → Delete account**. For the web link Play asks for, use `https://arcella-seven.vercel.app/settings` (members sign in, then delete).
    - **User-generated content:** Arcella has in-app reporting, blocking and an admin moderation queue (**Admin → Reports**), which Google's policy for social apps requires.
    - **Content rating** questionnaire, **target audience** (choose honestly; many members are college students aged 17 and up) and the **ads** declaration (no ads).
 5. **Testing:** new personal developer accounts must first run a *closed test* with at least 12 opted-in testers for 14 days before they can apply for production access. Check the current rule in Play Console, since Google changes it from time to time.

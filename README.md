@@ -4,6 +4,8 @@ A professional network for architecture students, alumni, faculty and firms in I
 
 It also includes what a public launch needs: email verification with a one-time code at sign-up, search across the whole network, password reset by code, account deletion, reporting and blocking with an admin moderation queue, a privacy page, and anti-spam rate limits.
 
+Live at **[arcella-seven.vercel.app](https://arcella-seven.vercel.app)**.
+
 | Folder | Stack | Hosting |
 | --- | --- | --- |
 | `backend/` | Node.js, Express 5, MongoDB (Mongoose), JWT, bcrypt, multer, zod | Render (`render.yaml`) |
@@ -78,7 +80,7 @@ Register with the address in `ADMIN_EMAIL` to become a site admin. If you regist
 
 ### 2. API: Render
 
-**Blueprint (uses `render.yaml`):** push the repo to GitHub, then in Render choose **New → Blueprint**, pick the repository and fill in the variables it asks for (`MONGODB_URI`, `CLIENT_URL`, `ADMIN_EMAIL` and optionally Cloudinary and email). `JWT_SECRET` is generated for you.
+**Blueprint (uses `render.yaml`):** open [render.com/deploy?repo=https://github.com/Pablojha/arcella](https://render.com/deploy?repo=https://github.com/Pablojha/arcella) (or **New → Blueprint** and pick the repository) and fill in the variables it asks for (`MONGODB_URI`, `ADMIN_EMAIL` and optionally Cloudinary and email). `JWT_SECRET` is generated for you and `CLIENT_URL` is preset to the Vercel app.
 
 **Manual:** **New → Web Service**, root directory `backend`, build command `npm install`, start command `npm start`, health check path `/api/health`, and add the variables from the table above with `NODE_ENV=production`.
 
@@ -94,7 +96,7 @@ Notes:
 1. **Add New → Project**, import the repository and set the root directory to `frontend` (framework: Vite).
 2. Add `VITE_API_URL` = your Render URL, e.g. `https://arcella-api-pablojha.onrender.com`.
 3. Deploy. `vercel.json` rewrites every route to `index.html` so deep links work.
-4. Copy the Vercel URL into `CLIENT_URL` on Render (comma-separate several, e.g. a custom domain too) and redeploy the API.
+4. `render.yaml` presets `CLIENT_URL` to `https://arcella-seven.vercel.app`. If your Vercel URL is different or you add a custom domain, update `CLIENT_URL` on Render (comma-separate several) and redeploy the API.
 
 ### 4. Email for one-time codes
 
