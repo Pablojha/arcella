@@ -1,3 +1,4 @@
+import ChatState from '../models/ChatState.js';
 import Message from '../models/Message.js';
 import User from '../models/User.js';
 import { CARD } from '../config/constants.js';
@@ -9,10 +10,18 @@ import { ApiError, found } from '../utils/errors.js';
 import { has, same } from '../utils/shape.js';
 
 const PAGE = 30;
+const PIN_LIMIT = 3;
 
+/**
+ * The viewer's chats, latest activity first with pinned ones on top (in the order they were pinned). Hidden chats are
+ * left out, or are the only ones listed with `hidden`. Chats with blocked members never appear.
+ */
 export async function conversations(req, res) {
   const me = req.user._id;
-  const hidden = await hiddenIds(req.user);
+  const [blocked, states] = await Promise.all([hiddenIds(req.user), ChatState.find({ user: me }).lean()]);
+  const hiddenChats = states.filter((state) => state.hidden).map((state) => state.other);
+  const pins = states.filter((state) => state.pinnedAt);
+  const people = req.query.hidden ? { $in: hiddenChats, $nin: blocked } : { $nin: [...blocked, ...hiddenChats] };
   const rows = await Message.aggregate([
     { $match: { $or: [{ from: me }, { to: me }] } },
     { $sort: { _id: -1 } },
@@ -24,17 +33,47 @@ export async function conversations(req, res) {
         unread: { $sum: { $cond: [{ $and: [{ $eq: ['$to', me] }, { $eq: ['$read', false] }] }, 1, 0] } },
       },
     },
-    { $match: { _id: { $nin: hidden } } },
-    { $addFields: { activity: { $max: ['$last.createdAt', '$reaction.at'] } } },
-    { $sort: { activity: -1 } },
+    { $match: { _id: people } },
+    // Pinned chats sort first here too, so the 50-chat limit never drops one that hasn't been active lately.
+    { $addFields: { activity: { $max: ['$last.createdAt', '$reaction.at'] }, pinned: { $in: ['$_id', pins.map((state) => state.other)] } } },
+    { $sort: { pinned: -1, activity: -1 } },
     { $limit: 50 },
   ]);
   const users = await User.find({ _id: { $in: rows.map((row) => row._id) } }).select(CARD).lean();
   const byId = new Map(users.map((user) => [String(user._id), user]));
+  const pinnedAt = new Map(pins.map((state) => [String(state.other), state.pinnedAt]));
+  const pinTime = (item) => pinnedAt.get(String(item.user._id));
   const items = rows
     .filter((row) => byId.has(String(row._id)))
-    .map((row) => ({ user: byId.get(String(row._id)), last: row.last, reaction: row.reaction.at > row.last.createdAt ? row.reaction : null, activity: row.activity, unread: row.unread }));
+    .map((row) => ({
+      user: byId.get(String(row._id)),
+      last: row.last,
+      reaction: row.reaction.at > row.last.createdAt ? row.reaction : null,
+      activity: row.activity,
+      unread: row.unread,
+      pinned: row.pinned,
+    }))
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned) || (a.pinned ? pinTime(a) - pinTime(b) : 0));
   res.json({ items });
+}
+
+/** Pins (up to 3) or hides a chat for the viewer only. Hiding also unpins it, and new messages don't bring it back. */
+export async function setState(req, res) {
+  const me = req.user._id;
+  const other = found(await User.exists({ _id: req.params.userId }), 'User')._id;
+  const { pinned, hidden } = req.body;
+  const state = (await ChatState.findOne({ user: me, other })) ?? new ChatState({ user: me, other });
+  if (hidden !== undefined) state.hidden = hidden;
+  if (hidden || pinned === false) state.pinnedAt = undefined;
+  if (pinned && !state.pinnedAt) {
+    if (state.hidden) throw new ApiError(400, 'Unhide this chat to pin it');
+    if ((await ChatState.countDocuments({ user: me, other: { $ne: other }, pinnedAt: { $ne: null } })) >= PIN_LIMIT) {
+      throw new ApiError(400, 'You can pin up to 3 chats. Unpin one to pin this.');
+    }
+    state.pinnedAt = new Date();
+  }
+  await state.save();
+  res.json({ pinned: Boolean(state.pinnedAt), hidden: state.hidden });
 }
 
 /**
@@ -82,7 +121,12 @@ export async function thread(req, res) {
   }
   const seen = await Message.findOne({ from: me, to: other._id, read: true }).sort({ _id: -1 }).select('_id').lean();
   const presence = { online: isOnline(other._id), activeAt: other.lastActiveAt ?? null };
-  const details = after || before ? {} : { user: other, canMessage: await canMessage(req.user, other), blockedByMe: has(req.user.blocked, other._id) };
+  let details = {};
+  if (!after && !before) {
+    const state = await ChatState.findOne({ user: me, other: other._id }).lean();
+    const chat = { pinned: Boolean(state?.pinnedAt), hidden: Boolean(state?.hidden) };
+    details = { user: other, canMessage: await canMessage(req.user, other), blockedByMe: has(req.user.blocked, other._id), chat };
+  }
   res.json({ items, hasMore, seenUntil: seen?._id ?? null, presence, ...details });
 }
 

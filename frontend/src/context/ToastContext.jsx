@@ -7,16 +7,22 @@ const ICONS = { success: CircleCheck, error: CircleAlert, info: Info };
 const TONES = { success: 'text-brand', error: 'text-accent', info: 'text-muted' };
 let nextId = 0;
 
+/** Toasts: `toast.info(message, { action: { label, onClick }, duration })`; an action button closes its toast. */
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
-  const push = useCallback((type, message) => {
-    const id = ++nextId;
-    setToasts((list) => [...list.slice(-2), { id, type, message }]);
-    setTimeout(() => setToasts((list) => list.filter((toast) => toast.id !== id)), 3800);
-  }, []);
+  const dismiss = useCallback((id) => setToasts((list) => list.filter((toast) => toast.id !== id)), []);
 
-  const toast = useMemo(() => ({ success: (m) => push('success', m), error: (m) => push('error', m), info: (m) => push('info', m) }), [push]);
+  const push = useCallback(
+    (type, message, { action, duration = 3800 } = {}) => {
+      const id = ++nextId;
+      setToasts((list) => [...list.slice(-2), { id, type, message, action }]);
+      setTimeout(() => dismiss(id), duration);
+    },
+    [dismiss],
+  );
+
+  const toast = useMemo(() => ({ success: (m, o) => push('success', m, o), error: (m, o) => push('error', m, o), info: (m, o) => push('info', m, o) }), [push]);
 
   useEffect(() => {
     const onSlow = () => toast.info('Waking up the server. Free hosting can take up to a minute on the first visit.');
@@ -29,7 +35,7 @@ export function ToastProvider({ children }) {
       {children}
       <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[90] flex flex-col items-center gap-2 px-4 md:bottom-6 md:items-end md:px-6">
         <AnimatePresence>
-          {toasts.map(({ id, type, message }) => {
+          {toasts.map(({ id, type, message, action }) => {
             const Icon = ICONS[type];
             return (
               <motion.div
@@ -44,6 +50,18 @@ export function ToastProvider({ children }) {
               >
                 <Icon size={18} className={`mt-px shrink-0 ${TONES[type]}`} />
                 <span className="min-w-0 break-words">{message}</span>
+                {action && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      action.onClick();
+                      dismiss(id);
+                    }}
+                    className="-my-1 ml-auto shrink-0 rounded-full px-2 py-1 font-semibold text-brand hover:bg-brand/10"
+                  >
+                    {action.label}
+                  </button>
+                )}
               </motion.div>
             );
           })}

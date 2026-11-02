@@ -44,6 +44,12 @@ export function usePressGestures({ onTap, onDoubleTap, onLongPress }) {
       }
     },
     onPointerCancel: cancel,
+    // The click that may follow a long-press (e.g. on a link) must not also count as a tap.
+    onClickCapture(event) {
+      if (!press.current.held) return;
+      event.preventDefault();
+      event.stopPropagation();
+    },
     onContextMenu(event) {
       event.preventDefault();
       if (!press.current.held) onLongPress?.(event.currentTarget);

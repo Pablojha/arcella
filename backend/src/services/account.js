@@ -1,4 +1,5 @@
 import Answer from '../models/Answer.js';
+import ChatState from '../models/ChatState.js';
 import Comment from '../models/Comment.js';
 import Connection from '../models/Connection.js';
 import Critique from '../models/Critique.js';
@@ -73,6 +74,7 @@ export async function deleteAccount(userId) {
     Critique.deleteMany({ author: userId }),
     Connection.deleteMany({ $or: [{ from: userId }, { to: userId }] }),
     removeMessages(userId),
+    ChatState.deleteMany({ $or: [{ user: userId }, { other: userId }] }),
     Notification.deleteMany({ $or: [{ user: userId }, { actor: userId }] }),
     Session.deleteMany({ $or: [{ mentor: userId }, { mentee: userId }] }),
     Verification.deleteMany({ user: userId }),

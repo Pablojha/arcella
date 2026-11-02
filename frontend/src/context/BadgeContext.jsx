@@ -23,6 +23,11 @@ export function BadgeProvider({ children }) {
   usePoll(refresh, 15_000, signedIn);
   useSocketEvent('message:new', refresh);
 
+  useEffect(() => {
+    window.addEventListener('chats:changed', refresh);
+    return () => window.removeEventListener('chats:changed', refresh);
+  }, [refresh]);
+
   return <BadgeContext value={{ ...badges, refresh }}>{children}</BadgeContext>;
 }
 

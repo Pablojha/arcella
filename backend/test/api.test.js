@@ -176,6 +176,27 @@ test('reacts to messages with one emoji per person, live', async () => {
   bilalLive.disconnect();
 });
 
+test('pins up to three chats and hides chats only for yourself', async () => {
+  const { asha, bilal } = people;
+  await join('esha', 'Esha Patel', 'student');
+  const state = (other, body, status) => call('PATCH', `/messages/${people[other].user._id}/state`, { token: asha.token, body, status });
+  const listed = async (query = '') => (await call('GET', `/messages${query}`, { token: asha.token })).items;
+  for (const other of ['bilal', 'chitra', 'admin']) assert.equal((await state(other, { pinned: true })).pinned, true);
+  assert.equal((await state('esha', { pinned: true }, 400)).message, 'You can pin up to 3 chats. Unpin one to pin this.');
+  assert.deepEqual([(await listed())[0].user._id, (await listed())[0].pinned], [bilal.user._id, true]);
+
+  assert.deepEqual(await state('bilal', { hidden: true }), { pinned: false, hidden: true });
+  await call('POST', `/messages/${asha.user._id}`, { token: bilal.token, body: { text: 'Still there?' } });
+  assert.equal((await listed()).some((item) => item.user._id === bilal.user._id), false);
+  assert.deepEqual((await listed('?hidden=1')).map((item) => item.user._id), [bilal.user._id]);
+  assert.equal((await call('GET', '/notifications/badges', { token: asha.token })).messages, 0);
+  assert.ok((await call('GET', '/messages', { token: bilal.token })).items.some((item) => item.user._id === asha.user._id));
+
+  assert.deepEqual(await state('bilal', { hidden: false, pinned: true }), { pinned: true, hidden: false });
+  assert.deepEqual((await call('GET', `/messages/${bilal.user._id}`, { token: asha.token })).chat, { pinned: true, hidden: false });
+  for (const other of ['chitra', 'admin']) await state(other, { pinned: false });
+});
+
 test('verifies a college by email code with limited attempts', async () => {
   const [iitr] = (await call('GET', '/colleges?q=roorkee', { token: tokenOf('asha') })).items;
   people.iitr = iitr;

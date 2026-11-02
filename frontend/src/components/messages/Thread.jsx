@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useBadges } from '../../context/BadgeContext';
 import { useToast } from '../../context/ToastContext';
 import { useBlock } from '../../hooks/useBlock';
+import { useChatSettings } from '../../hooks/useChatSettings';
 import { useMedia } from '../../hooks/useMedia';
 import { usePoll } from '../../hooks/usePoll';
 import { useSocketEvent } from '../../hooks/useSocketEvent';
@@ -60,7 +62,9 @@ export default function Thread({ userId }) {
   const { refresh: refreshBadges } = useBadges();
   const toast = useToast();
   const toggleBlock = useBlock();
+  const navigate = useNavigate();
   const desktop = useMedia('(min-width: 768px)');
+  const settings = useChatSettings((id, chat) => setThread((current) => ({ ...current, chat })));
   const [thread, setThread] = useState({ user: null, items: [], hasMore: false, canMessage: false, blockedByMe: false, seenUntil: null, presence: null, error: '' });
   const [typing, setTyping] = useState(false);
   const [live, setLive] = useState(socket.connected);
@@ -186,7 +190,13 @@ export default function Thread({ userId }) {
       <ChatHeader
         user={other}
         presence={thread.presence}
+        chat={thread.chat}
         blockedByMe={thread.blockedByMe}
+        onPin={() => settings.pin(userId, !thread.chat?.pinned)}
+        onHide={async () => {
+          if (await settings.hide(userId, thread.chat?.pinned)) navigate('/messages');
+        }}
+        onUnhide={() => settings.unhide(userId)}
         onReport={() => setReporting({ type: 'user', id: other._id, label: other.name })}
         onBlock={block}
       />

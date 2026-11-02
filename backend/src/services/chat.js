@@ -1,3 +1,4 @@
+import ChatState from '../models/ChatState.js';
 import Connection from '../models/Connection.js';
 import Message from '../models/Message.js';
 import { same } from '../utils/shape.js';
@@ -13,3 +14,6 @@ export async function canMessage(me, other) {
   const ids = pair(me._id, other._id);
   return Boolean((await Connection.exists({ ...ids, status: 'accepted' })) || (await Message.exists(ids)));
 }
+
+/** The people whose chats this user has hidden from their list. */
+export const hiddenChats = (userId) => ChatState.find({ user: userId, hidden: true }).distinct('other');

@@ -1,4 +1,4 @@
-import { ArrowLeft, Ban, Flag } from 'lucide-react';
+import { ArrowLeft, Ban, Eye, EyeOff, Flag, Pin, PinOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ago } from '../../lib/format';
 import Avatar from '../ui/Avatar';
@@ -15,7 +15,7 @@ function activity(presence) {
   return '';
 }
 
-export default function ChatHeader({ user, presence, blockedByMe, onReport, onBlock }) {
+export default function ChatHeader({ user, presence, chat, blockedByMe, onPin, onHide, onUnhide, onReport, onBlock }) {
   const status = activity(presence);
   return (
     <header className="flex shrink-0 items-center gap-2 border-b border-line px-2 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] md:px-4 md:py-3">
@@ -40,6 +40,8 @@ export default function ChatHeader({ user, presence, blockedByMe, onReport, onBl
         <MoreMenu
           label="Chat options"
           items={[
+            !chat?.hidden && { label: chat?.pinned ? 'Unpin' : 'Pin', icon: chat?.pinned ? PinOff : Pin, onClick: onPin },
+            chat?.hidden ? { label: 'Unhide chat', icon: Eye, onClick: onUnhide } : { label: 'Hide chat', icon: EyeOff, onClick: onHide },
             { label: `Report ${user.name.split(' ')[0]}`, icon: Flag, onClick: onReport },
             { label: blockedByMe ? 'Unblock' : `Block ${user.name.split(' ')[0]}`, icon: Ban, onClick: onBlock, danger: !blockedByMe },
           ]}
