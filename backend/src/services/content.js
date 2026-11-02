@@ -44,7 +44,10 @@ const REMOVE = {
   },
   async comment(id) {
     const comment = await Comment.findByIdAndDelete(id);
-    if (comment) await Post.updateOne({ _id: comment.post }, { $inc: { commentsCount: -1 } });
+    if (!comment) return;
+    // Replies go with the comment they answer.
+    const { deletedCount } = await Comment.deleteMany({ parent: id });
+    await Post.updateOne({ _id: comment.post }, { $inc: { commentsCount: -(1 + deletedCount) } });
   },
   async project(id) {
     const project = await Project.findByIdAndDelete(id);

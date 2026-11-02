@@ -5,15 +5,14 @@ import { usePostActions } from '../../hooks/usePostActions';
 import { useReelSound } from '../../hooks/useReelSound';
 import ReportSheet from '../ReportSheet';
 import Avatar from '../ui/Avatar';
-import Sheet from '../ui/Sheet';
 import BigHeart from './BigHeart';
-import Comments from './Comments';
+import CommentsSheet from './CommentsSheet';
 import ReelPlayer from './ReelPlayer';
 
-function ReelButton({ icon: Icon, label, count, active, onClick }) {
+function ReelButton({ icon: Icon, label, count, active, activeClass = 'text-white', onClick }) {
   return (
     <button type="button" onClick={onClick} aria-label={label} aria-pressed={active} className="flex flex-col items-center gap-1 text-xs font-semibold drop-shadow">
-      <span className={`grid size-11 place-items-center rounded-full bg-black/35 backdrop-blur-sm transition active:scale-90 ${active ? 'text-accent' : ''}`}>
+      <span className={`grid size-11 place-items-center rounded-full bg-black/35 backdrop-blur-sm transition active:scale-90 ${active ? activeClass : ''}`}>
         <Icon size={22} className={active ? 'fill-current' : ''} />
       </span>
       {count > 0 && <span className="tabular-nums">{count}</span>}
@@ -83,16 +82,14 @@ export default function Reel({ post, onActive }) {
           )}
         </div>
         <div className="absolute bottom-0 right-0 flex flex-col items-center gap-4 p-3 pb-[max(1.75rem,env(safe-area-inset-bottom))]">
-          <ReelButton icon={Heart} label="Like" active={like.active} count={like.count} onClick={toggleLike} />
+          <ReelButton icon={Heart} label="Like" active={like.active} activeClass="text-alert" count={like.count} onClick={toggleLike} />
           <ReelButton icon={MessageCircle} label="Comments" count={commentsCount} onClick={() => setCommentsOpen(true)} />
           <ReelButton icon={Send} label="Share" onClick={share} />
           <ReelButton icon={Bookmark} label="Save" active={saved} onClick={toggleSave} />
           <ReelButton icon={soundOn ? Volume2 : VolumeX} label={soundOn ? 'Mute' : 'Unmute'} onClick={() => setSoundOn(!soundOn)} />
         </div>
       </div>
-      <Sheet open={commentsOpen} onClose={() => setCommentsOpen(false)} title="Comments">
-        <Comments post={post} onCount={(change) => setCommentsCount((count) => count + change)} onReport={setReporting} />
-      </Sheet>
+      <CommentsSheet post={post} open={commentsOpen} onClose={() => setCommentsOpen(false)} onCount={(change) => setCommentsCount((count) => count + change)} onReport={setReporting} />
       <ReportSheet target={reporting} onClose={() => setReporting(null)} />
     </section>
   );

@@ -16,7 +16,7 @@ const feedSchema = listQuery({
 
 const postSchema = z.object({ text: text(3000).optional(), college: optionalId, important: bool, aspect: decimal(0.05, 20) });
 const repostSchema = z.object({ text: text(3000).optional() });
-const commentSchema = z.object({ text: required(1000) });
+const commentSchema = z.object({ text: required(1000), parent: optionalId });
 
 const router = Router();
 
@@ -31,6 +31,7 @@ router.post('/:id/repost', writeLimiter, validate(repostSchema), ctrl.repost);
 router.delete('/:id/repost', ctrl.undoRepost);
 router.get('/:id/comments', ctrl.comments);
 router.post('/:id/comments', writeLimiter, validate(commentSchema), ctrl.addComment);
+router.post('/:id/comments/:commentId/like', ctrl.likeComment);
 router.delete('/:id/comments/:commentId', ctrl.removeComment);
 
 export default router;

@@ -3,11 +3,12 @@ import { useEffect } from 'react';
 /**
  * Keeps --app-height/--app-top on <html> equal to the visible area above the on-screen keyboard, and sets
  * data-keyboard while it is open, so full-screen layouts like the chat stay pinned above the keyboard.
+ * Pass `active = false` to switch it off (e.g. while a sheet with a text box is closed).
  */
-export function useViewportHeight() {
+export function useViewportHeight(active = true) {
   useEffect(() => {
     const viewport = window.visualViewport;
-    if (!viewport) return undefined;
+    if (!active || !viewport) return undefined;
     const root = document.documentElement;
     let tallest = viewport.height;
     const update = () => {
@@ -31,5 +32,5 @@ export function useViewportHeight() {
       ['--app-height', '--app-top'].forEach((name) => root.style.removeProperty(name));
       root.removeAttribute('data-keyboard');
     };
-  }, []);
+  }, [active]);
 }

@@ -14,6 +14,7 @@ import { has, same, withCount } from '../utils/shape.js';
 import { excerpt } from '../utils/text.js';
 
 const AUTHOR = { path: 'author', select: CARD };
+const REPLY_TO = { path: 'replyTo', select: 'name username' };
 const WITH_ORIGINAL = [AUTHOR, { path: 'repostOf', populate: AUTHOR }];
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Feed photos range from portrait 4:5 to landscape 1.91:1, like Instagram; anything beyond is cropped to fit.
@@ -159,25 +160,48 @@ export async function undoRepost(req, res) {
   res.json({ repostsCount });
 }
 
+/** A comment as a viewer sees it: a like count and whether they liked it, not who did. */
+const commentCard = (viewer, comment) => withCount(comment, 'likes', viewer._id, 'liked');
+
+/** Every comment and reply on a post, oldest first. Hidden people's comments go, with the replies under them. */
 export async function comments(req, res) {
   await readablePost(req);
-  const items = await Comment.find({ post: req.params.id, author: { $nin: await hiddenIds(req.user) } }).sort({ _id: 1 }).populate(AUTHOR).lean();
-  res.json({ items });
+  const items = await Comment.find({ post: req.params.id, author: { $nin: await hiddenIds(req.user) } }).sort({ _id: 1 }).populate([AUTHOR, REPLY_TO]).lean();
+  const threads = new Set(items.filter((comment) => !comment.parent).map((comment) => String(comment._id)));
+  res.json({ items: items.filter((comment) => !comment.parent || threads.has(String(comment.parent))).map((comment) => commentCard(req.user, comment)) });
 }
 
+/**
+ * Comments on a post, or replies with `parent`. A reply to a reply joins the same thread and answers its author.
+ * The post's author hears about every comment; whoever was replied to hears about the reply.
+ */
 export async function addComment(req, res) {
   const post = await readablePost(req);
-  const comment = await Comment.create({ post: post._id, author: req.user._id, text: req.body.text });
+  const { text, parent: parentId } = req.body;
+  const target = parentId && found(await Comment.findOne({ _id: parentId, post: post._id }).select('author parent').lean(), 'Comment');
+  const comment = await Comment.create({ post: post._id, author: req.user._id, text, parent: target ? (target.parent ?? target._id) : null, replyTo: target?.author });
   await Post.updateOne({ _id: post._id }, { $inc: { commentsCount: 1 } });
-  await notify({ user: post.author, actor: req.user._id, type: 'comment', text: excerpt(req.body.text), link: `/posts/${post._id}` });
-  await comment.populate(AUTHOR);
-  res.status(201).json(comment);
+  const note = { actor: req.user._id, text: excerpt(text), link: `/posts/${post._id}` };
+  if (target) await notify({ ...note, user: target.author, type: 'reply' });
+  if (!target || !same(target.author, post.author)) await notify({ ...note, user: post.author, type: 'comment' });
+  await comment.populate([AUTHOR, REPLY_TO]);
+  res.status(201).json(commentCard(req.user, comment.toObject()));
 }
 
+export async function likeComment(req, res) {
+  const post = await readablePost(req);
+  found(await Comment.exists({ _id: req.params.commentId, post: post._id }), 'Comment');
+  const { doc, active, count } = await toggle(Comment, req.params.commentId, 'likes', req.user._id);
+  if (active) await notify({ user: doc.author, actor: req.user._id, type: 'comment_like', text: excerpt(doc.text), link: `/posts/${post._id}` });
+  res.json({ liked: active, likesCount: count });
+}
+
+/** Deletes a comment and the replies under it; `removed` says how many went, for the post's comment count. */
 export async function removeComment(req, res) {
   const post = await readablePost(req);
   const comment = found(await Comment.findOne({ _id: req.params.commentId, post: post._id }), 'Comment');
   if (!same(post.author, req.user._id)) await assertCanManage(req.user, comment.author, post.college);
+  const removed = 1 + (await Comment.countDocuments({ parent: comment._id }));
   await removeContent('comment', comment._id);
-  res.json({ ok: true });
+  res.json({ removed });
 }

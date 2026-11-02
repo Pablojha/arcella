@@ -9,9 +9,8 @@ import api from '../../lib/api';
 import { formatDate, longAgo, plural } from '../../lib/format';
 import ReportSheet from '../ReportSheet';
 import MoreMenu from '../ui/MoreMenu';
-import Sheet from '../ui/Sheet';
 import UserChip from '../ui/UserChip';
-import Comments from './Comments';
+import CommentsSheet from './CommentsSheet';
 import MediaCarousel from './MediaCarousel';
 import PostActions from './PostActions';
 import QuotedPost from './QuotedPost';
@@ -177,9 +176,14 @@ function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = fal
         </time>
       </div>
 
-      <Sheet open={commentsOpen} onClose={() => setCommentsOpen(false)} title="Comments">
-        <Comments post={post} onCount={(change) => setCommentsCount((count) => count + change)} onReport={setReporting} />
-      </Sheet>
+      <CommentsSheet
+        post={post}
+        open={commentsOpen}
+        onClose={() => setCommentsOpen(false)}
+        canModerate={canModerate}
+        onCount={(change) => setCommentsCount((count) => count + change)}
+        onReport={setReporting}
+      />
       <ReportSheet target={reporting} onClose={() => setReporting(null)} />
     </article>
   );

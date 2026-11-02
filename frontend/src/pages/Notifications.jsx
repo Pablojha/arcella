@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ArrowBigUp, BadgeCheck, Bell, CircleAlert, CircleCheck, HandHeart, Heart, MessageSquare, MessageSquareText, Repeat2, Shield, ShieldCheck, TriangleAlert, UserCheck, UserPlus } from 'lucide-react';
+import { ArrowBigUp, BadgeCheck, Bell, CircleAlert, CircleCheck, HandHeart, Heart, MessageSquare, MessageSquareText, Repeat2, Reply, Shield, ShieldCheck, TriangleAlert, UserCheck, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Logo from '../components/brand/Logo';
 import Avatar from '../components/ui/Avatar';
@@ -17,6 +17,8 @@ import { timeAgo } from '../lib/format';
 const TYPES = {
   like: { icon: Heart, text: 'liked your post' },
   comment: { icon: MessageSquare, text: 'commented on your post' },
+  reply: { icon: Reply, text: 'replied to your comment' },
+  comment_like: { icon: Heart, text: 'liked your comment' },
   repost: { icon: Repeat2, text: 'reposted your post' },
   important: { icon: TriangleAlert, text: 'posted something important' },
   college_role: { icon: Shield, text: 'made you a group admin' },

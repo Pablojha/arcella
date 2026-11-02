@@ -126,6 +126,29 @@ test('connects members and shares posts with likes and comments', async () => {
   people.asha.post = post;
 });
 
+test('replies to comments in one-level threads, likes them and deletes a thread at once', async () => {
+  const { post } = people.asha;
+  const [first] = (await call('GET', `/posts/${post._id}/comments`, { token: tokenOf('asha') })).items;
+  const reply = await call('POST', `/posts/${post._id}/comments`, { token: tokenOf('asha'), body: { text: 'Thank you!', parent: first._id } });
+  assert.equal(reply.parent, first._id);
+  assert.equal(reply.replyTo.name, 'Bilal Khan');
+  // A reply to a reply joins the same thread and answers the reply's author.
+  const nested = await call('POST', `/posts/${post._id}/comments`, { token: tokenOf('chitra'), body: { text: 'Agreed', parent: reply._id } });
+  assert.equal(nested.parent, first._id);
+  assert.equal(nested.replyTo.name, 'Asha Rao');
+  assert.deepEqual(await call('POST', `/posts/${post._id}/comments/${first._id}/like`, { token: tokenOf('asha') }), { liked: true, likesCount: 1 });
+  const listed = (await call('GET', `/posts/${post._id}/comments`, { token: tokenOf('bilal') })).items;
+  assert.deepEqual(listed.map((comment) => [comment.text, comment.likesCount, comment.liked]), [['Congrats!', 1, false], ['Thank you!', 0, false], ['Agreed', 0, false]]);
+  assert.equal('likes' in listed[0], false);
+  const notes = (await call('GET', '/notifications', { token: tokenOf('bilal') })).items.map((note) => note.type);
+  assert.ok(notes.includes('reply') && notes.includes('comment_like'));
+  assert.equal((await call('GET', `/posts/${post._id}`, { token: tokenOf('asha') })).commentsCount, 3);
+  await call('DELETE', `/posts/${post._id}/comments/${first._id}`, { token: tokenOf('chitra'), status: 403 });
+  assert.deepEqual(await call('DELETE', `/posts/${post._id}/comments/${first._id}`, { token: tokenOf('bilal') }), { removed: 3 });
+  assert.equal((await call('GET', `/posts/${post._id}`, { token: tokenOf('asha') })).commentsCount, 0);
+  assert.equal((await call('GET', `/posts/${post._id}/comments`, { token: tokenOf('asha') })).items.length, 0);
+});
+
 test('chats with photos, GIFs and voice notes, live and in pages', async () => {
   const { asha, bilal } = people;
   const [ashaLive, bilalLive] = await Promise.all([socketOf('asha'), socketOf('bilal')]);

@@ -39,6 +39,7 @@ const OWNED = [
 /** Arrays of user ids the member may appear in on other people's documents. */
 const MENTIONS = [
   [Post, 'likes'],
+  [Comment, 'likes'],
   [Post, 'saves'],
   [Project, 'appreciations'],
   [Resource, 'bookmarks'],

@@ -32,7 +32,7 @@ export default function PostActions({ post, actions, slides, onComments, onUnrep
 
   return (
     <footer className="relative flex items-center px-1.5">
-      <LikeButton variant="icon" active={like.active} onToggle={toggleLike} />
+      <LikeButton variant="icon" active={like.active} onToggle={toggleLike} activeClass="text-alert" />
       <button type="button" onClick={onComments} aria-label="Comments" className={ICON}>
         <MessageCircle size={24} />
       </button>
