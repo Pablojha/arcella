@@ -10,18 +10,12 @@ const TIGHT = {
 };
 const RING = 2 * Math.PI * 18;
 
-function MediaBubble({ message, corners, onOpen, onRetry }) {
+function MediaBubble({ message, corners }) {
   const { media, status, progress = 0 } = message;
   const ratio = media.width && media.height ? media.width / media.height : 1;
   const poster = media.kind === 'video' && videoUrl(media.url, true);
   return (
-    <button
-      type="button"
-      onClick={status === 'failed' ? onRetry : onOpen}
-      aria-label={media.kind === 'video' ? 'Open video' : 'Open photo'}
-      style={{ aspectRatio: ratio, width: `min(70vw, 320px, calc(55dvh * ${ratio}))` }}
-      className={`relative block overflow-hidden bg-ink/10 ${corners}`}
-    >
+    <div style={{ aspectRatio: ratio, width: `min(70vw, 320px, calc(55dvh * ${ratio}))` }} className={`relative overflow-hidden bg-ink/10 ${corners}`}>
       {media.kind === 'image' && <img src={mediaUrl(media.url, 640)} alt="" className="size-full object-cover" />}
       {poster && <img src={poster} alt="" className="size-full object-cover" />}
       {media.kind === 'video' && !poster && <video src={videoUrl(media.url)} muted playsInline preload="metadata" className="size-full object-cover" />}
@@ -48,16 +42,19 @@ function MediaBubble({ message, corners, onOpen, onRetry }) {
           </span>
         </span>
       )}
-    </button>
+    </div>
   );
 }
 
-/** What a message shows: text (large when it's only 1–3 emoji), a photo or video, a GIF, a voice note or a story reply. */
-export default function MessageBubble({ message, mine, position, onOpenMedia, onRetry }) {
+/**
+ * What a message shows: text (large when it's only 1–3 emoji), a photo or video, a GIF, a voice note or a story reply.
+ * Taps are handled by the row around it.
+ */
+export default function MessageBubble({ message, mine, position }) {
   const corners = `rounded-[22px] ${TIGHT[mine ? 'mine' : 'theirs'][position]}`;
   const bubble = mine ? 'bg-brand text-on-brand' : 'bg-ink/[0.07]';
 
-  if (message.media) return <MediaBubble message={message} corners={corners} onOpen={() => onOpenMedia(message)} onRetry={() => onRetry(message)} />;
+  if (message.media) return <MediaBubble message={message} corners={corners} />;
   if (message.gif) return <img src={message.gif.url} width={message.gif.width} height={message.gif.height} alt="GIF" loading="lazy" className={`h-auto w-[min(60vw,240px)] bg-ink/5 ${corners}`} />;
   if (message.voice) {
     return (

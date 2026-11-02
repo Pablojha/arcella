@@ -25,11 +25,20 @@ const attachmentSchema = z.object({
   duration: decimal(0, 3600),
   waveform: z.preprocess(parseJson, z.array(z.number().min(0).max(1)).max(64).optional()),
 });
+const reactionSchema = z.object({
+  emoji: z
+    .string()
+    .trim()
+    .min(1)
+    .max(16)
+    .refine((value) => /\p{Extended_Pictographic}/u.test(value) && !/[\p{L}\p{N}<>]/u.test(value), 'Pick an emoji'),
+});
 
 const router = Router();
 
 router.use(auth);
 router.get('/', ctrl.conversations);
+router.put('/reactions/:messageId', writeLimiter, validate(reactionSchema), ctrl.react);
 router.get('/:userId', validate(z.object({ after: objectId.optional(), before: objectId.optional() }), 'query'), ctrl.thread);
 router.post('/:userId', writeLimiter, validate(sendSchema), ctrl.send);
 router.post('/:userId/attachments', writeLimiter, chatAttachment, validate(attachmentSchema), ctrl.sendAttachment);

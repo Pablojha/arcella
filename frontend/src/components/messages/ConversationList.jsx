@@ -11,12 +11,21 @@ import { IconButton } from '../ui/Button';
 import { ListSkeleton } from '../ui/Skeleton';
 import NewChat from './NewChat';
 
-/** The chat-list line for a message: its text, or what kind of thing was sent. */
-function preview(message) {
+/** What a message was: its text, or the kind of thing sent. */
+function describe(message) {
   if (message.text) return message.storyImage ? `Story reply: ${message.text}` : message.text;
   if (message.media) return message.media.kind === 'video' ? '🎥 Video' : '📷 Photo';
   if (message.gif) return 'GIF';
   return message.voice ? '🎤 Voice message' : '';
+}
+
+/** The chat-list line: the newest reaction ("You reacted ❤️ to a message") or the last message. */
+function preview({ last, reaction, user: other }, me) {
+  if (reaction) {
+    if (reaction.by === me) return `You reacted ${reaction.emoji} to a message`;
+    return `${other.name.split(' ')[0]} reacted ${reaction.emoji} to ${reaction.author === me ? 'your message' : 'a message'}`;
+  }
+  return `${last.from === me ? 'You: ' : ''}${describe(last)}`;
 }
 
 export default function ConversationList({ activeId }) {
@@ -25,6 +34,7 @@ export default function ConversationList({ activeId }) {
   const [composing, setComposing] = useState(false);
   usePoll(reload, 30_000);
   useSocketEvent('message:new', reload);
+  useSocketEvent('message:update', reload);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -34,20 +44,17 @@ export default function ConversationList({ activeId }) {
       </div>
       <div className="-mx-2 flex-1 overflow-y-auto md:mx-0 md:px-2">
         {!data && <ListSkeleton count={4} lines={0} />}
-        {data?.items.map(({ user: other, last, unread }) => (
-          <Link key={other._id} to={`/messages/${other._id}`} className={`flex items-center gap-3 rounded-2xl px-2 py-3 transition ${other._id === activeId ? 'bg-brand/10' : 'hover:bg-ink/5'}`}>
-            <Avatar user={other} size={48} />
+        {data?.items.map((item) => (
+          <Link key={item.user._id} to={`/messages/${item.user._id}`} className={`flex items-center gap-3 rounded-2xl px-2 py-3 transition ${item.user._id === activeId ? 'bg-brand/10' : 'hover:bg-ink/5'}`}>
+            <Avatar user={item.user} size={48} />
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="truncate font-medium">{other.name}</span>
-                <span className="shrink-0 text-xs text-muted">{timeAgo(last.createdAt)}</span>
+                <span className="truncate font-medium">{item.user.name}</span>
+                <span className="shrink-0 text-xs text-muted">{timeAgo(item.activity ?? item.last.createdAt)}</span>
               </div>
-              <p className={`truncate text-sm ${unread ? 'font-semibold text-ink' : 'text-muted'}`}>
-                {last.from === user._id && 'You: '}
-                {preview(last)}
-              </p>
+              <p className={`truncate text-sm ${item.unread ? 'font-semibold text-ink' : 'text-muted'}`}>{preview(item, user._id)}</p>
             </div>
-            {unread > 0 && <span className="min-w-5 shrink-0 rounded-full bg-accent px-1.5 text-center text-[11px] font-semibold leading-5 text-on-accent">{unread}</span>}
+            {item.unread > 0 && <span className="min-w-5 shrink-0 rounded-full bg-accent px-1.5 text-center text-[11px] font-semibold leading-5 text-on-accent">{item.unread}</span>}
           </Link>
         ))}
         {data && !data.items.length && (

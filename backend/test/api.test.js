@@ -155,6 +155,27 @@ test('chats with photos, GIFs and voice notes, live and in pages', async () => {
   bilalLive.disconnect();
 });
 
+test('reacts to messages with one emoji per person, live', async () => {
+  const { asha, bilal, chitra } = people;
+  const bilalLive = await socketOf('bilal');
+  const message = await call('POST', `/messages/${bilal.user._id}`, { token: asha.token, body: { text: 'Jury went well!' } });
+  const url = `/messages/reactions/${message._id}`;
+  const react = async (key, emoji) => (await call('PUT', url, { token: tokenOf(key), body: { emoji } })).reactions.map((reaction) => [reaction.user, reaction.emoji]);
+  const previewFor = async (key, otherKey) => (await call('GET', '/messages', { token: tokenOf(key) })).items.find((item) => item.user._id === people[otherKey].user._id).reaction;
+  const update = next(bilalLive, 'message:update');
+  assert.deepEqual(await react('bilal', '❤️'), [[bilal.user._id, '❤️']]);
+  assert.equal((await update).reactions[0].emoji, '❤️');
+  assert.deepEqual(await react('bilal', '😂'), [[bilal.user._id, '😂']]);
+  await react('asha', '👍🏽');
+  const preview = await previewFor('bilal', 'asha');
+  assert.deepEqual([preview.by, preview.emoji, preview.author], [asha.user._id, '👍🏽', asha.user._id]);
+  assert.deepEqual(await react('asha', '👍🏽'), [[bilal.user._id, '😂']]);
+  assert.equal((await previewFor('asha', 'bilal')).emoji, '😂');
+  await call('PUT', url, { token: bilal.token, body: { emoji: 'abc' }, status: 400 });
+  await call('PUT', url, { token: chitra.token, body: { emoji: '❤️' }, status: 404 });
+  bilalLive.disconnect();
+});
+
 test('verifies a college by email code with limited attempts', async () => {
   const [iitr] = (await call('GET', '/colleges?q=roorkee', { token: tokenOf('asha') })).items;
   people.iitr = iitr;

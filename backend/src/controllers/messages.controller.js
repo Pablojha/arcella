@@ -1,7 +1,7 @@
 import Message from '../models/Message.js';
 import User from '../models/User.js';
 import { CARD } from '../config/constants.js';
-import { hiddenIds } from '../services/blocks.js';
+import { hiddenIds, isBlockedBetween } from '../services/blocks.js';
 import { canMessage, pair } from '../services/chat.js';
 import { deliverMessage, emitTo, isOnline } from '../services/realtime.js';
 import { saveFile } from '../services/storage.js';
@@ -20,17 +20,41 @@ export async function conversations(req, res) {
       $group: {
         _id: { $cond: [{ $eq: ['$from', me] }, '$to', '$from'] },
         last: { $first: '$$ROOT' },
+        reaction: { $top: { sortBy: { 'lastReaction.at': -1 }, output: { at: '$lastReaction.at', by: '$lastReaction.user', emoji: '$lastReaction.emoji', author: '$from' } } },
         unread: { $sum: { $cond: [{ $and: [{ $eq: ['$to', me] }, { $eq: ['$read', false] }] }, 1, 0] } },
       },
     },
     { $match: { _id: { $nin: hidden } } },
-    { $sort: { 'last._id': -1 } },
+    { $addFields: { activity: { $max: ['$last.createdAt', '$reaction.at'] } } },
+    { $sort: { activity: -1 } },
     { $limit: 50 },
   ]);
   const users = await User.find({ _id: { $in: rows.map((row) => row._id) } }).select(CARD).lean();
   const byId = new Map(users.map((user) => [String(user._id), user]));
-  const items = rows.filter((row) => byId.has(String(row._id))).map((row) => ({ user: byId.get(String(row._id)), last: row.last, unread: row.unread }));
+  const items = rows
+    .filter((row) => byId.has(String(row._id)))
+    .map((row) => ({ user: byId.get(String(row._id)), last: row.last, reaction: row.reaction.at > row.last.createdAt ? row.reaction : null, activity: row.activity, unread: row.unread }));
   res.json({ items });
+}
+
+/**
+ * The viewer's reaction to a message in one of their chats: the same emoji again removes it, a different one replaces
+ * it (one reaction per person). Both people see the change at once.
+ */
+export async function react(req, res) {
+  const me = req.user._id;
+  const message = found(await Message.findOne({ _id: req.params.messageId, $or: [{ from: me }, { to: me }] }), 'Message');
+  if (await isBlockedBetween(message.from, message.to)) throw new ApiError(403, "You can't react in this chat");
+  const { emoji } = req.body;
+  const removing = message.reactions.some((reaction) => same(reaction.user, me) && reaction.emoji === emoji);
+  message.reactions = message.reactions.filter((reaction) => !same(reaction.user, me));
+  if (!removing) message.reactions.push({ user: me, emoji, at: new Date() });
+  const newest = message.reactions.reduce((latest, reaction) => (!latest || reaction.at > latest.at ? reaction : latest), null);
+  message.lastReaction = newest ? { user: newest.user, emoji: newest.emoji, at: newest.at } : undefined;
+  await message.save();
+  const update = { _id: message._id, reactions: message.reactions };
+  [message.from, message.to].forEach((user) => emitTo(user, 'message:update', update));
+  res.json(update);
 }
 
 /**

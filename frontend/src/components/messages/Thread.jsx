@@ -16,6 +16,8 @@ import Lightbox from '../ui/Lightbox';
 import ChatComposer from './ChatComposer';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
+import ReactionMenu from './ReactionMenu';
+import ReactionsSheet from './ReactionsSheet';
 
 const UPLOAD_TIMEOUT_MS = 15 * 60_000;
 const TYPING_TIMEOUT_MS = 6000;
@@ -64,6 +66,8 @@ export default function Thread({ userId }) {
   const [live, setLive] = useState(socket.connected);
   const [viewer, setViewer] = useState(null);
   const [reporting, setReporting] = useState(null);
+  const [menu, setMenu] = useState(null);
+  const [reactionsOf, setReactionsOf] = useState(null);
   const latestSaved = useRef(null);
   const typingTimer = useRef(null);
   useViewportHeight();
@@ -126,6 +130,27 @@ export default function Thread({ userId }) {
     transmit(message);
   };
 
+  const setReactions = (id, reactions) => setThread((current) => ({ ...current, items: current.items.map((item) => (item._id === id ? { ...item, reactions } : item)) }));
+
+  /** One reaction per person: the same emoji again removes it. Shown at once, undone if the server refuses. */
+  const react = async (message, emoji) => {
+    const previous = message.reactions ?? [];
+    const removing = previous.some((reaction) => reaction.user === me._id && reaction.emoji === emoji);
+    setReactions(message._id, [...previous.filter((reaction) => reaction.user !== me._id), ...(removing ? [] : [{ user: me._id, emoji }])]);
+    try {
+      setReactions(message._id, (await api.put(`/messages/reactions/${message._id}`, { emoji })).reactions);
+    } catch (error) {
+      setReactions(message._id, previous);
+      toast.error(error.message);
+    }
+  };
+
+  const copy = (text) =>
+    navigator.clipboard.writeText(text).then(
+      () => toast.success('Copied'),
+      () => toast.error('Copying is blocked in this browser'),
+    );
+
   useSocketEvent('connect', () => setLive(true));
   useSocketEvent('disconnect', () => setLive(false));
   useSocketEvent('message:new', (message) => {
@@ -139,6 +164,7 @@ export default function Thread({ userId }) {
     setThread((current) => (!fromThem && current.items.some((item) => item.status === 'sending') ? current : { ...current, items: merge(current.items, [message]) }));
   });
   useSocketEvent('message:seen', ({ by, until }) => by === userId && setThread((current) => ({ ...current, seenUntil: until })));
+  useSocketEvent('message:update', ({ _id, reactions }) => setReactions(_id, reactions));
   useSocketEvent('typing', ({ from, typing: active }) => {
     if (from !== userId) return;
     clearTimeout(typingTimer.current);
@@ -177,6 +203,9 @@ export default function Thread({ userId }) {
           onLoadOlder={loadOlder}
           onOpenMedia={(message) => setViewer(gallery.indexOf(message))}
           onRetry={transmit}
+          onReact={react}
+          onMenu={setMenu}
+          onShowReactions={(message) => setReactionsOf(message)}
         />
       )}
       {other &&
@@ -189,6 +218,8 @@ export default function Thread({ userId }) {
           </p>
         ))}
       <Lightbox items={gallery.map(({ media }) => ({ url: media.url, kind: media.kind }))} index={viewer} onChange={setViewer} />
+      <ReactionMenu target={menu} me={me._id} onReact={react} onCopy={copy} onClose={() => setMenu(null)} />
+      <ReactionsSheet message={thread.items.find((item) => item._id === reactionsOf?._id)} me={me} other={other} onRemove={react} onClose={() => setReactionsOf(null)} />
       <ReportSheet target={reporting} onClose={() => setReporting(null)} />
     </div>
   );

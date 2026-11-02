@@ -7,8 +7,13 @@ const mediaSchema = new Schema(
 );
 const gifSchema = new Schema({ url: { type: String, required: true }, width: Number, height: Number }, { _id: false });
 const voiceSchema = new Schema({ url: { type: String, required: true }, duration: Number, waveform: [Number] }, { _id: false });
+const reactionSchema = new Schema({ user: ref('User', { required: true }), emoji: { type: String, required: true }, at: Date }, { _id: false });
+const lastReactionSchema = new Schema({ user: ref('User'), emoji: String, at: Date }, { _id: false });
 
-/** A direct message: text, one photo or video, a GIF, or a voice note (older messages are text only). */
+/**
+ * A direct message: text, one photo or video, a GIF, or a voice note (older messages are text only). Each person may
+ * leave one reaction; `lastReaction` remembers the newest for the chat-list preview.
+ */
 const messageSchema = new Schema(
   {
     from: ref('User', { required: true }),
@@ -18,6 +23,8 @@ const messageSchema = new Schema(
     gif: gifSchema,
     voice: voiceSchema,
     storyImage: String,
+    reactions: [reactionSchema],
+    lastReaction: lastReactionSchema,
     read: { type: Boolean, default: false },
   },
   { timestamps: true },
