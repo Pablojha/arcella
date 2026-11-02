@@ -130,7 +130,7 @@ export default function FirmDetail() {
         </div>
       )}
 
-      <Lightbox images={firm.gallery} index={lightbox} onChange={setLightbox} />
+      <Lightbox items={firm.gallery} index={lightbox} onChange={setLightbox} />
       <Sheet open={editing} onClose={() => setEditing(false)} title="Edit firm page" size="lg">
         <FirmForm
           key={editing}

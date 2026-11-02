@@ -6,6 +6,7 @@ import RequireAuth from './components/layout/RequireAuth';
 import LoadingScreen from './components/LoadingScreen';
 import OfflineBanner from './components/OfflineBanner';
 import { useAuth } from './context/AuthContext';
+import { socket } from './lib/realtime';
 
 /** A lazily loaded page that can also be fetched ahead of time. */
 const page = (load) => Object.assign(lazy(load), { preload: load });
@@ -100,7 +101,11 @@ export default function App() {
   useEffect(() => {
     if (!signedIn) return undefined;
     const id = setTimeout(() => TAB_PAGES.forEach((Page) => Page.preload()), 1500);
-    return () => clearTimeout(id);
+    socket.connect();
+    return () => {
+      clearTimeout(id);
+      socket.disconnect();
+    };
   }, [signedIn]);
 
   return (

@@ -4,6 +4,7 @@ import Story, { STORY_TTL_SECONDS } from '../models/Story.js';
 import { CARD } from '../config/constants.js';
 import { hiddenIds } from '../services/blocks.js';
 import { removeContent } from '../services/content.js';
+import { deliverMessage } from '../services/realtime.js';
 import { saveFile } from '../services/storage.js';
 import { ApiError, found } from '../utils/errors.js';
 import { has, same } from '../utils/shape.js';
@@ -54,7 +55,9 @@ export async function view(req, res) {
 export async function reply(req, res) {
   const story = found(await Story.findOne({ _id: req.params.id, ...(await visibleTo(req.user)) }), 'Story');
   if (same(story.author, req.user._id)) throw new ApiError(400, "You can't reply to your own story");
-  res.status(201).json(await Message.create({ from: req.user._id, to: story.author, text: req.body.text, storyImage: story.image }));
+  const message = await Message.create({ from: req.user._id, to: story.author, text: req.body.text, storyImage: story.image });
+  deliverMessage(message);
+  res.status(201).json(message);
 }
 
 export async function remove(req, res) {

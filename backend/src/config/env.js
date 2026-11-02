@@ -21,6 +21,7 @@ export const env = {
   mailFrom: e.MAIL_FROM || 'Arcella <no-reply@arcella.app>',
   resendKey: e.RESEND_API_KEY,
   smtp: { host: e.SMTP_HOST, port: Number(e.SMTP_PORT) || 587, user: e.SMTP_USER, pass: e.SMTP_PASS },
+  giphyKey: e.GIPHY_API_KEY,
 };
 
 if (env.isProd && !e.JWT_SECRET) throw new Error('JWT_SECRET must be set in production');

@@ -15,11 +15,14 @@ Object.assign(process.env, {
   RESEND_API_KEY: '',
   SMTP_HOST: '',
   CLOUDINARY_CLOUD_NAME: '',
+  GIPHY_API_KEY: '',
 });
 
 const { default: mongoose } = await import('mongoose');
+const { io } = await import('socket.io-client');
 const { default: app } = await import('../src/app.js');
 const { seedColleges } = await import('../src/seed/colleges.js');
+const { startRealtime } = await import('../src/services/realtime.js');
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 const file = (name, type) => new File([name.endsWith('.pdf') ? Buffer.from('%PDF-1.4\n%%EOF') : PNG], name, { type });
@@ -58,8 +61,17 @@ before(async () => {
   await mongoose.connection.dropDatabase();
   await seedColleges();
   server = app.listen(0);
+  startRealtime(server);
   base = `http://127.0.0.1:${server.address().port}/api`;
 });
+
+/** A connected real-time socket for a signed-in member. */
+async function socketOf(key) {
+  const socket = io(base.replace('/api', ''), { auth: { token: tokenOf(key) }, transports: ['websocket'] });
+  await new Promise((resolve, reject) => socket.once('connect', resolve).once('connect_error', reject));
+  return socket;
+}
+const next = (socket, event) => new Promise((resolve) => socket.once(event, resolve));
 
 after(async () => {
   server?.close();
@@ -107,6 +119,40 @@ test('connects members and shares posts with likes and comments', async () => {
   await call('POST', `/posts/${post._id}/comments`, { token: tokenOf('bilal'), body: { text: 'Congrats!' } });
   await call('DELETE', `/posts/${post._id}`, { token: tokenOf('bilal'), status: 403 });
   people.asha.post = post;
+});
+
+test('chats with photos, GIFs and voice notes, live and in pages', async () => {
+  const { asha, bilal } = people;
+  const [ashaLive, bilalLive] = await Promise.all([socketOf('asha'), socketOf('bilal')]);
+  const thread = `/messages/${bilal.user._id}`;
+  const arrived = next(bilalLive, 'message:new');
+  const hello = await call('POST', thread, { token: asha.token, body: { text: 'Hi Bilal 👋' } });
+  assert.equal((await arrived)._id, hello._id);
+  const typing = next(bilalLive, 'typing');
+  ashaLive.emit('typing', { to: bilal.user._id, typing: true });
+  assert.deepEqual(await typing, { from: asha.user._id, typing: true });
+
+  await call('POST', thread, { token: asha.token, body: {}, status: 400 });
+  await call('POST', thread, { token: asha.token, body: { gif: { url: 'https://example.com/x.gif', width: 200, height: 200 } }, status: 400 });
+  const gif = await call('POST', thread, { token: asha.token, body: { gif: { url: 'https://media2.giphy.com/media/abc/200w.webp', width: 200, height: 150 } } });
+  assert.deepEqual([gif.gif.width, gif.text], [200, undefined]);
+  const photo = await call('POST', `${thread}/attachments`, { token: asha.token, form: { kind: 'image', width: 800, height: 600, file: file('room.png', 'image/png') } });
+  assert.match(photo.media.url, /^\/uploads\/messages\/.+\.png$/);
+  const voice = await call('POST', `${thread}/attachments`, { token: asha.token, form: { kind: 'voice', duration: 3.2, waveform: '[0.1,0.8,0.4]', file: new File([Buffer.from('audio')], 'voice.webm', { type: 'audio/webm' }) } });
+  assert.deepEqual([voice.voice.duration, voice.voice.waveform], [3.2, [0.1, 0.8, 0.4]]);
+  await call('POST', `${thread}/attachments`, { token: asha.token, form: { kind: 'video', file: file('clip.png', 'image/png') }, status: 400 });
+  assert.equal((await call('GET', '/gifs', { token: asha.token, status: 503 })).message, "GIFs aren't available right now");
+
+  for (let i = 0; i < 30; i += 1) await call('POST', i % 2 ? thread : `/messages/${asha.user._id}`, { token: i % 2 ? asha.token : bilal.token, body: { text: `Line ${i}` } });
+  const seen = next(ashaLive, 'message:seen');
+  const latest = await call('GET', `/messages/${asha.user._id}`, { token: bilal.token });
+  assert.equal((await seen).by, bilal.user._id);
+  assert.deepEqual([latest.items.length, latest.hasMore, latest.presence.online], [30, true, true]);
+  const older = await call('GET', `/messages/${asha.user._id}?before=${latest.items[0]._id}`, { token: bilal.token });
+  assert.deepEqual(older.items.map((message) => message.text ?? Object.keys(message).find((key) => ['gif', 'media', 'voice'].includes(key))), ['Hi Bilal 👋', 'gif', 'media', 'voice']);
+  assert.equal(older.hasMore, false);
+  ashaLive.disconnect();
+  bilalLive.disconnect();
 });
 
 test('verifies a college by email code with limited attempts', async () => {

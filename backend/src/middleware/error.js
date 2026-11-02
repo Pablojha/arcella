@@ -1,5 +1,6 @@
 import multer from 'multer';
 import { env } from '../config/env.js';
+import { ApiError } from '../utils/errors.js';
 
 const MULTER_MESSAGES = {
   LIMIT_FILE_SIZE: 'That file is too large',
@@ -16,7 +17,8 @@ export function errorHandler(err, req, res, next) {
   else if (err.name === 'CastError') [status, message] = [400, 'Invalid id or value'];
   else if (err.name === 'ValidationError') status = 400;
   else if (err.code === 11000) [status, message] = [409, 'That already exists'];
-  if (status >= 500) {
+  // ApiErrors are deliberate answers (like "GIFs aren't available"); anything else at 500+ is a real failure.
+  if (status >= 500 && !(err instanceof ApiError)) {
     console.error(err);
     if (env.isProd) message = 'Something went wrong on our side. Please try again.';
   }

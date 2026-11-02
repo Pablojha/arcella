@@ -31,6 +31,7 @@ export const bool = z.preprocess(
 );
 
 export const int = (min, max) => z.preprocess((value) => (blank(value) ? undefined : value), z.coerce.number().int().min(min).max(max).optional());
+export const decimal = (min, max) => z.preprocess((value) => (blank(value) ? undefined : value), z.coerce.number().min(min).max(max).optional());
 
 export const date = z.preprocess((value) => (blank(value) ? undefined : value), z.coerce.date().optional());
 

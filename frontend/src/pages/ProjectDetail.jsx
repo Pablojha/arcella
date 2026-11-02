@@ -116,7 +116,7 @@ export default function ProjectDetail() {
         <CritiquePanel project={project} onChange={merge} />
       </div>
 
-      <Lightbox images={project.images} index={lightbox} onChange={setLightbox} />
+      <Lightbox items={project.images} index={lightbox} onChange={setLightbox} />
       {own && editing && <EditProject project={project} open onClose={() => setEditing(false)} onSaved={merge} />}
       <ReportSheet target={reporting} onClose={() => setReporting(null)} />
     </div>

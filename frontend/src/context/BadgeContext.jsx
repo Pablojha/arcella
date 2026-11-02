@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { usePoll } from '../hooks/usePoll';
+import { useSocketEvent } from '../hooks/useSocketEvent';
 import api from '../lib/api';
 import { useAuth } from './AuthContext';
 
@@ -20,6 +21,7 @@ export function BadgeProvider({ children }) {
   }, [signedIn, refresh]);
 
   usePoll(refresh, 15_000, signedIn);
+  useSocketEvent('message:new', refresh);
 
   return <BadgeContext value={{ ...badges, refresh }}>{children}</BadgeContext>;
 }

@@ -20,7 +20,7 @@ export default function ImageGrid({ images }) {
           );
         })}
       </div>
-      <Lightbox images={images} index={open} onChange={setOpen} />
+      <Lightbox items={images} index={open} onChange={setOpen} />
     </>
   );
 }

@@ -29,6 +29,9 @@ export function videoUrl(url, poster = false) {
   return variant.replace(/\.\w+$/, poster ? '.jpg' : '.mp4');
 }
 
+/** Cloudinary voice notes play as MP3, which every browser supports (phones record WebM or M4A). */
+export const audioUrl = (url) => (url?.includes('/video/upload/') ? url.replace(/\.\w+$/, '.mp3') : mediaUrl(url));
+
 /** Compact age for bylines: "now", "5m", "3d". */
 export function timeAgo(date) {
   const seconds = (Date.now() - new Date(date)) / 1000;

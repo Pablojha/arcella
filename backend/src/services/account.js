@@ -48,6 +48,14 @@ const MENTIONS = [
   [User, 'blocked'],
 ];
 
+/** Deletes every message to or from the user, with the photos, videos and voice notes in them. */
+async function removeMessages(userId) {
+  const filter = { $or: [{ from: userId }, { to: userId }] };
+  const files = (await Message.find(filter).select('media.url voice.url').lean()).flatMap((message) => [message.media?.url, message.voice?.url]);
+  await Message.deleteMany(filter);
+  await removeFiles(files);
+}
+
 /** Permanently removes a member and everything they created, keeping other members' counters right. */
 export async function deleteAccount(userId) {
   const user = await User.findById(userId).select('avatar cover');
@@ -64,7 +72,7 @@ export async function deleteAccount(userId) {
     GroupMessage.deleteMany({ author: userId }),
     Critique.deleteMany({ author: userId }),
     Connection.deleteMany({ $or: [{ from: userId }, { to: userId }] }),
-    Message.deleteMany({ $or: [{ from: userId }, { to: userId }] }),
+    removeMessages(userId),
     Notification.deleteMany({ $or: [{ user: userId }, { actor: userId }] }),
     Session.deleteMany({ $or: [{ mentor: userId }, { mentee: userId }] }),
     Verification.deleteMany({ user: userId }),

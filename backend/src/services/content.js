@@ -83,7 +83,8 @@ const REMOVE = {
     await removeFiles([firm.logo, firm.cover, ...firm.gallery]);
   },
   async message(id) {
-    await Message.findByIdAndDelete(id);
+    const message = await Message.findByIdAndDelete(id);
+    if (message) await removeFiles([message.media?.url, message.voice?.url]);
   },
   async chat(id) {
     await GroupMessage.findByIdAndDelete(id);

@@ -30,6 +30,7 @@ const userSchema = new Schema(
     mentor: { enabled: { type: Boolean, default: false }, topics: [String], slots: [String], about: String },
     blocked: { type: [ref('User')], select: false },
     passwordChangedAt: Date,
+    lastActiveAt: Date,
   },
   {
     timestamps: true,

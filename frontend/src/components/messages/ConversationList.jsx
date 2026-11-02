@@ -4,17 +4,27 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../hooks/useApi';
 import { usePoll } from '../../hooks/usePoll';
+import { useSocketEvent } from '../../hooks/useSocketEvent';
 import { timeAgo } from '../../lib/format';
 import Avatar from '../ui/Avatar';
 import { IconButton } from '../ui/Button';
 import { ListSkeleton } from '../ui/Skeleton';
 import NewChat from './NewChat';
 
+/** The chat-list line for a message: its text, or what kind of thing was sent. */
+function preview(message) {
+  if (message.text) return message.storyImage ? `Story reply: ${message.text}` : message.text;
+  if (message.media) return message.media.kind === 'video' ? '🎥 Video' : '📷 Photo';
+  if (message.gif) return 'GIF';
+  return message.voice ? '🎤 Voice message' : '';
+}
+
 export default function ConversationList({ activeId }) {
   const { user } = useAuth();
   const { data, reload } = useApi('/messages');
   const [composing, setComposing] = useState(false);
-  usePoll(reload, 8000);
+  usePoll(reload, 30_000);
+  useSocketEvent('message:new', reload);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -34,8 +44,7 @@ export default function ConversationList({ activeId }) {
               </div>
               <p className={`truncate text-sm ${unread ? 'font-semibold text-ink' : 'text-muted'}`}>
                 {last.from === user._id && 'You: '}
-                {last.storyImage && 'Story reply: '}
-                {last.text}
+                {preview(last)}
               </p>
             </div>
             {unread > 0 && <span className="min-w-5 shrink-0 rounded-full bg-accent px-1.5 text-center text-[11px] font-semibold leading-5 text-on-accent">{unread}</span>}
