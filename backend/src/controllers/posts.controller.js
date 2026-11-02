@@ -16,17 +16,33 @@ import { excerpt } from '../utils/text.js';
 const AUTHOR = { path: 'author', select: CARD };
 const WITH_ORIGINAL = [AUTHOR, { path: 'repostOf', populate: AUTHOR }];
 const DAY_MS = 24 * 60 * 60 * 1000;
+// Feed photos range from portrait 4:5 to landscape 1.91:1, like Instagram; anything beyond is cropped to fit.
+const MIN_ASPECT = 4 / 5;
+const MAX_ASPECT = 1.91;
 
 /**
- * Posts as a viewer sees them: like counts instead of who liked, private saved/reposted flags, and a
- * repost's original shaped the same way (null once it is deleted or its author is hidden from the viewer).
+ * Posts as a viewer sees them: like counts instead of who liked (plus one liker to name, a connection when possible),
+ * private saved/reposted flags, and a repost's original shaped the same way (null once it is deleted or its author is
+ * hidden from the viewer).
  */
 async function cards(viewer, posts, hidden) {
   const hiddenSet = new Set((hidden ?? (await hiddenIds(viewer))).map(String));
-  const ids = posts.flatMap((post) => [post._id, post.repostOf?._id]).filter(Boolean);
-  const reposted = new Set((await Post.find({ author: viewer._id, repostOf: { $in: ids }, text: null }).distinct('repostOf')).map(String));
+  const all = posts.flatMap((post) => [post, post.repostOf]).filter(Boolean);
+  const [repostedIds, connections] = await Promise.all([
+    Post.find({ author: viewer._id, repostOf: { $in: all.map((post) => post._id) }, text: null }).distinct('repostOf'),
+    Connection.idsOf(viewer._id),
+  ]);
+  const reposted = new Set(repostedIds.map(String));
+  const friends = new Set(connections.map(String));
+  const pickLiker = (likes = []) => {
+    const others = likes.map(String).filter((id) => id !== String(viewer._id) && !hiddenSet.has(id));
+    return others.findLast((id) => friends.has(id)) ?? others.at(-1);
+  };
+  const likerOf = new Map(all.map((post) => [String(post._id), pickLiker(post.likes)]));
+  const likers = new Map((await User.find({ _id: { $in: [...likerOf.values()].filter(Boolean) } }).select('name username').lean()).map((user) => [String(user._id), user]));
   const card = ({ saves = [], repostOf, ...post }) => ({
     ...withCount(post, 'likes', viewer._id, 'liked'),
+    likedBy: likers.get(likerOf.get(String(post._id))) ?? null,
     saved: has(saves, viewer._id),
     reposted: reposted.has(String(post._id)),
     ...(repostOf !== undefined && { repostOf: repostOf && !hiddenSet.has(String(repostOf.author?._id)) ? card(repostOf) : null }),
@@ -83,13 +99,21 @@ export async function get(req, res) {
 }
 
 export async function create(req, res) {
-  const { text, college, important } = req.body;
+  const { text, college, important, aspect } = req.body;
   const { images = [], video: [video] = [] } = req.files ?? {};
   if (!text && !images.length && !video) throw new ApiError(400, 'Write something or add a photo or video');
   if (images.length && video) throw new ApiError(400, 'Add photos or one video, not both');
   if (college) assertMember(req.user, college);
   if (important) await assertCanFlag(req.user, college);
-  const post = await Post.create({ author: req.user._id, text, college, important, images: await saveFiles(images, 'posts'), video: video && (await saveFile(video, 'posts')) });
+  const post = await Post.create({
+    author: req.user._id,
+    text,
+    college,
+    important,
+    images: await saveFiles(images, 'posts'),
+    aspect: images.length && aspect ? Math.min(Math.max(aspect, MIN_ASPECT), MAX_ASPECT) : undefined,
+    video: video && (await saveFile(video, 'posts')),
+  });
   if (important) await announce(req.user, post);
   await post.populate(AUTHOR);
   const [card] = await cards(req.user, [post.toObject()]);

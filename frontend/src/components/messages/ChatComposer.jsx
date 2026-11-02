@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Camera, Image, Mic, Play, X } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
-import { clock, measureMedia, waveformOf } from '../../lib/chat';
+import { clock, waveformOf } from '../../lib/chat';
+import { measureMedia } from '../../lib/media';
 import { compressImage } from '../../lib/files';
 import GifSheet from './GifSheet';
 

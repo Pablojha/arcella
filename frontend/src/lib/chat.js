@@ -30,26 +30,6 @@ export function separatorLabel(value) {
 /** "0:07", "12:30" */
 export const clock = (seconds = 0) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 
-/** Kind, size and (for videos) length of a picked file, read in the browser before it is sent. */
-export function measureMedia(file) {
-  const url = URL.createObjectURL(file);
-  if (file.type.startsWith('video/')) {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.onloadedmetadata = () => resolve({ kind: 'video', url, width: video.videoWidth || undefined, height: video.videoHeight || undefined, duration: video.duration });
-      video.onerror = () => resolve({ kind: 'video', url });
-      video.src = url;
-    });
-  }
-  return new Promise((resolve) => {
-    const image = new Image();
-    image.onload = () => resolve({ kind: 'image', url, width: image.naturalWidth, height: image.naturalHeight });
-    image.onerror = () => resolve({ kind: 'image', url });
-    image.src = url;
-  });
-}
-
 /** Peak levels (0–1) of a recording in `bars` slices, drawn as the voice note's waveform. */
 export async function waveformOf(blob, bars = 32) {
   const context = new AudioContext();

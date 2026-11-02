@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Image, Newspaper, Plus } from 'lucide-react';
+import { Image, Newspaper, Plus, WifiOff } from 'lucide-react';
 import CreatePost from '../components/feed/CreatePost';
 import PostCard from '../components/feed/PostCard';
 import StoriesBar from '../components/feed/StoriesBar';
@@ -9,11 +9,12 @@ import ProfileStrength from '../components/home/ProfileStrength';
 import Suggestions from '../components/home/Suggestions';
 import UpcomingEvents from '../components/home/UpcomingEvents';
 import Avatar from '../components/ui/Avatar';
+import Button from '../components/ui/Button';
 import EmptyState from '../components/ui/EmptyState';
 import LoadMore from '../components/ui/LoadMore';
 import PullToRefresh from '../components/ui/PullToRefresh';
 import Reveal from '../components/ui/Reveal';
-import { ListSkeleton } from '../components/ui/Skeleton';
+import { PostSkeleton } from '../components/ui/Skeleton';
 import Tabs from '../components/ui/Tabs';
 import { useAuth } from '../context/AuthContext';
 import { usePaged } from '../hooks/usePaged';
@@ -42,7 +43,7 @@ export default function Home() {
       </aside>
 
       <PullToRefresh onRefresh={feed.reload}>
-        <section className="min-w-0 space-y-4">
+        <section className="mx-auto w-full min-w-0 max-w-[470px] space-y-4">
           <StoriesBar composerOpen={addingStory} onComposerOpen={setAddingStory} />
           <ProfileStrength />
           <button type="button" onClick={() => setComposing(true)} className="card hidden w-full items-center gap-3 p-3 text-left transition hover:border-ink/25 md:flex">
@@ -56,8 +57,11 @@ export default function Home() {
               <PostCard post={post} onDeleted={(id) => hide((item) => item._id !== id)} onAuthorBlocked={(authorId) => hide((item) => item.author?._id !== authorId)} />
             </Reveal>
           ))}
-          {feed.loading && !feed.items.length && <ListSkeleton count={2} lines={3} />}
-          {!feed.loading && !feed.items.length && (
+          {feed.loading && !feed.items.length && <PostSkeleton />}
+          {feed.error && !feed.loading && !feed.items.length && (
+            <EmptyState icon={WifiOff} title="Couldn't load posts" text={feed.error.message} action={<Button onClick={feed.reload}>Try again</Button>} />
+          )}
+          {!feed.loading && !feed.error && !feed.items.length && (
             <EmptyState icon={Newspaper} title={scope === 'network' ? 'Your network is quiet' : 'No posts yet'} text="Be the first to share something with the community." />
           )}
           <LoadMore hasMore={feed.hasMore} loading={feed.loading} onLoad={feed.loadMore} />

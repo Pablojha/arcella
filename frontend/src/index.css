@@ -104,6 +104,17 @@
   }
 }
 
+/* Posts run edge to edge on phones (undoing the page's 1rem gutter) and sit in a 470px column on larger screens. */
+@utility post-column {
+  margin-inline: -1rem;
+
+  @media (width >= 40rem) {
+    width: 100%;
+    max-width: 470px;
+    margin-inline: auto;
+  }
+}
+
 @layer components {
   .card {
     background-color: var(--card);

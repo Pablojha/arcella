@@ -4,7 +4,7 @@ import { auth } from '../middleware/auth.js';
 import { writeLimiter } from '../middleware/rateLimit.js';
 import { postMedia } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
-import { bool, listQuery, objectId, optionalId, required, text, z } from '../utils/zod.js';
+import { bool, decimal, listQuery, objectId, optionalId, required, text, z } from '../utils/zod.js';
 
 const feedSchema = listQuery({
   scope: z.enum(['all', 'network']).optional(),
@@ -14,7 +14,7 @@ const feedSchema = listQuery({
   video: bool,
 });
 
-const postSchema = z.object({ text: text(3000).optional(), college: optionalId, important: bool });
+const postSchema = z.object({ text: text(3000).optional(), college: optionalId, important: bool, aspect: decimal(0.05, 20) });
 const repostSchema = z.object({ text: text(3000).optional() });
 const commentSchema = z.object({ text: required(1000) });
 

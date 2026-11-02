@@ -42,6 +42,17 @@ export function timeAgo(date) {
 /** Age for use inside a sentence: "just now", "5m ago". */
 export const ago = (date) => (timeAgo(date) === 'now' ? 'just now' : `${timeAgo(date)} ago`);
 
+/** Age in words under a post: "just now", "5 minutes ago", "3 days ago", then the date once it's a week old. */
+export function longAgo(date) {
+  const seconds = (Date.now() - new Date(date)) / 1000;
+  if (seconds >= 604_800) {
+    const year = new Date(date).getFullYear() === new Date().getFullYear() ? {} : { year: 'numeric' };
+    return formatDate(date, { day: 'numeric', month: 'long', ...year });
+  }
+  const [unit, size] = [['day', 86_400], ['hour', 3_600], ['minute', 60]].find(([, length]) => seconds >= length) ?? [];
+  return unit ? `${plural(Math.floor(seconds / size), unit)} ago` : 'just now';
+}
+
 export const formatDate = (date, options = { day: 'numeric', month: 'short', year: 'numeric' }) => new Date(date).toLocaleDateString('en-IN', options);
 
 export const formatTime = (date) => new Date(date).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });

@@ -9,7 +9,7 @@ import EmptyState from '../ui/EmptyState';
 import LoadMore from '../ui/LoadMore';
 import PullToRefresh from '../ui/PullToRefresh';
 import Reveal from '../ui/Reveal';
-import { ListSkeleton } from '../ui/Skeleton';
+import { PostSkeleton } from '../ui/Skeleton';
 
 export default function GroupDiscussion({ college }) {
   const { user } = useAuth();
@@ -29,7 +29,7 @@ export default function GroupDiscussion({ college }) {
             <PostCard post={post} canModerate={college.moderator} onDeleted={(id) => hide((item) => item._id !== id)} onAuthorBlocked={(authorId) => hide((item) => item.author?._id !== authorId)} />
           </Reveal>
         ))}
-        {feed.loading && !feed.items.length && <ListSkeleton count={2} />}
+        {feed.loading && !feed.items.length && <PostSkeleton />}
         {!feed.loading && !feed.items.length && <EmptyState icon={MessagesSquare} title="Quiet in here" text="Ask about studio schedules, share jury dates or plan a site visit." />}
         <LoadMore hasMore={feed.hasMore} loading={feed.loading} onLoad={feed.loadMore} />
         <CreatePost open={composing} onClose={() => setComposing(false)} college={college._id} onCreated={(post) => feed.setItems((items) => [post, ...items])} />

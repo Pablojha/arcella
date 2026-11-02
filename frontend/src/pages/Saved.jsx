@@ -5,7 +5,7 @@ import LoadMore from '../components/ui/LoadMore';
 import PageHeader from '../components/ui/PageHeader';
 import PullToRefresh from '../components/ui/PullToRefresh';
 import Reveal from '../components/ui/Reveal';
-import { ListSkeleton } from '../components/ui/Skeleton';
+import { PostSkeleton } from '../components/ui/Skeleton';
 import { usePaged } from '../hooks/usePaged';
 import { useTitle } from '../hooks/useTitle';
 
@@ -23,7 +23,7 @@ export default function Saved() {
             <PostCard post={post} onDeleted={hide} onAuthorBlocked={(authorId) => saved.setItems((items) => items.filter((item) => item.author?._id !== authorId))} />
           </Reveal>
         ))}
-        {saved.loading && !saved.items.length && <ListSkeleton count={2} lines={3} />}
+        {saved.loading && !saved.items.length && <PostSkeleton />}
         {!saved.loading && !saved.items.length && <EmptyState icon={Bookmark} title="Nothing saved yet" text="Tap the bookmark on any post to keep it here." />}
         <LoadMore hasMore={saved.hasMore} loading={saved.loading} onLoad={saved.loadMore} />
       </div>

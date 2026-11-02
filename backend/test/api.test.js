@@ -111,11 +111,16 @@ test('registers members, keeps passwords private and grants admin by email', asy
 test('connects members and shares posts with likes and comments', async () => {
   await call('POST', `/connections/${people.bilal.user._id}`, { token: tokenOf('asha') });
   assert.equal((await call('POST', `/connections/${people.asha.user._id}/accept`, { token: tokenOf('bilal') })).status, 'connected');
-  const post = await call('POST', '/posts', { token: tokenOf('asha'), form: { text: 'First jury done!', images: [file('a.png', 'image/png')] } });
+  const post = await call('POST', '/posts', { token: tokenOf('asha'), form: { text: 'First jury done!', images: [file('a.png', 'image/png')], aspect: '0.5' } });
+  assert.equal(post.aspect, 0.8);
   const feed = await call('GET', '/posts?scope=network', { token: tokenOf('bilal') });
   assert.equal(feed.items[0]._id, post._id);
   assert.equal('likes' in feed.items[0], false);
   assert.deepEqual(await call('POST', `/posts/${post._id}/like`, { token: tokenOf('bilal') }), { liked: true, likesCount: 1 });
+  await call('POST', `/posts/${post._id}/like`, { token: tokenOf('chitra') });
+  // "Liked by" names a connection over a more recent stranger, and never the viewer.
+  assert.equal((await call('GET', `/posts/${post._id}`, { token: tokenOf('asha') })).likedBy.name, 'Bilal Khan');
+  assert.equal((await call('GET', `/posts/${post._id}`, { token: tokenOf('bilal') })).likedBy.name, 'Chitra Menon');
   await call('POST', `/posts/${post._id}/comments`, { token: tokenOf('bilal'), body: { text: 'Congrats!' } });
   await call('DELETE', `/posts/${post._id}`, { token: tokenOf('bilal'), status: 403 });
   people.asha.post = post;

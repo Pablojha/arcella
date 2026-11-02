@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ArrowLeft, Clapperboard } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Reel from '../components/feed/Reel';
@@ -13,7 +12,6 @@ export default function Reels() {
   const start = params.get('start');
   const { data: first } = useApi(start && `/posts/${start}`);
   const reels = usePaged('/posts', { video: 1, limit: 6 });
-  const [muted, setMuted] = useState(false);
   useTitle('Reels');
   const items = first?.video ? [first, ...reels.items.filter((post) => post._id !== first._id)] : reels.items;
 
@@ -31,7 +29,7 @@ export default function Reels() {
       </header>
       <div className="no-scrollbar h-full snap-y snap-mandatory overflow-y-auto overscroll-contain">
         {items.map((post, index) => (
-          <Reel key={post._id} post={post} muted={muted} onMutedChange={setMuted} onActive={() => reached(index)} />
+          <Reel key={post._id} post={post} onActive={() => reached(index)} />
         ))}
         {!reels.loading && !items.length && (
           <div className="grid h-full place-items-center p-8 text-center">

@@ -6,6 +6,8 @@ const postSchema = new Schema(
     author: ref('User', { required: true }),
     text: { type: String, trim: true },
     images: [String],
+    // The first photo's width / height, kept between 4:5 and 1.91:1, so the feed sizes it before it loads.
+    aspect: Number,
     video: String,
     important: { type: Boolean, default: false },
     likes: [ref('User')],

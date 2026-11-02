@@ -14,7 +14,7 @@ import EmptyState from '../components/ui/EmptyState';
 import LoadMore from '../components/ui/LoadMore';
 import MoreMenu from '../components/ui/MoreMenu';
 import Reveal from '../components/ui/Reveal';
-import { GridSkeleton, ListSkeleton, Skeleton } from '../components/ui/Skeleton';
+import { GridSkeleton, PostSkeleton, Skeleton } from '../components/ui/Skeleton';
 import Tabs from '../components/ui/Tabs';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
 import { useAuth } from '../context/AuthContext';
@@ -112,7 +112,7 @@ function Activity({ person }) {
           <PostCard post={post} onDeleted={(id) => feed.setItems((items) => items.filter((item) => item._id !== id))} />
         </Reveal>
       ))}
-      {feed.loading && <ListSkeleton count={2} />}
+      {feed.loading && <PostSkeleton />}
       {!feed.loading && !feed.items.length && <EmptyState icon={Pencil} title="No posts yet" />}
       <LoadMore hasMore={feed.hasMore} loading={feed.loading} onLoad={feed.loadMore} />
     </div>

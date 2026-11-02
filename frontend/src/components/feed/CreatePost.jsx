@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useUploadProgress } from '../../hooks/useUploadProgress';
 import api, { toFormData } from '../../lib/api';
+import { aspectOf } from '../../lib/media';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
 import ImagePicker from '../ui/ImagePicker';
@@ -48,7 +49,9 @@ export default function CreatePost({ open, onClose, onCreated, college, onStory 
     event.preventDefault();
     setBusy(true);
     try {
-      const post = await api.post('/posts', toFormData({ text, college, images, video, important: important || undefined }), upload.config);
+      // The first photo's shape lets the feed size the post before its photos load.
+      const aspect = images[0] && (await aspectOf(images[0]));
+      const post = await api.post('/posts', toFormData({ text, college, images, video, important: important || undefined, aspect }), upload.config);
       onCreated(post);
       setText('');
       setImages([]);
