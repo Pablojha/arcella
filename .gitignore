@@ -1,0 +1,19 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+
+# Environment files hold secrets: never commit them (the examples are safe)
+.env
+.env.*
+!.env.example
+
+# Local uploads, logs, test output and editor/OS files
+backend/uploads/
+*.log
+e2e/test-results/
+e2e/playwright-report/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

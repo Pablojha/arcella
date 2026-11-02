@@ -3,13 +3,15 @@ import User from '../models/User.js';
 import { env } from '../config/env.js';
 import { ApiError } from '../utils/errors.js';
 
-export const signToken = (user) => jwt.sign({ id: user._id }, env.jwtSecret, { expiresIn: env.jwtExpires });
+const ALGORITHM = 'HS256';
+
+export const signToken = (user) => jwt.sign({ id: user._id }, env.jwtSecret, { algorithm: ALGORITHM, expiresIn: env.jwtExpires });
 
 /** The account a session token belongs to; expired tokens, deleted accounts and sessions older than a password change are refused. */
 export async function userFromToken(token) {
   let payload;
   try {
-    payload = jwt.verify(token, env.jwtSecret);
+    payload = jwt.verify(token, env.jwtSecret, { algorithms: [ALGORITHM] });
   } catch {
     throw new ApiError(401, 'Your session has expired, please log in again');
   }

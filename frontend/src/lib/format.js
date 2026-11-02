@@ -29,6 +29,9 @@ export function videoUrl(url, poster = false) {
   return variant.replace(/\.\w+$/, poster ? '.jpg' : '.mp4');
 }
 
+/** A link from member content, kept only if it is http(s), mailto or tel: never javascript: or data: URLs. */
+export const safeHref = (url) => (/^(https?:\/\/|mailto:|tel:)/i.test(url ?? '') ? url : undefined);
+
 /** Cloudinary voice notes play as MP3, which every browser supports (phones record WebM or M4A). */
 export const audioUrl = (url) => (url?.includes('/video/upload/') ? url.replace(/\.\w+$/, '.mp3') : mediaUrl(url));
 

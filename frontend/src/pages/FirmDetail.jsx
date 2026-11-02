@@ -14,7 +14,7 @@ import UserChip from '../components/ui/UserChip';
 import { useToast } from '../context/ToastContext';
 import { useApi } from '../hooks/useApi';
 import api from '../lib/api';
-import { mediaUrl, plural } from '../lib/format';
+import { mediaUrl, plural, safeHref } from '../lib/format';
 
 export default function FirmDetail() {
   const { slug } = useParams();
@@ -78,7 +78,7 @@ export default function FirmDetail() {
             )}
             <span>{plural(firm.followersCount, 'follower')}</span>
             {firm.website && (
-              <a href={firm.website} target="_blank" rel="noopener noreferrer nofollow" className="flex min-w-0 items-center gap-1.5 text-brand hover:underline">
+              <a href={safeHref(firm.website)} target="_blank" rel="noopener noreferrer nofollow" className="flex min-w-0 items-center gap-1.5 text-brand hover:underline">
                 <Globe size={15} className="shrink-0" /> <span className="truncate">{firm.website.replace(/^https?:\/\//, '')}</span>
               </a>
             )}

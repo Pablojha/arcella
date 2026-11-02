@@ -11,7 +11,7 @@ import { useToast } from '../context/ToastContext';
 import { useApi } from '../hooks/useApi';
 import api from '../lib/api';
 import { EVENT_TYPES } from '../lib/constants';
-import { calendarUrl, formatDate, formatTime, labelOf, mediaUrl } from '../lib/format';
+import { calendarUrl, formatDate, formatTime, labelOf, mediaUrl, safeHref } from '../lib/format';
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -71,7 +71,7 @@ export default function EventDetail() {
             <p className="flex min-w-0 items-center gap-2">
               {event.online ? <Video size={16} className="shrink-0 text-muted" /> : <MapPin size={16} className="shrink-0 text-muted" />}
               {event.online ? (
-                <a href={event.link} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center gap-1 text-brand hover:underline">
+                <a href={safeHref(event.link)} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center gap-1 text-brand hover:underline">
                   <span className="truncate">Join online</span> <ExternalLink size={13} />
                 </a>
               ) : (

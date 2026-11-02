@@ -1,9 +1,11 @@
 import rateLimit from 'express-rate-limit';
+import { env } from '../config/env.js';
 
 const limiter = (limit, minutes, message, options = {}) =>
   rateLimit({ windowMs: minutes * 60_000, limit, standardHeaders: 'draft-7', legacyHeaders: false, message: { message }, ...options });
 
-export const authLimiter = limiter(30, 15, 'Too many attempts. Please wait a few minutes and try again.');
+/** Sign-up, sign-in and code checks per IP: 30 per 15 minutes unless AUTH_RATE_LIMIT says otherwise (tests). */
+export const authLimiter = limiter(env.authRateLimit, 15, 'Too many attempts. Please wait a few minutes and try again.');
 
 /** These run after `auth`, so limits apply per account rather than per (shared campus) IP. */
 const perAccount = { keyGenerator: (req) => String(req.user._id) };

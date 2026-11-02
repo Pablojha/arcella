@@ -11,7 +11,8 @@ import { after, before, test } from 'node:test';
 Object.assign(process.env, {
   NODE_ENV: 'test',
   MONGODB_URI: process.env.MONGODB_TEST_URI || 'mongodb://127.0.0.1:27017/arcella_test',
-  ADMIN_EMAIL: 'admin@test.arcella',
+  ADMIN_EMAIL: 'admin@test.arcella,boss@test.arcella',
+  AUTH_RATE_LIMIT: '1000',
   CLIENT_URL: 'http://localhost:5173',
   UPLOAD_DIR: await fs.mkdtemp(path.join(os.tmpdir(), 'arcella-uploads-')),
   RESEND_API_KEY: '',
@@ -131,6 +132,27 @@ test('registers members, keeps passwords private and grants admin by email', asy
   assert.match(bad.message, /Name must be at least 2 characters/);
   const profile = await call('GET', `/users/${asha.user.username}`, { token: tokenOf('bilal') });
   assert.equal('email' in profile.user, false);
+});
+
+test('gives admin rights only once the admin email is proven with a code', async () => {
+  const users = mongoose.connection.collection('users');
+  const step = await call('POST', '/auth/register', { body: { name: 'Boss Admin', email: 'boss@test.arcella', password: 'password123', type: 'faculty' } });
+  assert.equal('token' in step, false);
+  assert.equal((await users.findOne({ email: 'boss@test.arcella' })).isAdmin, false);
+  const session = await call('POST', '/auth/verify-email', { body: { email: 'boss@test.arcella', code: step.devCode } });
+  assert.equal(session.user.isAdmin, true);
+});
+
+test('upgrades old bcrypt passwords to Argon2id at sign-in, without signing anyone out', async () => {
+  const { default: bcrypt } = await import('bcryptjs');
+  const users = mongoose.connection.collection('users');
+  assert.match((await users.findOne({ email: 'chitra@test.arcella' })).password, /^\$argon2id\$v=19\$m=19456,p=1,t=2\$/);
+  await users.updateOne({ email: 'chitra@test.arcella' }, { $set: { password: await bcrypt.hash('password123', 10) } });
+  await call('POST', '/auth/login', { body: { email: 'chitra@test.arcella', password: 'not-the-password' }, status: 401 });
+  assert.ok((await call('POST', '/auth/login', { body: { email: 'chitra@test.arcella', password: 'password123' } })).token);
+  assert.match((await users.findOne({ email: 'chitra@test.arcella' })).password, /^\$argon2id\$/);
+  await call('GET', '/auth/me', { token: tokenOf('chitra') });
+  assert.ok((await call('POST', '/auth/login', { body: { email: 'chitra@test.arcella', password: 'password123' } })).token);
 });
 
 test('connects members and shares posts with likes and comments', async () => {

@@ -26,7 +26,7 @@ import { useTitle } from '../hooks/useTitle';
 import api, { toFormData } from '../lib/api';
 import { USER_TYPES } from '../lib/constants';
 import { compressImage } from '../lib/files';
-import { labelOf, mediaUrl, plural } from '../lib/format';
+import { labelOf, mediaUrl, plural, safeHref } from '../lib/format';
 
 const TABS = [
   { value: 'about', label: 'About' },
@@ -228,7 +228,7 @@ export default function Profile() {
                 </span>
               )}
               {person.website && (
-                <a href={person.website} target="_blank" rel="noopener noreferrer nofollow" className="flex min-w-0 items-center gap-1.5 text-brand hover:underline">
+                <a href={safeHref(person.website)} target="_blank" rel="noopener noreferrer nofollow" className="flex min-w-0 items-center gap-1.5 text-brand hover:underline">
                   <LinkIcon size={15} className="shrink-0" /> <span className="truncate">{person.website.replace(/^(https?:\/\/|mailto:)/, '')}</span>
                 </a>
               )}

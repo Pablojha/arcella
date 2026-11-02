@@ -11,7 +11,7 @@ import { useToast } from '../context/ToastContext';
 import { useApi } from '../hooks/useApi';
 import api from '../lib/api';
 import { JOB_TYPES } from '../lib/constants';
-import { formatDate, labelOf, timeAgo } from '../lib/format';
+import { formatDate, labelOf, safeHref, timeAgo } from '../lib/format';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -88,9 +88,11 @@ export default function JobDetail() {
                 Remove
               </Button>
             )}
-            <Button href={job.applyLink} icon={ExternalLink} size="lg">
-              Apply
-            </Button>
+            {safeHref(job.applyLink) && (
+              <Button href={safeHref(job.applyLink)} icon={ExternalLink} size="lg">
+                Apply
+              </Button>
+            )}
           </div>
         </div>
       </article>

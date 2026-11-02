@@ -14,13 +14,21 @@ const verificationStep = async (user) => ({ verify: true, email: user.email, ...
 
 const needsCode = (user) => signupNeedsCode && !user.emailVerified;
 
-/** Creates the account, or refreshes an unconfirmed one so the real owner of the email can finish signing up. */
+/** Admin rights come from the ADMIN_EMAIL list, but only for an address its owner proved with a one-time code. */
+function grantAdminIfListed(user) {
+  if (user.emailVerified && !user.isAdmin && env.adminEmails.includes(user.email)) user.isAdmin = true;
+}
+
+/**
+ * Creates the account. An unconfirmed one is refreshed so the real owner of the email can finish signing up, but
+ * only while codes are on: without them nothing proves ownership, so an existing account is never taken over.
+ */
 export async function register(req, res) {
   const { name, email, password, type } = req.body;
   const existing = await User.findOne({ email });
-  if (existing?.emailVerified) throw new ApiError(409, 'An account with this email already exists. Try logging in.');
+  if (existing && (existing.emailVerified || !signupNeedsCode)) throw new ApiError(409, 'An account with this email already exists. Try logging in.');
   const user = existing ?? new User({ email });
-  user.set({ name, password, type, isAdmin: env.adminEmails.includes(email), emailVerified: !signupNeedsCode });
+  user.set({ name, password, type });
   await user.save();
   res.status(201).json(needsCode(user) ? await verificationStep(user) : await session(user));
 }
@@ -29,10 +37,8 @@ export async function login(req, res) {
   const user = await User.findOne({ email: req.body.email }).select('+password');
   if (!user || !(await user.checkPassword(req.body.password))) throw new ApiError(401, 'Wrong email or password');
   if (needsCode(user)) return res.json(await verificationStep(user));
-  if (!user.isAdmin && env.adminEmails.includes(user.email)) {
-    user.isAdmin = true;
-    await user.save();
-  }
+  grantAdminIfListed(user);
+  if (user.isModified('isAdmin')) await user.save();
   res.json(await session(user));
 }
 
@@ -44,6 +50,7 @@ export async function verifyEmail(req, res) {
   if (user.emailVerified) throw new ApiError(400, 'This email is already verified. Please log in.');
   await checkCode(email, 'signup', code);
   user.emailVerified = true;
+  grantAdminIfListed(user);
   await user.save();
   res.json(await session(user));
 }
@@ -67,6 +74,7 @@ export async function resetPassword(req, res) {
   await checkCode(email, 'reset', code);
   const user = found(await User.findOne({ email }), 'Account');
   user.set({ password, emailVerified: true });
+  grantAdminIfListed(user);
   await user.save();
   await PushSubscription.deleteMany({ user: user._id });
   res.json(await session(user));
