@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '../../context/ToastContext';
 import api, { token } from '../../lib/api';
+import { syncPush } from '../../lib/push';
 import Button from '../ui/Button';
 import Field from '../ui/Field';
 import PasswordInput from '../ui/PasswordInput';
@@ -17,6 +18,8 @@ export default function ChangePassword() {
     try {
       const { token: fresh } = await api.patch('/auth/password', form);
       token.set(fresh);
+      // Signing out the other devices also stopped every device's notifications; this one keeps getting them.
+      syncPush().catch(() => {});
       setForm({ current: '', password: '' });
       toast.success('Password changed. Your other devices were signed out.');
     } catch (error) {

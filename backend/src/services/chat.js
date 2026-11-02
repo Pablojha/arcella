@@ -17,3 +17,16 @@ export async function canMessage(me, other) {
 
 /** The people whose chats this user has hidden from their list. */
 export const hiddenChats = (userId) => ChatState.find({ user: userId, hidden: true }).distinct('other');
+
+export const isHiddenChat = async (userId, otherId) => Boolean(await ChatState.exists({ user: userId, other: otherId, hidden: true }));
+
+/** Unread messages for the badges; chats the user hid don't count. */
+export const unreadMessages = async (userId) => Message.countDocuments({ to: userId, read: false, from: { $nin: await hiddenChats(userId) } });
+
+/** What a message says in a notification: its text, or what kind of thing was sent. */
+export function messagePreview(message) {
+  if (message.text) return message.storyImage ? `Replied to your story: ${message.text}` : message.text;
+  if (message.media) return message.media.kind === 'video' ? '🎥 Sent a video' : '📷 Sent a photo';
+  if (message.voice) return '🎤 Sent a voice message';
+  return message.gif ? 'Sent a GIF' : 'New message';
+}

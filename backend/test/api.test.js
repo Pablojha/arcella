@@ -1,7 +1,9 @@
 // End-to-end API tests: `npm test`. Uses a separate database (MONGODB_TEST_URI, default arcella_test)
 // and a temporary upload folder; email and Cloudinary are switched off so nothing leaves the machine.
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
@@ -17,6 +19,9 @@ Object.assign(process.env, {
   CLOUDINARY_CLOUD_NAME: '',
   GIPHY_API_KEY: '',
 });
+const { default: webpush } = await import('web-push');
+const vapid = webpush.generateVAPIDKeys();
+Object.assign(process.env, { VAPID_PUBLIC_KEY: vapid.publicKey, VAPID_PRIVATE_KEY: vapid.privateKey });
 
 const { default: mongoose } = await import('mongoose');
 const { io } = await import('socket.io-client');
@@ -72,6 +77,26 @@ async function socketOf(key) {
   return socket;
 }
 const next = (socket, event) => new Promise((resolve) => socket.once(event, resolve));
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** A browser's push subscription (fresh P-256 keys and auth secret) that can read what is pushed to it (RFC 8291). */
+function pushDevice(endpoint) {
+  const ecdh = crypto.createECDH('prime256v1');
+  ecdh.generateKeys();
+  const secret = crypto.randomBytes(16);
+  const hkdf = (ikm, salt, info, length) => Buffer.from(crypto.hkdfSync('sha256', ikm, salt, info, length));
+  const read = (body) => {
+    const salt = body.subarray(0, 16);
+    const senderKey = body.subarray(21, 21 + body[20]);
+    const sealed = body.subarray(21 + body[20]);
+    const ikm = hkdf(ecdh.computeSecret(senderKey), secret, Buffer.concat([Buffer.from('WebPush: info\0'), ecdh.getPublicKey(), senderKey]), 32);
+    const decipher = crypto.createDecipheriv('aes-128-gcm', hkdf(ikm, salt, Buffer.from('Content-Encoding: aes128gcm\0'), 16), hkdf(ikm, salt, Buffer.from('Content-Encoding: nonce\0'), 12));
+    decipher.setAuthTag(sealed.subarray(-16));
+    const padded = Buffer.concat([decipher.update(sealed.subarray(0, -16)), decipher.final()]);
+    return JSON.parse(padded.subarray(0, padded.lastIndexOf(2)).toString());
+  };
+  return { subscription: { endpoint, keys: { p256dh: ecdh.getPublicKey().toString('base64url'), auth: secret.toString('base64url') } }, read };
+}
 
 after(async () => {
   server?.close();
@@ -223,6 +248,98 @@ test('pins up to three chats and hides chats only for yourself', async () => {
   assert.deepEqual(await state('bilal', { hidden: false, pinned: true }), { pinned: true, hidden: false });
   assert.deepEqual((await call('GET', `/messages/${bilal.user._id}`, { token: asha.token })).chat, { pinned: true, hidden: false });
   for (const other of ['chitra', 'admin']) await state(other, { pinned: false });
+});
+
+test('pushes messages and reactions to other devices, never into the chat being read, privately for hidden chats', async () => {
+  const { asha, bilal } = people;
+  const requests = [];
+  let arrived = null;
+  const service = http.createServer((req, res) => {
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk)).on('end', () => {
+      res.writeHead(req.url === '/gone' ? 410 : 201).end();
+      requests.push({ path: req.url, headers: req.headers, body: Buffer.concat(chunks) });
+      if (req.url !== '/gone') arrived?.();
+    });
+  });
+  await new Promise((resolve) => service.listen(0, '127.0.0.1', resolve));
+  const origin = `http://127.0.0.1:${service.address().port}`;
+  const phone = pushDevice(`${origin}/phone`);
+  const expectPush = () =>
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('No push arrived')), 3000);
+      arrived = () => {
+        clearTimeout(timer);
+        arrived = null;
+        const { headers, body } = requests.at(-1);
+        resolve({ headers, alert: phone.read(body) });
+      };
+    });
+  const expectQuiet = async () => {
+    const before = requests.length;
+    await pause(400);
+    assert.equal(requests.length, before, 'expected no push');
+  };
+  const send = (text) => call('POST', `/messages/${bilal.user._id}`, { token: asha.token, body: { text } });
+
+  assert.equal((await call('GET', '/push/key')).key, vapid.publicKey);
+  await call('POST', '/push/subscriptions', { token: bilal.token, body: { endpoint: 'https://evil.example.com/hook', keys: phone.subscription.keys }, status: 400 });
+  await call('POST', '/push/subscriptions', { token: bilal.token, body: phone.subscription });
+  await call('POST', '/push/subscriptions', { token: bilal.token, body: pushDevice(`${origin}/gone`).subscription });
+
+  // A message: the sender's name and words, grouped per chat, opening that chat; a device the service forgot is dropped.
+  let pushed = expectPush();
+  await send('Are you coming to the crit?');
+  const { headers, alert } = await pushed;
+  assert.deepEqual([alert.title, alert.body, alert.url, alert.tag, alert.user.name], ['Asha Rao', 'Are you coming to the crit?', `/messages/${asha.user._id}`, `chat-${asha.user._id}`, 'Asha Rao']);
+  assert.ok(alert.badge >= 1);
+  assert.deepEqual([headers.ttl, headers.urgency, headers.topic], ['86400', 'high', `chat-${asha.user._id}`]);
+  pushed = expectPush();
+  await call('POST', `/messages/${bilal.user._id}/attachments`, { token: asha.token, form: { kind: 'image', width: 800, height: 600, file: file('site.png', 'image/png') } });
+  assert.equal((await pushed).alert.body, '📷 Sent a photo');
+  assert.equal(requests.filter((request) => request.path === '/gone').length, 1);
+
+  // Reading that chat: nothing at all. Elsewhere in the app on the phone: a banner instead of a push. App hidden: a push.
+  const bilalLive = await socketOf('bilal');
+  const noAlert = () => assert.fail('no banner expected while reading the chat');
+  bilalLive.on('message:alert', noAlert);
+  await bilalLive.emitWithAck('presence', { visible: true, chat: asha.user._id, endpoint: phone.subscription.endpoint });
+  await send('See you there');
+  await expectQuiet();
+  bilalLive.off('message:alert', noAlert);
+  await bilalLive.emitWithAck('presence', { visible: true, chat: null, endpoint: phone.subscription.endpoint });
+  const banner = next(bilalLive, 'message:alert');
+  await send('Bring the model');
+  assert.deepEqual([(await banner).title, (await banner).body], ['Asha Rao', 'Bring the model']);
+  await expectQuiet();
+  await bilalLive.emitWithAck('presence', { visible: false, chat: asha.user._id, endpoint: phone.subscription.endpoint });
+  pushed = expectPush();
+  await send('Leaving now');
+  assert.equal((await pushed).alert.body, 'Leaving now');
+
+  // Reactions reach the author of the message; nobody is pushed about their own messages.
+  const mine = await call('POST', `/messages/${asha.user._id}`, { token: bilal.token, body: { text: 'Ok!' } });
+  await expectQuiet();
+  pushed = expectPush();
+  await call('PUT', `/messages/reactions/${mine._id}`, { token: asha.token, body: { emoji: '🔥' } });
+  assert.deepEqual([(await pushed).alert.title, (await pushed).alert.body], ['Asha Rao', 'Asha reacted 🔥 to your message']);
+
+  // A hidden chat only says "New message", and its reactions stay quiet.
+  await call('PATCH', `/messages/${asha.user._id}/state`, { token: bilal.token, body: { hidden: true } });
+  pushed = expectPush();
+  await send('Did you see this?');
+  const hidden = (await pushed).alert;
+  assert.deepEqual([hidden.title, hidden.body, hidden.user, hidden.icon], ['Arcella', 'New message', undefined, undefined]);
+  await call('PUT', `/messages/reactions/${mine._id}`, { token: asha.token, body: { emoji: '😮' } });
+  await expectQuiet();
+  await call('PATCH', `/messages/${asha.user._id}/state`, { token: bilal.token, body: { hidden: false } });
+
+  // Signing out forgets the device.
+  await call('DELETE', '/push/subscriptions', { token: bilal.token, body: { endpoint: phone.subscription.endpoint } });
+  await send('Anyone?');
+  await expectQuiet();
+  bilalLive.disconnect();
+  service.close();
 });
 
 test('verifies a college by email code with limited attempts', async () => {

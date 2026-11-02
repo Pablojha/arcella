@@ -22,6 +22,12 @@ export const env = {
   resendKey: e.RESEND_API_KEY,
   smtp: { host: e.SMTP_HOST, port: Number(e.SMTP_PORT) || 587, user: e.SMTP_USER, pass: e.SMTP_PASS },
   giphyKey: e.GIPHY_API_KEY,
+  // Web Push keys (generate once with `npx web-push generate-vapid-keys`); the subject is a contact for push services.
+  vapid: {
+    publicKey: e.VAPID_PUBLIC_KEY,
+    privateKey: e.VAPID_PRIVATE_KEY,
+    subject: e.VAPID_SUBJECT || clientUrls.find((url) => url.startsWith('https://')) || `mailto:${list(e.ADMIN_EMAIL)[0] || 'admin@localhost'}`,
+  },
 };
 
 if (env.isProd && !e.JWT_SECRET) throw new Error('JWT_SECRET must be set in production');

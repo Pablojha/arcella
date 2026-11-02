@@ -1,9 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import api, { token } from '../lib/api';
 import { cache } from '../lib/cache';
+import { disablePush } from '../lib/push';
 
 const AuthContext = createContext(null);
 const USER_KEY = 'arcella_user';
+const SIGN_OUT_WAIT_MS = 3000;
 
 function cachedUser() {
   try {
@@ -33,19 +35,25 @@ export function AuthProvider({ children }) {
     [setUser],
   );
 
-  const logout = useCallback(() => {
-    cache.clear();
-    token.clear();
-    setUser(null);
-  }, [setUser]);
+  /** Signs out, and this device stops getting the account's notifications (`signedOut`: the session has already ended). */
+  const logout = useCallback(
+    async ({ signedOut = false } = {}) => {
+      await Promise.race([disablePush({ signedOut }).catch(() => {}), new Promise((resolve) => setTimeout(resolve, SIGN_OUT_WAIT_MS))]);
+      cache.clear();
+      token.clear();
+      setUser(null);
+    },
+    [setUser],
+  );
 
   const refresh = useCallback(() => api.get('/auth/me').then((data) => setUser(data.user)), [setUser]);
 
   useEffect(() => {
     if (token.get()) refresh().catch(() => {}).finally(() => setReady(true));
     else api.get('/health').catch(() => {});
-    window.addEventListener('auth:expired', logout);
-    return () => window.removeEventListener('auth:expired', logout);
+    const expired = () => logout({ signedOut: true });
+    window.addEventListener('auth:expired', expired);
+    return () => window.removeEventListener('auth:expired', expired);
   }, [refresh, logout]);
 
   return <AuthContext value={{ user, ready, login, logout, refresh, setUser }}>{children}</AuthContext>;

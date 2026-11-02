@@ -4,7 +4,7 @@ import User from '../models/User.js';
 import { CARD } from '../config/constants.js';
 import { hiddenIds, isBlockedBetween } from '../services/blocks.js';
 import { canMessage, pair } from '../services/chat.js';
-import { deliverMessage, emitTo, isOnline } from '../services/realtime.js';
+import { announceReaction, deliverMessage, emitTo, isOnline } from '../services/realtime.js';
 import { saveFile } from '../services/storage.js';
 import { ApiError, found } from '../utils/errors.js';
 import { has, same } from '../utils/shape.js';
@@ -93,6 +93,7 @@ export async function react(req, res) {
   await message.save();
   const update = { _id: message._id, reactions: message.reactions };
   [message.from, message.to].forEach((user) => emitTo(user, 'message:update', update));
+  if (!removing && !same(message.from, me)) announceReaction(message, req.user, emoji).catch((error) => console.warn(`Reaction alert failed: ${error.message}`));
   res.json(update);
 }
 

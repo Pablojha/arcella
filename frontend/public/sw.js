@@ -31,3 +31,42 @@ self.addEventListener('fetch', (event) => {
   }
   event.respondWith(caches.match(request).then((cached) => cached || fetch(request).then((response) => keep(request, response))));
 });
+
+// Message notifications: one per chat (a newer message replaces it and counts up), opening that chat when tapped.
+self.addEventListener('push', (event) => {
+  let alert = {};
+  try {
+    alert = event.data?.json() ?? {};
+  } catch {
+    // Not one of ours: show a plain notification below.
+  }
+  event.waitUntil(
+    (async () => {
+      if (Number.isInteger(alert.badge) && 'setAppBadge' in navigator) await navigator.setAppBadge(alert.badge).catch(() => {});
+      const [earlier] = alert.tag ? await self.registration.getNotifications({ tag: alert.tag }) : [];
+      const count = (earlier?.data?.count ?? 0) + 1;
+      const title = alert.title || 'Arcella';
+      await self.registration.showNotification(count > 1 ? `${title} (${count})` : title, {
+        body: alert.body || 'New message',
+        tag: alert.tag,
+        renotify: Boolean(alert.tag),
+        icon: alert.icon || '/icons/icon-192.png',
+        badge: '/icons/badge-96.png',
+        data: { url: alert.url || '/messages', count },
+      });
+    })(),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const { url } = event.notification.data ?? {};
+  event.waitUntil(
+    (async () => {
+      const [app] = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      if (!app) return self.clients.openWindow(url || '/messages');
+      await app.focus();
+      app.postMessage({ type: 'open', url });
+    })(),
+  );
+});

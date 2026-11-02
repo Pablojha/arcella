@@ -11,6 +11,7 @@ import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
 import Post from '../models/Post.js';
 import Project from '../models/Project.js';
+import PushSubscription from '../models/PushSubscription.js';
 import Question from '../models/Question.js';
 import Report from '../models/Report.js';
 import Resource from '../models/Resource.js';
@@ -76,6 +77,7 @@ export async function deleteAccount(userId) {
     Connection.deleteMany({ $or: [{ from: userId }, { to: userId }] }),
     removeMessages(userId),
     ChatState.deleteMany({ $or: [{ user: userId }, { other: userId }] }),
+    PushSubscription.deleteMany({ user: userId }),
     Notification.deleteMany({ $or: [{ user: userId }, { actor: userId }] }),
     Session.deleteMany({ $or: [{ mentor: userId }, { mentee: userId }] }),
     Verification.deleteMany({ user: userId }),

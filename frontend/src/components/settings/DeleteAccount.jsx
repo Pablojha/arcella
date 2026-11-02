@@ -24,7 +24,7 @@ export default function DeleteAccount() {
     setBusy(true);
     try {
       await api.delete('/users/me', { data: { password } });
-      logout();
+      await logout({ signedOut: true });
       navigate('/', { replace: true });
       toast.success('Your account and data were deleted. Take care!');
     } catch (error) {

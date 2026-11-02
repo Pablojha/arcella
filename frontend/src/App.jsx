@@ -4,6 +4,7 @@ import { Route, Routes } from 'react-router-dom';
 import AppShell from './components/layout/AppShell';
 import RequireAuth from './components/layout/RequireAuth';
 import LoadingScreen from './components/LoadingScreen';
+import MessageAlerts from './components/MessageAlerts';
 import OfflineBanner from './components/OfflineBanner';
 import { useAuth } from './context/AuthContext';
 import { socket } from './lib/realtime';
@@ -112,6 +113,7 @@ export default function App() {
     <>
       <AnimatePresence>{!(ready && splashDone) && <LoadingScreen key="splash" done={ready} />}</AnimatePresence>
       <OfflineBanner />
+      {user && <MessageAlerts />}
       {ready && (
         <Suspense fallback={null}>
           <Routes>

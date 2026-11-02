@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import BlockedMembers from '../components/settings/BlockedMembers';
 import ChangePassword from '../components/settings/ChangePassword';
 import DeleteAccount from '../components/settings/DeleteAccount';
+import PushSetting from '../components/settings/PushSetting';
 import Button from '../components/ui/Button';
 import PageHeader from '../components/ui/PageHeader';
 import { useAuth } from '../context/AuthContext';
@@ -33,13 +34,16 @@ export default function Settings() {
           Edit profile
         </Button>
       </Section>
-      <Section title="Password" index={1}>
+      <Section title="Notifications" index={1}>
+        <PushSetting />
+      </Section>
+      <Section title="Password" index={2}>
         <ChangePassword />
       </Section>
-      <Section title="Blocked members" index={2}>
+      <Section title="Blocked members" index={3}>
         <BlockedMembers />
       </Section>
-      <Section title="Privacy" index={3}>
+      <Section title="Privacy" index={4}>
         <p className="text-sm text-muted">
           See what we store and who can see it in our{' '}
           <Link to="/privacy" className="font-medium text-brand hover:underline">
@@ -48,7 +52,7 @@ export default function Settings() {
           .
         </p>
       </Section>
-      <Section title="Delete account" index={4} danger>
+      <Section title="Delete account" index={5} danger>
         <DeleteAccount />
       </Section>
     </div>

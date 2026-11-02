@@ -1,3 +1,4 @@
+import PushSubscription from '../models/PushSubscription.js';
 import User from '../models/User.js';
 import { env } from '../config/env.js';
 import { signToken } from '../middleware/auth.js';
@@ -60,21 +61,23 @@ export async function forgotPassword(req, res) {
   res.json({ ok: true, ...(user ? await resendCode(user.email, 'reset') : {}) });
 }
 
-/** A correct code proves the inbox, so it also confirms the email. Older sessions are signed out. */
+/** A correct code proves the inbox, so it also confirms the email. Older sessions are signed out, and stop getting pushes. */
 export async function resetPassword(req, res) {
   const { email, code, password } = req.body;
   await checkCode(email, 'reset', code);
   const user = found(await User.findOne({ email }), 'Account');
   user.set({ password, emailVerified: true });
   await user.save();
+  await PushSubscription.deleteMany({ user: user._id });
   res.json(await session(user));
 }
 
-/** Changes the password, which signs out every other device; the caller gets a fresh token. */
+/** Changes the password, which signs out every other device (and their pushes); the caller gets a fresh token. */
 export async function changePassword(req, res) {
   const user = await User.findById(req.user._id).select('+password');
   if (!(await user.checkPassword(req.body.current))) throw new ApiError(400, 'Your current password is not right');
   user.password = req.body.password;
   await user.save();
+  await PushSubscription.deleteMany({ user: user._id });
   res.json({ token: signToken(user) });
 }

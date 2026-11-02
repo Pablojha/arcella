@@ -74,8 +74,8 @@ export default function More() {
         variant="secondary"
         icon={LogOut}
         className="w-full"
-        onClick={() => {
-          logout();
+        onClick={async () => {
+          await logout();
           navigate('/', { replace: true });
         }}
       >

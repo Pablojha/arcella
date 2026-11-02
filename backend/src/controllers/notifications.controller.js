@@ -1,7 +1,6 @@
 import Connection from '../models/Connection.js';
-import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
-import { hiddenChats } from '../services/chat.js';
+import { unreadMessages } from '../services/chat.js';
 import { paginate } from '../utils/query.js';
 
 export async function list(req, res) {
@@ -18,7 +17,7 @@ export async function markRead(req, res) {
 export async function badges(req, res) {
   const me = req.user._id;
   const [messages, notifications, requests] = await Promise.all([
-    hiddenChats(me).then((hidden) => Message.countDocuments({ to: me, read: false, from: { $nin: hidden } })),
+    unreadMessages(me),
     Notification.countDocuments({ user: me, read: false }),
     Connection.countDocuments({ to: me, status: 'pending' }),
   ]);

@@ -14,6 +14,7 @@ import MoreMenu from '../ui/MoreMenu';
 import { ListSkeleton } from '../ui/Skeleton';
 import ChatActions from './ChatActions';
 import NewChat from './NewChat';
+import PushPrompt from './PushPrompt';
 
 /** What a message was: its text, or the kind of thing sent. */
 function describe(message) {
@@ -93,6 +94,7 @@ export default function ConversationList({ activeId }) {
           </>
         )}
       </div>
+      {!showHidden && <PushPrompt />}
       <div className="-mx-2 flex-1 overflow-y-auto md:mx-0 md:px-2">
         {!data && <ListSkeleton count={4} lines={0} />}
         {data?.items.map((item) => (
