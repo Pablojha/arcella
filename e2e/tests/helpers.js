@@ -26,6 +26,16 @@ export async function newMember(name = 'Test Member', email = `member.${unique()
   return { ...session, email };
 }
 
+/** Verifies `member` at the college found by `query` with an address on its email domain; `member.user` is updated. */
+export async function verifyAt(member, query, details) {
+  const { items } = await api('GET', `/colleges?q=${encodeURIComponent(query)}`, { token: member.token });
+  const college = items[0];
+  const email = `${member.email.split('@')[0]}@${college.domains[0]}`;
+  const sent = await api('POST', '/verification/email/send', { token: member.token, body: { college: college._id, ...details, email } });
+  member.user = (await api('POST', '/verification/email/confirm', { token: member.token, body: { code: sent.devCode } })).user;
+  return college;
+}
+
 /** The site admin from the API's ADMIN_EMAIL list: created on the first run, signed in on later ones. */
 export async function adminMember() {
   try {

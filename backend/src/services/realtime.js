@@ -3,6 +3,8 @@ import { Server } from 'socket.io';
 import User from '../models/User.js';
 import { env } from '../config/env.js';
 import { userFromToken } from '../middleware/auth.js';
+import { isMember } from '../utils/access.js';
+import { hiddenIds } from './blocks.js';
 import { canMessage, isHiddenChat, messagePreview, unreadMessages } from './chat.js';
 import { pushTo } from './push.js';
 
@@ -14,6 +16,14 @@ const screens = new Map();
 let io = null;
 
 export const emitTo = (userId, event, payload) => io?.to(`user:${userId}`).emit(event, payload);
+
+const groupRoom = (collegeId) => `college:${collegeId}`;
+
+/**
+ * Tells every open chat of a college's group that something changed. New messages are only announced: each chat then
+ * fetches them, so members never receive messages from people they blocked or who blocked them.
+ */
+export const emitToGroup = (collegeId, event, payload) => io?.to(groupRoom(collegeId)).emit(event, { college: String(collegeId), ...payload });
 export const isOnline = (userId) => online.has(String(userId));
 
 /** A Cloudinary avatar as a small square image a notification can show (other images can't be reached by URL). */
@@ -78,6 +88,7 @@ export function startRealtime(server) {
     const { user } = socket.data;
     const id = String(user._id);
     const allowedUntil = new Map();
+    let hidden = { rooms: [], until: 0 };
     socket.join(`user:${id}`);
     online.set(id, (online.get(id) ?? 0) + 1);
     if (!screens.has(id)) screens.set(id, new Map());
@@ -87,11 +98,44 @@ export function startRealtime(server) {
       try {
         if (!isObjectIdOrHexString(to)) return;
         if ((allowedUntil.get(to) ?? 0) < Date.now()) {
-          const other = await User.findById(to).select('verified college batch');
+          const other = await User.findById(to).select('memberships');
           if (!other || !(await canMessage(user, other))) return;
           allowedUntil.set(to, Date.now() + PERMISSION_TTL_MS);
         }
         emitTo(to, 'typing', { from: id, typing: Boolean(typing) });
+      } catch {
+        // A failed check simply drops this typing update.
+      }
+    });
+
+    // An open group chat joins its college's room, checked against the member's memberships as they are now.
+    socket.on('group:join', async ({ college } = {}, ack) => {
+      let joined = false;
+      try {
+        const member = isObjectIdOrHexString(college) && (await User.findById(id).select('memberships isAdmin'));
+        if (member && isMember(member, college)) {
+          socket.join(groupRoom(college));
+          joined = true;
+        }
+      } catch {
+        // Without the room, the chat keeps polling.
+      }
+      if (typeof ack === 'function') ack(joined);
+    });
+    socket.on('group:leave', ({ college } = {}) => {
+      if (isObjectIdOrHexString(college)) socket.leave(groupRoom(college));
+    });
+
+    // Typing in a group reaches its open chats, except people this member blocked or was blocked by (checked each minute).
+    socket.on('group:typing', async ({ college, typing } = {}) => {
+      try {
+        const room = isObjectIdOrHexString(college) && groupRoom(college);
+        if (!room || !socket.rooms.has(room)) return;
+        if (hidden.until < Date.now()) hidden = { rooms: (await hiddenIds(user)).map((other) => `user:${other}`), until: Date.now() + PERMISSION_TTL_MS };
+        socket
+          .to(room)
+          .except(hidden.rooms)
+          .emit('group:typing', { college, user: { _id: id, name: user.name, avatar: user.avatar }, typing: Boolean(typing) });
       } catch {
         // A failed check simply drops this typing update.
       }

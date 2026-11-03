@@ -2,7 +2,22 @@ import College from '../models/College.js';
 import { ApiError } from './errors.js';
 import { same } from './shape.js';
 
-export const isMember = (user, collegeId) => user.isAdmin || (user.verified && same(user.college, collegeId));
+const idOf = (value) => value?._id ?? value;
+
+/** The colleges whose private groups the user belongs to: those of their verified memberships. */
+export function memberCollegeIds(user) {
+  const ids = (user.memberships ?? []).filter((entry) => entry.verified).map((entry) => idOf(entry.college));
+  return ids.filter((id, index) => ids.findIndex((other) => same(other, id)) === index);
+}
+
+/** Whether the user is a verified member of the college. */
+export const belongsTo = (user, collegeId) => memberCollegeIds(user).some((id) => same(id, collegeId));
+
+/** Filter for the users who are verified members of a college. */
+export const membersOf = (college) => ({ memberships: { $elemMatch: { college, verified: true } } });
+
+/** Verified members, and site admins, can see a college's group. */
+export const isMember = (user, collegeId) => user.isAdmin || belongsTo(user, collegeId);
 
 export function assertMember(user, collegeId) {
   if (!isMember(user, collegeId)) throw new ApiError(403, 'Only verified members of this college can see this');

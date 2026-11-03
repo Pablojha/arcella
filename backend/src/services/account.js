@@ -51,11 +51,10 @@ const MENTIONS = [
   [User, 'blocked'],
 ];
 
-/** Deletes every message to or from the user, with the photos, videos and voice notes in them. */
-async function removeMessages(userId) {
-  const filter = { $or: [{ from: userId }, { to: userId }] };
-  const files = (await Message.find(filter).select('media.url voice.url').lean()).flatMap((message) => [message.media?.url, message.voice?.url]);
-  await Message.deleteMany(filter);
+/** Deletes messages matching `filter`, with the photos, videos and voice notes in them. */
+async function removeMessages(Model, filter) {
+  const files = (await Model.find(filter).select('media.url voice.url').lean()).flatMap((message) => [message.media?.url, message.voice?.url]);
+  await Model.deleteMany(filter);
   await removeFiles(files);
 }
 
@@ -73,7 +72,7 @@ const PERSON = 'name username';
  */
 export async function exportAccount(userId) {
   const [account, created, messages, groupMessages, connections, notifications, chatSettings, savedPosts, verifications, reports, devices] = await Promise.all([
-    User.findById(userId).select('+blocked').populate('blocked', PERSON).lean(),
+    User.findById(userId).select('+blocked').populate('blocked', PERSON).populate('memberships.college', 'name').lean(),
     Promise.all(OWNED.map(async ([type, Model, field]) => [`${type}s`, (await Model.find({ [field]: userId }).sort({ _id: 1 }).lean()).map((doc) => countIds(Model, doc))])),
     Message.find({ $or: [{ from: userId }, { to: userId }] }).sort({ _id: 1 }).populate('from to', PERSON).lean(),
     GroupMessage.find({ author: userId }).sort({ _id: 1 }).populate('college', 'name').lean(),
@@ -114,10 +113,10 @@ export async function deleteAccount(userId) {
     ...[Question, Answer].map((Model) => Model.updateMany({ upvotes: userId }, { $pull: { upvotes: userId }, $inc: { votes: -1 } })),
     User.updateMany({ _id: { $in: contacts } }, { $inc: { connectionsCount: -1 } }),
     dropCollegeRoles(userId),
-    GroupMessage.deleteMany({ author: userId }),
+    removeMessages(GroupMessage, { author: userId }),
     Critique.deleteMany({ author: userId }),
     Connection.deleteMany({ $or: [{ from: userId }, { to: userId }] }),
-    removeMessages(userId),
+    removeMessages(Message, { $or: [{ from: userId }, { to: userId }] }),
     ChatState.deleteMany({ $or: [{ user: userId }, { other: userId }] }),
     PushSubscription.deleteMany({ user: userId }),
     Notification.deleteMany({ $or: [{ user: userId }, { actor: userId }] }),

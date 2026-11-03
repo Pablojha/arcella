@@ -11,7 +11,8 @@ import Verification from '../models/Verification.js';
 import { CARD, COLLEGE_ADMINS } from '../config/constants.js';
 import { deleteAccount } from '../services/account.js';
 import { previewContent, removeContent } from '../services/content.js';
-import { dropCollegeRoles, grantMembership } from '../services/membership.js';
+import { grantMembership, revokeMemberships } from '../services/membership.js';
+import { membersOf } from '../utils/access.js';
 import { ApiError, found } from '../utils/errors.js';
 import { paginate } from '../utils/query.js';
 import { searchRegex } from '../utils/text.js';
@@ -37,7 +38,7 @@ export async function stats(req, res) {
 
 export async function users(req, res) {
   const { q, college } = req.query;
-  const filter = college ? { college } : {};
+  const filter = college ? membersOf(college) : {};
   if (q) filter.$or = ['name', 'email', 'username'].map((field) => ({ [field]: searchRegex(q) }));
   const query = User.find(filter).select(`${CARD} email college collegeRole batch isAdmin createdAt`).populate('college', 'name short').sort({ _id: -1 });
   res.json(await paginate(query, req.query));
@@ -51,9 +52,9 @@ export async function verifyUser(req, res) {
   res.json({ ok: true });
 }
 
+/** Withdraws all of a member's college verifications (and group roles); their education stays, unverified. */
 export async function revokeUser(req, res) {
-  found(await User.findByIdAndUpdate(req.params.id, { verified: false, $unset: { college: 1, collegeRole: 1, batch: 1 } }), 'User');
-  await dropCollegeRoles(req.params.id);
+  await revokeMemberships(req.params.id);
   res.json({ ok: true });
 }
 

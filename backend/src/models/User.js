@@ -1,9 +1,24 @@
 import { Schema, model } from 'mongoose';
 import argon2 from 'argon2';
 import bcrypt from 'bcryptjs';
-import { COLLEGE_ROLES, USER_TYPES } from '../config/constants.js';
+import { COLLEGE_ROLES, DEGREE_LEVELS, USER_TYPES } from '../config/constants.js';
 import { randomSlug } from '../utils/text.js';
 import { ref } from './types.js';
+
+/**
+ * A college the member studied or teaches at. A verified membership opens that college's private group; faculty have
+ * no degree level or years. The `primary` one is mirrored in the user's college fields.
+ */
+const membershipSchema = new Schema({
+  college: ref('College', { required: true }),
+  role: { type: String, enum: COLLEGE_ROLES, required: true },
+  level: { type: String, enum: DEGREE_LEVELS },
+  degree: { type: String, trim: true },
+  batch: Number,
+  graduation: Number,
+  verified: { type: Boolean, default: false },
+  primary: { type: Boolean, default: false },
+});
 
 const userSchema = new Schema(
   {
@@ -23,6 +38,8 @@ const userSchema = new Schema(
     software: [String],
     skills: [String],
     experience: [{ title: String, org: String, start: String, end: String, description: String }],
+    memberships: [membershipSchema],
+    // The primary membership (the first verified one, or the one the member picks), shown on cards and profiles.
     college: ref('College'),
     collegeRole: { type: String, enum: COLLEGE_ROLES },
     batch: Number,
@@ -46,7 +63,7 @@ const userSchema = new Schema(
   },
 );
 
-userSchema.index({ college: 1, verified: 1, batch: -1 });
+userSchema.index({ 'memberships.college': 1, 'memberships.verified': 1 });
 userSchema.index({ 'mentor.enabled': 1 });
 
 userSchema.pre('validate', function setUsername() {

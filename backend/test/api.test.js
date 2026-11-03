@@ -377,6 +377,8 @@ test('verifies a college by email code with limited attempts', async () => {
   assert.match(wrong.message, /4 attempts left/);
   const { user } = await call('POST', '/verification/email/confirm', { token: tokenOf('asha'), body: { code: sent.devCode } });
   assert.equal(user.verified, true);
+  assert.deepEqual(user.memberships.map((entry) => [entry.college.short, entry.role, entry.batch, entry.verified, entry.primary]), [['IIT Roorkee', 'student', 2022, true, true]]);
+  await call('POST', '/verification/email/send', { token: tokenOf('asha'), body: { college: iitr._id, role: 'student', batch: 2022, email: 'asha.k@ar.iitr.ac.in' }, status: 400 });
 });
 
 test('reviews an uploaded document and deletes it after review', async () => {
@@ -450,6 +452,95 @@ test('runs a college with an admin and co-admin, and a group chat for its member
   assert.equal(report.content.text, 'Buy followers now');
   await call('POST', `/admin/reports/${report._id}/resolve`, { token: tokenOf('admin'), body: { action: 'remove' } });
   assert.deepEqual((await call('GET', chat, { token: bilal.token })).items, []);
+});
+
+test('group chats take GIFs, photos, voice notes and reactions, live like direct messages', async () => {
+  const { asha, bilal, chitra, iitr } = people;
+  const chat = `/colleges/${iitr._id}/chat`;
+  const [ashaLive, bilalLive, chitraLive] = await Promise.all([socketOf('asha'), socketOf('bilal'), socketOf('chitra')]);
+  assert.deepEqual(await Promise.all([ashaLive, bilalLive, chitraLive].map((socket) => socket.emitWithAck('group:join', { college: iitr._id }))), [true, true, false]);
+
+  const announced = next(ashaLive, 'group:new');
+  const gif = await call('POST', chat, { token: bilal.token, body: { gif: { url: 'https://media2.giphy.com/media/abc/200w.webp', width: 200, height: 150 } } });
+  assert.deepEqual(await announced, { college: iitr._id, _id: gif._id });
+  await call('POST', chat, { token: bilal.token, body: {}, status: 400 });
+  const photo = await call('POST', `${chat}/attachments`, { token: asha.token, form: { kind: 'image', width: 800, height: 600, file: file('model.png', 'image/png') } });
+  assert.match(photo.media.url, /^\/uploads\/groups\/.+\.png$/);
+  const voice = await call('POST', `${chat}/attachments`, { token: bilal.token, form: { kind: 'voice', duration: 2.5, waveform: '[0.2,0.9]', file: new File([Buffer.from('audio')], 'voice.webm', { type: 'audio/webm' }) } });
+  assert.deepEqual(voice.voice.waveform, [0.2, 0.9]);
+  await call('POST', `${chat}/attachments`, { token: chitra.token, form: { kind: 'image', width: 10, height: 10, file: file('x.png', 'image/png') }, status: 403 });
+
+  const typing = next(ashaLive, 'group:typing');
+  bilalLive.emit('group:typing', { college: iitr._id, typing: true });
+  const typed = await typing;
+  assert.deepEqual([typed.college, typed.user.name, typed.typing], [iitr._id, 'Bilal Khan', true]);
+
+  const reaction = `${chat}/${photo._id}/reaction`;
+  const updated = next(ashaLive, 'group:update');
+  const { reactions } = await call('PUT', reaction, { token: bilal.token, body: { emoji: '🔥' } });
+  assert.deepEqual(reactions.map((item) => [item.user.name, item.emoji]), [['Bilal Khan', '🔥']]);
+  assert.equal((await updated).reactions[0].emoji, '🔥');
+  assert.deepEqual((await call('PUT', reaction, { token: bilal.token, body: { emoji: '🔥' } })).reactions, []);
+  await call('PUT', reaction, { token: chitra.token, body: { emoji: '🔥' }, status: 403 });
+  const kinds = (await call('GET', chat, { token: asha.token })).items.map((message) => Object.keys(message).find((key) => ['gif', 'media', 'voice'].includes(key)));
+  assert.deepEqual(kinds.slice(-3), ['gif', 'media', 'voice']);
+
+  const removed = next(bilalLive, 'group:remove');
+  await call('DELETE', `${chat}/${photo._id}`, { token: asha.token });
+  assert.equal((await removed)._id, photo._id);
+  [ashaLive, bilalLive, chitraLive].forEach((socket) => socket.disconnect());
+});
+
+test('lets members list several colleges and verify each one to join its group', async () => {
+  const { asha, bilal, iitr } = people;
+  const [spa] = (await call('GET', `/colleges?q=${encodeURIComponent('SPA Delhi')}`, { token: bilal.token })).items;
+  const added = await call('POST', '/users/me/memberships', { token: bilal.token, body: { college: spa._id, role: 'student', level: 'postgraduate', degree: 'M.Arch', batch: 2026, graduation: 2028 } });
+  const entry = added.user.memberships.find((item) => item._id === added.membership);
+  assert.deepEqual([entry.college.name, entry.verified, added.user.college._id], [spa.name, false, iitr._id]);
+  await call('POST', '/users/me/memberships', { token: bilal.token, body: { college: spa._id, role: 'alumni', level: 'postgraduate', batch: 2020 }, status: 409 });
+  await call('POST', '/users/me/memberships', { token: bilal.token, body: { college: spa._id, role: 'student', batch: 2026 }, status: 400 });
+  await call('GET', `/colleges/${spa._id}/chat`, { token: bilal.token, status: 403 });
+
+  const sent = await call('POST', '/verification/email/send', { token: bilal.token, body: { college: spa._id, role: 'student', level: 'postgraduate', degree: 'M.Arch', batch: 2026, email: 'bilal@spa.ac.in' } });
+  const { user } = await call('POST', '/verification/email/confirm', { token: bilal.token, body: { code: sent.devCode } });
+  assert.deepEqual(
+    user.memberships.map((item) => [item.college.short, item.level ?? null, item.degree, item.verified, item.primary]),
+    [['IIT Roorkee', null, undefined, true, true], ['SPA Delhi', 'postgraduate', 'M.Arch', true, false]],
+  );
+  await call('GET', `/colleges/${spa._id}/chat`, { token: bilal.token });
+  await call('GET', `/colleges/${iitr._id}/chat`, { token: bilal.token });
+  const { groups } = await call('GET', `/colleges/${spa._id}/members`, { token: bilal.token });
+  assert.deepEqual(groups.map((group) => [group.title, group.members.map((member) => [member.name, member.level, member.degree])]), [['Batch 2026', [['Bilal Khan', 'postgraduate', 'M.Arch']]]]);
+  await call('POST', '/verification/email/send', { token: bilal.token, body: { college: spa._id, role: 'student', level: 'postgraduate', batch: 2026, email: 'bilal@spa.ac.in' }, status: 400 });
+
+  const start = new Date(Date.now() + 86_400_000).toISOString();
+  const event = await call('POST', '/events', { token: bilal.token, form: { title: 'M.Arch jury', type: 'jury', start, venue: 'Studio 4', collegeOnly: 'true', college: spa._id } });
+  assert.equal(event.college, spa._id);
+  await call('GET', `/events/${event._id}`, { token: asha.token, status: 403 });
+  await call('POST', '/events', { token: asha.token, form: { title: 'Not mine', type: 'jury', start, venue: 'Hall', collegeOnly: 'true', college: spa._id }, status: 403 });
+
+  const spaEntry = user.memberships.find((item) => item.college._id === spa._id);
+  await call('PUT', `/users/me/memberships/${spaEntry._id}`, { token: bilal.token, body: { role: 'student', level: 'postgraduate', batch: 2025 }, status: 400 });
+  const edited = await call('PUT', `/users/me/memberships/${spaEntry._id}`, { token: bilal.token, body: { role: 'alumni', level: 'postgraduate', degree: 'M.Arch (Urban Design)', batch: 2026, graduation: 2028 } });
+  assert.equal(edited.user.memberships.find((item) => item._id === spaEntry._id).degree, 'M.Arch (Urban Design)');
+  const switched = await call('POST', `/users/me/memberships/${spaEntry._id}/primary`, { token: bilal.token });
+  assert.deepEqual([switched.user.college._id, switched.user.batch, switched.user.type], [spa._id, 2026, 'alumni']);
+
+  const left = await call('DELETE', `/users/me/memberships/${spaEntry._id}`, { token: bilal.token });
+  assert.deepEqual([left.user.college._id, left.user.memberships.length, left.user.type], [iitr._id, 1, 'student']);
+  await call('GET', `/colleges/${spa._id}/chat`, { token: bilal.token, status: 403 });
+  assert.equal((await call('GET', `/colleges/${iitr._id}`, { token: bilal.token })).moderator, true);
+});
+
+test('gives members verified before several colleges were allowed a membership for their college', async () => {
+  const { default: User } = await import('../src/models/User.js');
+  const { migrateMemberships } = await import('../src/services/membership.js');
+  const legacy = await User.create({ name: 'Early Member', email: 'early@test.arcella', password: 'password123', college: people.iitr._id, collegeRole: 'alumni', batch: 2015, verified: true });
+  assert.equal(await migrateMemberships(), 1);
+  assert.equal(await migrateMemberships(), 0);
+  const [entry] = (await User.findById(legacy._id).lean()).memberships;
+  assert.deepEqual([String(entry.college), entry.role, entry.batch, entry.verified, entry.primary, Boolean(entry._id)], [people.iitr._id, 'alumni', 2015, true, true, true]);
+  await User.deleteOne({ _id: legacy._id });
 });
 
 test('marks posts Important once a day and notifies the right people', async () => {

@@ -1,9 +1,8 @@
 import Avatar from '../ui/Avatar';
 import Sheet from '../ui/Sheet';
 
-/** Who reacted to a message, with which emoji; your own reaction can be removed from here. */
-export default function ReactionsSheet({ message, me, other, onRemove, onClose }) {
-  const people = { [me._id]: me, ...(other && { [other._id]: other }) };
+/** Who reacted to a message, with which emoji (`people` maps ids to members); your own reaction can be removed from here. */
+export default function ReactionsSheet({ message, me, people, onRemove, onClose }) {
   return (
     <Sheet open={Boolean(message)} onClose={onClose} title="Reactions">
       <div className="space-y-1 pb-2">

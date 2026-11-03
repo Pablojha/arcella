@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { COLLEGE_ROLES } from '../config/constants.js';
 import * as ctrl from '../controllers/admin.controller.js';
 import { adminOnly, auth } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { int, listQuery, objectId, required, text, z } from '../utils/zod.js';
+import { membershipDetails, membershipRules } from '../utils/membership.schema.js';
+import { listQuery, objectId, required, text, z } from '../utils/zod.js';
 
 const domains = z.preprocess(
   (value) =>
@@ -21,9 +21,7 @@ const collegeSchema = z.object({
   domains,
 });
 
-const verifySchema = z
-  .object({ college: objectId, role: z.enum(COLLEGE_ROLES), batch: int(1950, new Date().getFullYear() + 6) })
-  .refine((data) => data.role === 'faculty' || Boolean(data.batch), { message: 'Batch year is required', path: ['batch'] });
+const verifySchema = membershipRules(z.object(membershipDetails));
 
 const router = Router();
 

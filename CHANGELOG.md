@@ -1,5 +1,15 @@
 # Changelog
 
+## November 2026: several colleges and group chats like direct messages
+
+- **Several colleges per member.** Profiles have an **Education** section: each college with the member's role, degree level (undergraduate, postgraduate or advanced research), degree and years. Each one can be verified (college email or document) and opens that college's private group, so members belong to every group they verified. The **College** page switches between them, and members choose which college is their main one.
+- Group access, members lists (grouped by batch, with each member's degree), Important-post audiences, college-only events (the host picks the college), stories for college mates, batchmate messaging and group admin roles now work per verified college. Leaving a college also ends any admin role in its group.
+- Existing members keep their verified college: the API copies it into their memberships at start-up, without changing anything else.
+- **Group chats work like direct messages:** photos, videos, voice notes, GIFs, emoji reactions, typing dots and live updates over Socket.IO, in the same bubbles and composer as direct messages, with sender names and group roles. On phones a group chat opens full screen. Reports and deletes are in the long-press menu.
+- Live group updates only announce new messages; each chat then fetches them through the API, so blocks still apply. Typing is not sent to people blocked either way.
+- Deleting a group message or an account now also deletes the photos, videos and voice notes in it, and report previews show attachments.
+- Tests: 3 new API tests (23 in all) and a new browser test file for education, the college switcher and live group chat on desktop and phone.
+
 ## November 2026: legal and compliance
 
 - **Terms of Use** now cover disclaimers, limitation of liability (cap to be set by the operator), indemnity, intellectual property and licences, moderation, a Grievance Officer under India's IT Rules 2021 (acknowledge in 24 hours, resolve in 15 days), and how the terms end or change.

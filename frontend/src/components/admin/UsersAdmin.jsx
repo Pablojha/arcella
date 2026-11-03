@@ -4,7 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import { useDebounce } from '../../hooks/useDebounce';
 import { usePaged } from '../../hooks/usePaged';
 import api from '../../lib/api';
-import { BATCH_YEARS, COLLEGE_ROLES } from '../../lib/constants';
+import { BATCH_YEARS, COLLEGE_ROLES, DEGREE_LEVELS } from '../../lib/constants';
 import Button from '../ui/Button';
 import CollegeSelect from '../ui/CollegeSelect';
 import Field from '../ui/Field';
@@ -16,7 +16,7 @@ import UserChip from '../ui/UserChip';
 
 function VerifyUser({ user, onClose, onDone }) {
   const toast = useToast();
-  const [form, setForm] = useState({ college: '', role: user.type === 'professional' ? 'alumni' : user.type, batch: '' });
+  const [form, setForm] = useState({ college: '', role: user.type === 'professional' ? 'alumni' : user.type, level: '', batch: '' });
   const [busy, setBusy] = useState(false);
 
   const submit = async (event) => {
@@ -50,6 +50,18 @@ function VerifyUser({ user, onClose, onDone }) {
             </select>
           </Field>
           {form.role !== 'faculty' && (
+            <Field label="Degree level">
+              <select value={form.level} onChange={(event) => setForm((current) => ({ ...current, level: event.target.value }))} className="input">
+                <option value="">Not set</option>
+                {DEGREE_LEVELS.map((level) => (
+                  <option key={level.value} value={level.value}>
+                    {level.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+          {form.role !== 'faculty' && (
             <Field label="Batch">
               <select value={form.batch} onChange={(event) => setForm((current) => ({ ...current, batch: event.target.value }))} className="input">
                 <option value="">Year</option>
@@ -75,7 +87,7 @@ export default function UsersAdmin() {
   const [verifying, setVerifying] = useState(null);
 
   const revoke = async (user) => {
-    if (!window.confirm(`Remove ${user.name}'s college verification?`)) return;
+    if (!window.confirm(`Remove all of ${user.name}'s college verifications? Their education stays on their profile, unverified.`)) return;
     try {
       await api.delete(`/admin/users/${user._id}/verify`);
       toast.success('Verification removed');
@@ -94,15 +106,14 @@ export default function UsersAdmin() {
             <UserChip user={user} sub={`${user.email}${user.verified ? ` · ${user.college?.short ?? user.college?.name ?? ''}` : ''}`} />
           </div>
           {user.isAdmin && <span className="chip">Admin</span>}
-          {user.verified ? (
+          {user.verified && (
             <Button size="sm" variant="danger" icon={ShieldOff} onClick={() => revoke(user)}>
               Revoke
             </Button>
-          ) : (
-            <Button size="sm" variant="secondary" icon={BadgeCheck} onClick={() => setVerifying(user)}>
-              Verify
-            </Button>
           )}
+          <Button size="sm" variant="secondary" icon={BadgeCheck} onClick={() => setVerifying(user)}>
+            Verify
+          </Button>
         </div>
       ))}
       {users.loading && <ListSkeleton count={3} lines={0} />}

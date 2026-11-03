@@ -1,21 +1,15 @@
 import { Router } from 'express';
-import { COLLEGE_ROLES, DOC_TYPES } from '../config/constants.js';
+import { DOC_TYPES } from '../config/constants.js';
 import * as ctrl from '../controllers/verification.controller.js';
 import { auth } from '../middleware/auth.js';
 import { otpLimiter } from '../middleware/rateLimit.js';
 import { proofDocument } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
-import { email, int, objectId, text, z } from '../utils/zod.js';
+import { membershipDetails, membershipRules } from '../utils/membership.schema.js';
+import { email, text, z } from '../utils/zod.js';
 
-const details = {
-  college: objectId,
-  role: z.enum(COLLEGE_ROLES),
-  batch: int(1950, new Date().getFullYear() + 6),
-};
-const needsBatch = [(data) => data.role === 'faculty' || Boolean(data.batch), { message: 'Batch year is required', path: ['batch'] }];
-
-const sendSchema = z.object({ ...details, email }).refine(...needsBatch);
-const documentSchema = z.object({ ...details, docType: z.enum(DOC_TYPES) }).refine(...needsBatch);
+const sendSchema = membershipRules(z.object({ ...membershipDetails, email }));
+const documentSchema = membershipRules(z.object({ ...membershipDetails, docType: z.enum(DOC_TYPES) }));
 const confirmSchema = z.object({ code: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code from your email') });
 const reviewSchema = z.object({ decision: z.enum(['approve', 'reject']), note: text(300).optional() });
 

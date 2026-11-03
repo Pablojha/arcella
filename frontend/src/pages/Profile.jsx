@@ -7,6 +7,7 @@ import RequestSession from '../components/mentors/RequestSession';
 import ConnectButton from '../components/network/ConnectButton';
 import ProjectCard from '../components/portfolio/ProjectCard';
 import EditProfile from '../components/profile/EditProfile';
+import Education from '../components/profile/Education';
 import ReportSheet from '../components/ReportSheet';
 import Avatar from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
@@ -50,12 +51,13 @@ function TagList({ title, items }) {
   );
 }
 
-function About({ person }) {
-  const empty = !person.bio && !person.software?.length && !person.skills?.length && !person.experience?.length;
-  if (empty) return <EmptyState icon={Pencil} title="Nothing here yet" text="This member hasn't filled in their profile." />;
+function About({ person, own }) {
+  const empty = !person.bio && !person.software?.length && !person.skills?.length && !person.experience?.length && !person.memberships?.length;
+  if (empty && !own) return <EmptyState icon={Pencil} title="Nothing here yet" text="This member hasn't filled in their profile." />;
   return (
     <div className="card space-y-6 p-4 md:p-6">
       {person.bio && <p className="whitespace-pre-line break-words leading-relaxed">{person.bio}</p>}
+      <Education person={person} own={own} />
       <TagList title="Software" items={person.software} />
       <TagList title="Skills" items={person.skills} />
       {person.experience?.length > 0 && (
@@ -242,7 +244,7 @@ export default function Profile() {
       </section>
 
       <Tabs tabs={TABS} value={tab} onChange={(value) => setParams({ tab: value }, { replace: true })} />
-      {tab === 'about' && <About person={person} />}
+      {tab === 'about' && <About person={person} own={own} />}
       {tab === 'portfolio' && <Portfolio person={person} own={own} />}
       {tab === 'activity' && <Activity person={person} />}
 

@@ -9,7 +9,7 @@ import { ListSkeleton } from '../ui/Skeleton';
 export default function CollegeEvents({ collegeId }) {
   const { items, loading } = usePaged('/events', { college: collegeId });
   const create = (
-    <Button to="/events/new?college=1" icon={Plus} size="sm">
+    <Button to={`/events/new?college=${collegeId}`} icon={Plus} size="sm">
       College-only event
     </Button>
   );

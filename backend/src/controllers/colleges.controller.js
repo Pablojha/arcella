@@ -2,7 +2,7 @@ import College from '../models/College.js';
 import User from '../models/User.js';
 import { CARD, COLLEGE_ADMINS } from '../config/constants.js';
 import { notify } from '../services/notify.js';
-import { assertMember, isMember, isModerator } from '../utils/access.js';
+import { assertMember, belongsTo, isMember, isModerator, membersOf } from '../utils/access.js';
 import { ApiError, found } from '../utils/errors.js';
 import { same } from '../utils/shape.js';
 import { escapeRegex, searchRegex, uniqueSlug } from '../utils/text.js';
@@ -27,21 +27,27 @@ export async function create(req, res) {
 export async function get(req, res) {
   const college = found(await College.findById(req.params.id).select('-addedBy').populate(COLLEGE_ADMINS).lean(), 'College');
   const [membersCount, moderator] = await Promise.all([
-    User.countDocuments({ college: college._id, verified: true }),
+    User.countDocuments(membersOf(college._id)),
     isModerator(req.user, college._id),
   ]);
   res.json({ ...college, membersCount, member: isMember(req.user, college._id), moderator });
 }
 
-/** Verified members grouped as Faculty first, then by batch (newest first). */
+/**
+ * Verified members grouped as Faculty first, then by batch (newest first), each with their role, degree and years at
+ * this college. Someone with two degrees here (say an undergraduate and a postgraduate one) appears in both batches.
+ */
 export async function members(req, res) {
   assertMember(req.user, req.params.id);
-  const users = await User.find({ college: req.params.id, verified: true }).select(`${CARD} batch collegeRole`).sort({ batch: -1, name: 1 }).lean();
+  const users = await User.find(membersOf(req.params.id)).select(`${CARD} memberships`).sort({ name: 1 }).lean();
+  const entries = users.flatMap(({ memberships, ...user }) =>
+    memberships.filter((entry) => entry.verified && same(entry.college, req.params.id)).map(({ role, level, degree, batch, graduation }) => ({ ...user, role, level, degree, batch, graduation })),
+  );
   const groups = new Map([['Faculty', []]]);
-  for (const user of users) {
-    const title = user.collegeRole === 'faculty' ? 'Faculty' : `Batch ${user.batch ?? 'not set'}`;
+  for (const entry of entries.sort((a, b) => (b.batch ?? 0) - (a.batch ?? 0))) {
+    const title = entry.role === 'faculty' ? 'Faculty' : `Batch ${entry.batch ?? 'not set'}`;
     if (!groups.has(title)) groups.set(title, []);
-    groups.get(title).push(user);
+    groups.get(title).push(entry);
   }
   res.json({ groups: [...groups].filter(([, list]) => list.length).map(([title, list]) => ({ title, members: list })) });
 }
@@ -55,8 +61,8 @@ export async function setRole(req, res) {
   const college = found(await College.findById(req.params.id), 'College');
   if (!req.user.isAdmin && !(role === 'coAdmin' && same(college.admin, req.user._id))) throw new ApiError(403, 'Only Arcella admins and the college admin can choose group admins');
   if (user) {
-    const member = found(await User.findById(user).select('verified college'), 'User');
-    if (!member.verified || !same(member.college, college._id)) throw new ApiError(400, 'Choose a verified member of this college');
+    const member = found(await User.findById(user).select('memberships'), 'User');
+    if (!belongsTo(member, college._id)) throw new ApiError(400, 'Choose a verified member of this college');
     const other = role === 'admin' ? 'coAdmin' : 'admin';
     if (same(college[other], user)) {
       if (!req.user.isAdmin) throw new ApiError(400, 'That member is already the college admin');

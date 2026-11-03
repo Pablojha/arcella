@@ -104,7 +104,7 @@ export async function react(req, res) {
  */
 export async function thread(req, res) {
   const me = req.user._id;
-  const other = found(await User.findById(req.params.userId).select(`${CARD} college batch lastActiveAt`), 'User');
+  const other = found(await User.findById(req.params.userId).select(`${CARD} memberships lastActiveAt`), 'User');
   const { after, before } = req.query;
   const filter = pair(me, other._id);
   let items;
@@ -133,7 +133,7 @@ export async function thread(req, res) {
 
 /** The person being messaged, if the viewer is allowed to message them. */
 async function recipient(req) {
-  const other = found(await User.findById(req.params.userId).select('college batch verified'), 'User');
+  const other = found(await User.findById(req.params.userId).select('memberships'), 'User');
   if (same(other._id, req.user._id)) throw new ApiError(400, "You can't message yourself");
   if (!(await canMessage(req.user, other))) throw new ApiError(403, 'You can message your connections and verified batchmates');
   return other;

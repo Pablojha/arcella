@@ -5,6 +5,7 @@ import { auth } from '../middleware/auth.js';
 import { exportLimiter } from '../middleware/rateLimit.js';
 import { images } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
+import { membershipDetails, membershipRules } from '../utils/membership.schema.js';
 import { link, list, listQuery, objectId, required, text, z } from '../utils/zod.js';
 
 const experience = z.object({
@@ -26,6 +27,10 @@ const profileSchema = z.object({
   experience: z.array(experience).max(20).optional(),
 });
 
+const { college, ...editable } = membershipDetails;
+const newMembership = membershipRules(z.object({ college, ...editable }), { needsLevel: true });
+const membershipChanges = membershipRules(z.object(editable), { needsLevel: true });
+
 const searchSchema = listQuery({
   software: text(40).optional(),
   college: objectId.optional(),
@@ -41,6 +46,10 @@ router.patch('/me', validate(profileSchema), ctrl.updateMe);
 router.delete('/me', validate(z.object({ password: z.string().min(1).max(100) })), ctrl.deleteMe);
 router.get('/me/blocked', ctrl.blockedList);
 router.get('/me/export', exportLimiter, ctrl.exportMe);
+router.post('/me/memberships', validate(newMembership), ctrl.addMembership);
+router.put('/me/memberships/:membershipId', validate(membershipChanges), ctrl.updateMembership);
+router.delete('/me/memberships/:membershipId', ctrl.removeMembership);
+router.post('/me/memberships/:membershipId/primary', ctrl.choosePrimary);
 router.post('/me/avatar', images.single('image'), ctrl.updateImage('avatar'));
 router.post('/me/cover', images.single('image'), ctrl.updateImage('cover'));
 router.get('/:id', ctrl.profile);

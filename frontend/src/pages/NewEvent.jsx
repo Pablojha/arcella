@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext';
 import api, { toFormData } from '../lib/api';
 import { EVENT_TYPES } from '../lib/constants';
 import { compressImage } from '../lib/files';
+import { idOf, memberColleges } from '../lib/memberships';
 
 /** datetime-local values are local time; send them as absolute ISO timestamps. */
 const toIso = (local) => (local ? new Date(local).toISOString() : undefined);
@@ -20,7 +21,9 @@ export default function NewEvent() {
   const toast = useToast();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const [form, setForm] = useState({ title: '', type: 'site-visit', description: '', start: '', end: '', online: false, venue: '', link: '', collegeOnly: params.has('college') && user.verified });
+  const colleges = memberColleges(user);
+  const fromGroup = colleges.find((college) => college._id === params.get('college'));
+  const [form, setForm] = useState({ title: '', type: 'site-visit', description: '', start: '', end: '', online: false, venue: '', link: '', collegeOnly: Boolean(fromGroup), college: idOf(fromGroup ?? colleges[0]) ?? '' });
   const [cover, setCover] = useState(null);
   const [busy, setBusy] = useState(false);
   const set = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
@@ -30,7 +33,7 @@ export default function NewEvent() {
     event.preventDefault();
     setBusy(true);
     try {
-      const created = await api.post('/events', toFormData({ ...form, start: toIso(form.start), end: toIso(form.end), cover }));
+      const created = await api.post('/events', toFormData({ ...form, college: form.collegeOnly ? form.college : undefined, start: toIso(form.start), end: toIso(form.end), cover }));
       toast.success('Event published');
       navigate(`/events/${created._id}`, { replace: true });
     } catch (error) {
@@ -75,7 +78,20 @@ export default function NewEvent() {
           <span className="truncate">{cover ? cover.name : 'Add a cover image (optional)'}</span>
           <input type="file" accept="image/*" hidden onChange={async (event) => event.target.files[0] && setCover(await compressImage(event.target.files[0]))} />
         </label>
-        {user.verified && <Toggle checked={form.collegeOnly} onChange={set('collegeOnly')} label={`Only for ${user.college?.short ?? 'my college'}`} hint="Visible only to verified members of your college." />}
+        {colleges.length > 0 && (
+          <Toggle checked={form.collegeOnly} onChange={set('collegeOnly')} label={colleges.length > 1 ? 'Only for one of my colleges' : `Only for ${colleges[0].short ?? colleges[0].name}`} hint="Visible only to the college's verified members." />
+        )}
+        {form.collegeOnly && colleges.length > 1 && (
+          <Field label="College">
+            <select value={form.college} onChange={text('college')} className="input">
+              {colleges.map((college) => (
+                <option key={college._id} value={college._id}>
+                  {college.short ?? college.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Button type="submit" size="lg" className="w-full" loading={busy}>
           Publish event
         </Button>

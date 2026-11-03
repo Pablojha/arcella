@@ -1,5 +1,7 @@
 export const USER_TYPES = ['student', 'alumni', 'faculty', 'professional'];
 export const COLLEGE_ROLES = ['student', 'alumni', 'faculty'];
+/** Degree levels a member can list for each college they studied at. */
+export const DEGREE_LEVELS = ['undergraduate', 'postgraduate', 'research'];
 export const DOC_TYPES = ['id_card', 'marksheet', 'degree'];
 export const PROJECT_CATEGORIES = ['Residential', 'Commercial', 'Institutional', 'Urban Design', 'Landscape', 'Interior', 'Conservation', 'Thesis', 'Competition', 'Other'];
 export const CRITERIA = ['concept', 'planning', 'presentation', 'technical'];

@@ -13,6 +13,7 @@ import Resource from '../models/Resource.js';
 import Story from '../models/Story.js';
 import User from '../models/User.js';
 import { CARD } from '../config/constants.js';
+import { emitToGroup } from './realtime.js';
 import { removeFiles } from './storage.js';
 
 /** Reportable things: [model, fields shown to admins, path of the author]. */
@@ -27,8 +28,8 @@ export const CONTENT = {
   job: [Job, 'title company postedBy', 'postedBy'],
   event: [Event, 'title host', 'host'],
   firm: [Firm, 'name slug logo owner', 'owner'],
-  message: [Message, 'text from to', 'from'],
-  chat: [GroupMessage, 'text college author', 'author'],
+  message: [Message, 'text media gif voice from to', 'from'],
+  chat: [GroupMessage, 'text media gif voice college author', 'author'],
   user: [User, CARD, null],
 };
 
@@ -90,7 +91,10 @@ const REMOVE = {
     if (message) await removeFiles([message.media?.url, message.voice?.url]);
   },
   async chat(id) {
-    await GroupMessage.findByIdAndDelete(id);
+    const message = await GroupMessage.findByIdAndDelete(id);
+    if (!message) return;
+    emitToGroup(message.college, 'group:remove', { _id: message._id });
+    await removeFiles([message.media?.url, message.voice?.url]);
   },
 };
 

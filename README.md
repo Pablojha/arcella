@@ -1,6 +1,6 @@
 # arcella.
 
-A professional network for architecture students, alumni, faculty and firms in India: a feed of photo posts and vertical video reels with likes, comments, reposts, saves and Important alerts, portfolios with critiques, private college groups with verified membership, a group chat and their own admin and co-admin, stories, jobs, firm pages, mentorship, events, Q&A, study resources and direct messages. It works as a website, an installable PWA and an Android app.
+A professional network for architecture students, alumni, faculty and firms in India: a feed of photo posts and vertical video reels with likes, comments, reposts, saves and Important alerts, portfolios with critiques, private college groups (members can verify several colleges: undergraduate, postgraduate and research degrees) with a group chat that works like direct messages and their own admin and co-admin, stories, jobs, firm pages, mentorship, events, Q&A, study resources and direct messages. It works as a website, an installable PWA and an Android app.
 
 It also includes what a public launch needs: email verification with a one-time code at sign-up, search across the whole network, password reset by code, account deletion, reporting and blocking with an admin moderation queue, Terms, Privacy, Cookie, Refund, Community Guidelines, Copyright and Accessibility pages with a cookie notice, a "download your data" export, consent at sign-up, strict security headers, anti-spam rate limits, and automated accessibility (WCAG 2.2 AA), API and browser tests that run on every push.
 
@@ -50,8 +50,8 @@ Register with an address in `ADMIN_EMAIL` and confirm it with the one-time code 
 
 | Suite | Command | Needs |
 | --- | --- | --- |
-| API (19 end-to-end tests: auth, admin rights, posts, comments, chat, reactions, push notifications, colleges, moderation, account deletion) | `cd backend && npm test` | MongoDB. Uses a separate `arcella_test` database (override with `MONGODB_TEST_URI`); email and Cloudinary are switched off, so nothing leaves your machine |
-| Browser (Playwright: public pages and SEO tags, cookie notice, sign-up/login/logout/password reset, access control, 10 screen widths from 320 to 1920 px, WCAG 2.2 AA via axe-core in light and dark, internal links) | `cd e2e && npm test` | The API and a production build running (below) |
+| API (23 end-to-end tests: auth, admin rights, posts, comments, chat, reactions, push notifications, colleges, several colleges per member, group chat, moderation, data export, account deletion) | `cd backend && npm test` | MongoDB. Uses a separate `arcella_test` database (override with `MONGODB_TEST_URI`); email and Cloudinary are switched off, so nothing leaves your machine |
+| Browser (Playwright: public pages and SEO tags, cookie notice, sign-up/login/logout/password reset, access control, education and the college switcher, live group chat with reactions, 10 screen widths from 320 to 1920 px, WCAG 2.2 AA via axe-core in light and dark, internal links) | `cd e2e && npm test` | The API and a production build running (below) |
 
 To run the browser suite locally:
 
@@ -141,11 +141,17 @@ Notes:
 
 ## How college verification works
 
-1. A member picks their college (or adds a missing one), their role (student, alumni or faculty) and batch year.
+Members list every college they studied or teach at under **Education** on their profile: the college, their role (student, alumni or faculty) and, for students and alumni, the degree level (undergraduate, postgraduate or advanced research), the degree (B.Arch, M.Arch, PhD…) and the years. Each college is verified on its own and opens that college's group, so someone with a B.Arch from one college and an M.Arch from another belongs to both groups and switches between them on the **College** page. Their first verified college is the main one shown on cards; they can pick another.
+
+1. A member picks a college (or adds a missing one), their role, degree level, degree and batch year, or starts from a college in their Education with **Verify to join the group**.
 2. **College email:** offered only when an admin has set the college's official domains, e.g. `iitr.ac.in` (subdomains such as `ar.iitr.ac.in` also count). It sends a 6-digit code that expires in 10 minutes and allows 5 attempts, and the routes are rate-limited.
 3. **Document:** a college ID card, result or marksheet, or degree certificate goes into a review queue for site admins and that college's admin and co-admin, who approve or reject it with a note. The member is notified either way.
 
 Site admins manage colleges, email domains and manual verification from **More → Admin**, and can open every college group (**Admin → Colleges → Open group**). Each group has one **admin** and one **co-admin**, chosen from verified members on the group's **Members** tab: site admins choose both, and the college admin can pick their own co-admin. They review requests on the **Review** tab, remove posts and chat messages, and post Important updates to the whole group without the one-a-day limit members have.
+
+Group chats use the same screens as direct messages: photos, videos, voice notes, GIFs, emoji reactions (double-tap for ❤️, hold for more), typing dots and live updates, with each sender's name and group role. On phones a group chat opens full screen like a conversation. Members report messages and delete their own.
+
+Members verified before several colleges were allowed keep their college: at start-up the API gives each of them a matching membership (it changes nothing for anyone else).
 
 ## Important posts
 

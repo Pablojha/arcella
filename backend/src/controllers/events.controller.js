@@ -2,14 +2,14 @@ import Event from '../models/Event.js';
 import { CARD } from '../config/constants.js';
 import { removeContent } from '../services/content.js';
 import { saveFile } from '../services/storage.js';
-import { assertCanManage, assertMember } from '../utils/access.js';
+import { assertCanManage, assertMember, belongsTo, memberCollegeIds } from '../utils/access.js';
 import { ApiError, found } from '../utils/errors.js';
 import { paginate, toggle } from '../utils/query.js';
 import { withCount } from '../utils/shape.js';
 
 const TWO_HOURS = 2 * 60 * 60 * 1000;
 const shape = (viewerId) => (event) => withCount(event, 'attendees', viewerId, 'going');
-const visibleTo = (user) => ({ $or: [{ college: null }, ...(user.verified ? [{ college: user.college }] : [])] });
+const visibleTo = (user) => ({ college: { $in: [null, ...memberCollegeIds(user)] } });
 
 async function visibleEvent(req) {
   const event = found(await Event.findById(req.params.id), 'Event');
@@ -37,14 +37,14 @@ export async function get(req, res) {
 }
 
 export async function create(req, res) {
-  const { collegeOnly, ...body } = req.body;
-  if (collegeOnly && !req.user.verified) throw new ApiError(403, 'Verify your college to host college-only events');
+  const { collegeOnly, college = req.user.college, ...body } = req.body;
+  if (collegeOnly && !belongsTo(req.user, college)) throw new ApiError(403, 'Verify your college to host college-only events');
   if (body.end && body.end <= body.start) throw new ApiError(400, 'The event must end after it starts');
   if (body.online ? !body.link : !body.venue) throw new ApiError(400, body.online ? 'Add the joining link for an online event' : 'Add a venue, or mark the event as online');
   const event = await Event.create({
     ...body,
     end: body.end ?? new Date(body.start.getTime() + TWO_HOURS),
-    college: collegeOnly ? req.user.college : null,
+    college: collegeOnly ? college : null,
     host: req.user._id,
     cover: req.file ? await saveFile(req.file, 'events') : undefined,
   });

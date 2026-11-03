@@ -46,14 +46,14 @@ Started 3 November 2026 from tag `v1.0-pre-hardening` (the live version before t
 - [ ] **Owner decisions** raised there: minimum age 16 vs DPDP's under-18 parental consent, IT Rules 180-day retention, CERT-In incident reporting and logs, trademark, code licence
 
 ### Several colleges per member (chosen: join several college groups)
-- [ ] `memberships` on users: college, role, level (undergraduate/postgraduate/research), degree, batch, verified; migrate existing single-college members without losing data
-- [ ] Group access, members lists, Important-post audiences and admin roles work per verified membership
-- [ ] Verification per college (several requests allowed); the first verified college stays the primary one
-- [ ] Profile education section (add/edit/remove colleges by level and degree); college switcher on the College page
+- [x] `memberships` on users: college, role, level (undergraduate/postgraduate/research), degree, batch, verified; migrate existing single-college members without losing data
+- [x] Group access, members lists, Important-post audiences and admin roles work per verified membership
+- [x] Verification per college (several requests allowed); the first verified college stays the primary one
+- [x] Profile education section (add/edit/remove colleges by level and degree); college switcher on the College page
 
 ### Group chat like direct messages
-- [ ] Group messages: photos, videos, voice notes, GIFs, reactions; live over Socket.IO college rooms with typing
-- [ ] Same UI as DMs (bubbles, composer, reactions, lightbox, voice) plus sender names and admin badges; moderators can delete
+- [x] Group messages: photos, videos, voice notes, GIFs, reactions; live over Socket.IO college rooms with typing
+- [x] Same UI as DMs (bubbles, composer, reactions, lightbox, voice) plus sender names and admin badges; moderators can delete; full screen on phones
 
 ## Deploy
 - [x] Pushed and verified: Render live, Vercel live, CI green (API tests, website build, Playwright), and a live smoke test of every public page (no console errors, nothing blocked by the CSP)

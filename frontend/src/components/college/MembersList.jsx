@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import { useApi } from '../../hooks/useApi';
 import api from '../../lib/api';
 import { GROUP_ROLES } from '../../lib/constants';
+import { entriesAt, entryTitle } from '../../lib/memberships';
 import MoreMenu from '../ui/MoreMenu';
 import Reveal from '../ui/Reveal';
 import { ListSkeleton } from '../ui/Skeleton';
@@ -17,6 +18,7 @@ export default function MembersList({ college, onRolesChange }) {
   const { data, loading } = useApi(`/colleges/${college._id}/members`);
   const collegeAdmin = college.admin?._id === user._id;
   const roleOf = (member) => ['admin', 'coAdmin'].find((role) => college[role]?._id === member._id);
+  const myBatches = entriesAt(user, college._id).map((entry) => entry.batch).filter(Boolean);
 
   const assign = async (role, member) => {
     try {
@@ -41,12 +43,12 @@ export default function MembersList({ college, onRolesChange }) {
             <div className="card divide-y divide-line">
               {group.members.map((member) => {
                 const me = member._id === user._id;
-                const batchmate = !me && member.batch === user.batch;
+                const batchmate = !me && myBatches.includes(member.batch);
                 const role = roleOf(member);
                 return (
                   <div key={member._id} className="flex items-center gap-3 px-4 py-3">
                     <div className="min-w-0 flex-1">
-                      <UserChip user={member} />
+                      <UserChip user={member} sub={member.role === 'faculty' ? undefined : entryTitle(member)} />
                     </div>
                     {role && <span className="chip bg-brand/10 text-brand">{GROUP_ROLES[role]}</span>}
                     {me && <span className="chip">You</span>}

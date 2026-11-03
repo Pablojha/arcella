@@ -1,4 +1,8 @@
+import api from './api';
+
 const MINUTE = 60_000;
+const UPLOAD_TIMEOUT_MS = 15 * 60_000;
+let localId = 0;
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 const PICTOGRAPH = /\p{Extended_Pictographic}/u;
 const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
@@ -48,4 +52,36 @@ export async function waveformOf(blob, bars = 32) {
   } finally {
     context.close();
   }
+}
+
+/** Adds messages not already in the list (they can arrive both from a request and over the socket). */
+export const mergeMessages = (current, incoming) => [...current, ...incoming.filter((message) => !current.some((old) => old._id === message._id))];
+
+/** Swaps a pending message for the saved one, which may already have arrived over the socket. */
+export const settleMessage = (items, id, saved) => items.filter((message) => message._id !== saved._id).map((message) => (message._id === id ? saved : message));
+
+/** A just-sent message shown at once, before the server has it. */
+export function pendingMessage(item, sender) {
+  const { kind, file, url, width, height, duration, waveform } = item;
+  const content = {
+    text: { text: item.text },
+    gif: { gif: item.gif },
+    voice: { voice: { url, duration, waveform } },
+    image: { media: { url, kind, width, height } },
+    video: { media: { url, kind, width, height, duration } },
+  }[kind];
+  return { _id: `local-${++localId}`, ...sender, createdAt: new Date().toISOString(), status: 'sending', progress: 0, ...content, file, upload: { kind, width, height, duration, waveform } };
+}
+
+/**
+ * Sends a pending message to a chat at `base` (a conversation or a college group): JSON for text and GIFs, an upload
+ * to `base/attachments` with progress for photos, videos and voice notes.
+ */
+export function sendMessage(base, message, onProgress) {
+  if (!message.file) return api.post(base, message.gif ? { gif: message.gif } : { text: message.text });
+  const { kind, width, height, duration, waveform } = message.upload;
+  const form = new FormData();
+  Object.entries({ kind, width, height, duration, waveform: waveform?.length ? JSON.stringify(waveform) : undefined }).forEach(([key, value]) => value != null && form.append(key, value));
+  form.append('file', message.file);
+  return api.post(`${base}/attachments`, form, { timeout: UPLOAD_TIMEOUT_MS, onUploadProgress: ({ loaded, total }) => total && onProgress(loaded / total) });
 }

@@ -4,7 +4,7 @@ import * as ctrl from '../controllers/events.controller.js';
 import { auth } from '../middleware/auth.js';
 import { images } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
-import { bool, date, link, listQuery, objectId, required, text, z } from '../utils/zod.js';
+import { bool, date, link, listQuery, objectId, optionalId, required, text, z } from '../utils/zod.js';
 
 const eventSchema = z.object({
   title: required(120),
@@ -16,6 +16,7 @@ const eventSchema = z.object({
   online: bool,
   link,
   collegeOnly: bool,
+  college: optionalId,
 });
 
 const listSchema = listQuery({

@@ -7,7 +7,7 @@ import { hiddenIds } from '../services/blocks.js';
 import { removeContent } from '../services/content.js';
 import { notify, notifyMany } from '../services/notify.js';
 import { saveFile, saveFiles } from '../services/storage.js';
-import { assertCanManage, assertMember, isModerator } from '../utils/access.js';
+import { assertCanManage, assertMember, isModerator, memberCollegeIds, membersOf } from '../utils/access.js';
 import { ApiError, found } from '../utils/errors.js';
 import { paginate, toggle } from '../utils/query.js';
 import { has, same, withCount } from '../utils/shape.js';
@@ -61,7 +61,7 @@ async function assertCanFlag(user, college) {
 
 /** Notifies the audience of an Important post: the whole group, everyone (site admins), or the author's connections. */
 async function announce(user, post) {
-  const audience = post.college ? User.find({ college: post.college, verified: true }).distinct('_id') : user.isAdmin ? User.find().distinct('_id') : Connection.idsOf(user._id);
+  const audience = post.college ? User.find(membersOf(post.college)).distinct('_id') : user.isAdmin ? User.find().distinct('_id') : Connection.idsOf(user._id);
   const hidden = new Set((await hiddenIds(user)).map(String));
   const users = (await audience).filter((id) => !hidden.has(String(id)));
   await notifyMany({ users, actor: user._id, type: 'important', text: excerpt(post.text), link: `/posts/${post._id}` });
@@ -84,7 +84,7 @@ export async function feed(req, res) {
     filter.saves = req.user._id;
     // Saved group posts stay listed only while the viewer can still read that group.
     if (req.user.isAdmin) delete filter.college;
-    else filter.college = { $in: [null, req.user.verified ? req.user.college : null] };
+    else filter.college = { $in: [null, ...memberCollegeIds(req.user)] };
   }
   if (author) filter.author.$eq = author;
   else if (scope === 'network') filter.author.$in = [req.user._id, ...(await Connection.idsOf(req.user._id))];

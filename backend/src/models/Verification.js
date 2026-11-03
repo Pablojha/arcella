@@ -1,5 +1,5 @@
 import { Schema, model } from 'mongoose';
-import { COLLEGE_ROLES, DOC_TYPES } from '../config/constants.js';
+import { COLLEGE_ROLES, DEGREE_LEVELS, DOC_TYPES } from '../config/constants.js';
 import { ref } from './types.js';
 
 const verificationSchema = new Schema(
@@ -7,7 +7,10 @@ const verificationSchema = new Schema(
     user: ref('User', { required: true }),
     college: ref('College', { required: true }),
     role: { type: String, enum: COLLEGE_ROLES, required: true },
+    level: { type: String, enum: DEGREE_LEVELS },
+    degree: String,
     batch: Number,
+    graduation: Number,
     method: { type: String, enum: ['email', 'document', 'manual'], required: true },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     email: { type: String, lowercase: true },

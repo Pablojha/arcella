@@ -12,6 +12,7 @@ import { usePoll } from '../../hooks/usePoll';
 import { useSocketEvent } from '../../hooks/useSocketEvent';
 import { useViewportHeight } from '../../hooks/useViewportHeight';
 import api from '../../lib/api';
+import { mergeMessages as merge, pendingMessage, sendMessage, settleMessage as settle } from '../../lib/chat';
 import { socket } from '../../lib/realtime';
 import ReportSheet from '../ReportSheet';
 import Lightbox from '../ui/Lightbox';
@@ -21,37 +22,7 @@ import MessageList from './MessageList';
 import ReactionMenu from './ReactionMenu';
 import ReactionsSheet from './ReactionsSheet';
 
-const UPLOAD_TIMEOUT_MS = 15 * 60_000;
 const TYPING_TIMEOUT_MS = 6000;
-let localId = 0;
-
-const merge = (current, incoming) => [...current, ...incoming.filter((message) => !current.some((old) => old._id === message._id))];
-
-/** Swaps a pending message for the saved one, which may already have arrived over the socket. */
-const settle = (items, id, saved) => items.filter((message) => message._id !== saved._id).map((message) => (message._id === id ? saved : message));
-
-/** A just-sent message shown at once, before the server has it. */
-function pendingMessage(item, from, to) {
-  const { kind, file, url, width, height, duration, waveform } = item;
-  const content = {
-    text: { text: item.text },
-    gif: { gif: item.gif },
-    voice: { voice: { url, duration, waveform } },
-    image: { media: { url, kind, width, height } },
-    video: { media: { url, kind, width, height, duration } },
-  }[kind];
-  return { _id: `local-${++localId}`, from, to, createdAt: new Date().toISOString(), status: 'sending', progress: 0, ...content, file, upload: { kind, width, height, duration, waveform } };
-}
-
-/** Sends a pending message: JSON for text and GIFs, an upload with progress for photos, videos and voice notes. */
-function request(userId, message, onProgress) {
-  if (!message.file) return api.post(`/messages/${userId}`, message.gif ? { gif: message.gif } : { text: message.text });
-  const { kind, width, height, duration, waveform } = message.upload;
-  const form = new FormData();
-  Object.entries({ kind, width, height, duration, waveform: waveform?.length ? JSON.stringify(waveform) : undefined }).forEach(([key, value]) => value != null && form.append(key, value));
-  form.append('file', message.file);
-  return api.post(`/messages/${userId}/attachments`, form, { timeout: UPLOAD_TIMEOUT_MS, onUploadProgress: ({ loaded, total }) => total && onProgress(loaded / total) });
-}
 
 /**
  * One conversation. On phones it fills the screen above the keyboard (no bottom tabs); on desktop it sits beside the
@@ -116,7 +87,7 @@ export default function Thread({ userId }) {
       const update = (changes) => setThread((current) => ({ ...current, items: current.items.map((item) => (item._id === message._id ? { ...item, ...changes } : item)) }));
       update({ status: 'sending', progress: 0 });
       try {
-        const saved = await request(userId, message, (progress) => update({ progress }));
+        const saved = await sendMessage(`/messages/${userId}`, message, (progress) => update({ progress }));
         setThread((current) => ({ ...current, items: settle(current.items, message._id, saved) }));
         const local = message.media?.url ?? message.voice?.url;
         if (local?.startsWith('blob:')) URL.revokeObjectURL(local);
@@ -129,7 +100,7 @@ export default function Thread({ userId }) {
   );
 
   const send = (item) => {
-    const message = pendingMessage(item, me._id, userId);
+    const message = pendingMessage(item, { from: me._id, to: userId });
     setThread((current) => ({ ...current, items: [...current.items, message] }));
     transmit(message);
   };
@@ -229,7 +200,7 @@ export default function Thread({ userId }) {
         ))}
       <Lightbox items={gallery.map(({ media }) => ({ url: media.url, kind: media.kind }))} index={viewer} onChange={setViewer} />
       <ReactionMenu target={menu} me={me._id} onReact={react} onCopy={copy} onClose={() => setMenu(null)} />
-      <ReactionsSheet message={thread.items.find((item) => item._id === reactionsOf?._id)} me={me} other={other} onRemove={react} onClose={() => setReactionsOf(null)} />
+      <ReactionsSheet message={thread.items.find((item) => item._id === reactionsOf?._id)} me={me} people={{ [me._id]: me, ...(other && { [other._id]: other }) }} onRemove={react} onClose={() => setReactionsOf(null)} />
       <ReportSheet target={reporting} onClose={() => setReporting(null)} />
     </div>
   );

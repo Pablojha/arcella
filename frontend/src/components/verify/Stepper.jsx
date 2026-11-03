@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 
-const STEPS = ['College', 'Role & batch', 'Verify'];
+const STEPS = ['College', 'Degree & batch', 'Verify'];
 
 export default function Stepper({ step }) {
   return (

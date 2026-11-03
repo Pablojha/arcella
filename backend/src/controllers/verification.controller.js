@@ -3,7 +3,7 @@ import College from '../models/College.js';
 import User from '../models/User.js';
 import Verification from '../models/Verification.js';
 import { CARD } from '../config/constants.js';
-import { grantMembership } from '../services/membership.js';
+import { grantMembership, sameMembership } from '../services/membership.js';
 import { notify, notifyMany } from '../services/notify.js';
 import { checkCode, resendCode } from '../services/otp.js';
 import { profileOf } from '../services/profile.js';
@@ -12,31 +12,35 @@ import { ApiError, found } from '../utils/errors.js';
 
 const DOC_MIME = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
 
-function assertNotVerified(user) {
-  if (user.verified) throw new ApiError(400, 'You are already a verified member of your college');
+/** Members can verify several colleges, but each college and degree level only once. */
+function assertNotVerified(user, details) {
+  if (user.memberships.some((entry) => entry.verified && sameMembership(entry, details))) throw new ApiError(400, "You're already verified for this college and degree");
 }
 
+/** The member's latest request (`verification`) and the ones still waiting (`items`). */
 export async function mine(req, res) {
-  const verification = await Verification.findOne({ user: req.user._id }).sort({ _id: -1 }).populate('college', 'name short domains').lean();
-  res.json({ verification });
+  const requests = await Verification.find({ user: req.user._id }).sort({ _id: -1 }).populate('college', 'name short domains').lean();
+  res.json({ verification: requests[0] ?? null, items: requests.filter((request) => request.status === 'pending') });
 }
 
 export async function sendCode(req, res) {
-  assertNotVerified(req.user);
-  const { college: collegeId, role, batch, email } = req.body;
+  const { college: collegeId, email, ...details } = req.body;
+  assertNotVerified(req.user, req.body);
   const college = found(await College.findById(collegeId), 'College');
   if (!college.domains.length) throw new ApiError(400, 'This college has no official email domain yet. Please upload a document instead.');
   if (!college.allowsEmail(email)) throw new ApiError(400, `Use your official college email (${college.domains.map((d) => `@${d}`).join(' or ')})`);
   if (await Verification.exists({ email, status: 'approved', user: { $ne: req.user._id } })) {
     throw new ApiError(409, 'This college email is already linked to another account');
   }
-  await Verification.findOneAndUpdate({ user: req.user._id, method: 'email', status: 'pending' }, { college: college._id, role, batch, email }, { upsert: true });
+  // One code at a time: a new request replaces any earlier one by email.
+  await Verification.deleteMany({ user: req.user._id, method: 'email', status: 'pending' });
+  await Verification.create({ ...details, college: college._id, email, user: req.user._id, method: 'email' });
   res.json({ email, ...(await resendCode(email, 'college', college.name)) });
 }
 
 export async function confirmCode(req, res) {
-  assertNotVerified(req.user);
   const request = found(await Verification.findOne({ user: req.user._id, method: 'email', status: 'pending' }), 'Verification request');
+  assertNotVerified(req.user, request);
   await checkCode(request.email, 'college', req.body.code);
   await Verification.updateOne({ _id: request._id }, { status: 'approved', reviewedAt: new Date() });
   await grantMembership(req.user._id, request);
@@ -44,10 +48,10 @@ export async function confirmCode(req, res) {
 }
 
 export async function uploadDocument(req, res) {
-  assertNotVerified(req.user);
+  assertNotVerified(req.user, req.body);
   if (!req.file) throw new ApiError(400, 'Attach a photo or PDF of your document');
   const college = found(await College.findById(req.body.college).select('name admin coAdmin'), 'College');
-  await Verification.deleteMany({ user: req.user._id, status: 'pending' });
+  await Verification.deleteMany({ user: req.user._id, college: college._id, status: 'pending' });
   const request = await Verification.create({
     ...req.body,
     user: req.user._id,

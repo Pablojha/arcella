@@ -16,18 +16,20 @@ const BAR_WIDTH = 296;
 
 /**
  * Long-press menu: the message lifts over a dimmed screen with the reaction bar beside it (your current reaction is
- * highlighted; choosing it again removes it). "+" opens more emoji, and text messages can be copied. It has no exit
- * fade, because a fading overlay would swallow the next tap.
+ * highlighted; choosing it again removes it). "+" opens more emoji, text messages can be copied, and `actionsFor`
+ * adds more ({ label, icon, onClick, danger }), such as Report and Delete in a group. It has no exit fade, because a
+ * fading overlay would swallow the next tap.
  */
-export default function ReactionMenu({ target, me, onReact, onCopy, onClose }) {
+export default function ReactionMenu({ target, me, onReact, onCopy, actionsFor, onClose }) {
   const [more, setMore] = useState(false);
   if (!target) return null;
 
   const { message, mine, rect } = target;
   const above = rect.top - BAR_HEIGHT - 12 > 64;
   const bar = { top: above ? rect.top - BAR_HEIGHT - 10 : rect.bottom + 10, left: Math.min(Math.max(8, mine ? rect.right - BAR_WIDTH : rect.left), window.innerWidth - BAR_WIDTH - 8) };
-  const actions = { top: above ? rect.bottom + 10 : rect.bottom + BAR_HEIGHT + 20, ...(mine ? { right: window.innerWidth - rect.right } : { left: rect.left }) };
+  const listPosition = { top: above ? rect.bottom + 10 : rect.bottom + BAR_HEIGHT + 20, ...(mine ? { right: window.innerWidth - rect.right } : { left: rect.left }) };
   const current = message.reactions?.find((reaction) => reaction.user === me)?.emoji;
+  const actions = [message.text && { label: 'Copy', icon: Copy, onClick: () => onCopy(message.text) }, ...(actionsFor?.(message, mine) ?? [])].filter(Boolean);
 
   const close = () => {
     setMore(false);
@@ -78,20 +80,22 @@ export default function ReactionMenu({ target, me, onReact, onCopy, onClose }) {
           <Plus size={20} />
         </button>
       </motion.div>
-      {message.text && (
-        <motion.button
-          type="button"
-          style={actions}
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          onClick={() => {
-            onCopy(message.text);
-            close();
-          }}
-          className="absolute flex items-center gap-2 rounded-2xl border border-line bg-card px-4 py-2.5 text-sm font-medium shadow-xl"
-        >
-          <Copy size={16} /> Copy
-        </motion.button>
+      {actions.length > 0 && (
+        <motion.div style={listPosition} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="absolute flex flex-col divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-xl">
+          {actions.map(({ label, icon: Icon, onClick, danger }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => {
+                onClick();
+                close();
+              }}
+              className={`flex items-center gap-2 px-4 py-2.5 text-left text-sm font-medium transition hover:bg-ink/5 ${danger ? 'text-accent' : ''}`}
+            >
+              <Icon size={16} /> {label}
+            </button>
+          ))}
+        </motion.div>
       )}
       <AnimatePresence>
         {more && (

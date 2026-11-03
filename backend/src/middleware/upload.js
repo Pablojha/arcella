@@ -51,5 +51,5 @@ function matchKind(req, res, next) {
   next(req.body.kind === 'image' && req.file.size > 8 * MB ? new ApiError(400, 'Photos must be under 8 MB') : undefined);
 }
 
-/** One photo (8 MB), video (40 MB) or voice note for a direct message. */
+/** One photo (8 MB), video (40 MB) or voice note for a direct or group message. */
 export const chatAttachment = [dropTempFiles, chatFile.single('file'), matchKind];

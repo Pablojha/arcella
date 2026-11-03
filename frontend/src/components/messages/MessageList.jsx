@@ -39,8 +39,11 @@ function ReactionPill({ reactions, mine, onOpen }) {
   );
 }
 
-/** One message with its gestures: tap opens media (or retries), double-tap toggles ❤️, long-press opens the reaction menu. */
-function MessageRow({ message, mine, position, onOpenMedia, onRetry, onReact, onMenu, onShowReactions }) {
+/**
+ * One message with its gestures: tap opens media (or retries), double-tap toggles ❤️, long-press opens the reaction
+ * menu. A `label` (the sender's name in a group) sits above it.
+ */
+function MessageRow({ message, mine, position, label, onOpenMedia, onRetry, onReact, onMenu, onShowReactions }) {
   const saved = !message.status;
   const tap = message.status === 'failed' ? () => onRetry(message) : message.media ? () => onOpenMedia(message) : undefined;
   const gestures = usePressGestures({
@@ -52,6 +55,7 @@ function MessageRow({ message, mine, position, onOpenMedia, onRetry, onReact, on
 
   return (
     <div className={`flex max-w-[78%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
+      {label && <div className="mb-0.5 max-w-full px-1 text-xs">{label}</div>}
       <div
         {...gestures}
         role={tap ? 'button' : undefined}
@@ -75,8 +79,9 @@ function MessageRow({ message, mine, position, onOpenMedia, onRetry, onReact, on
 /**
  * The conversation, newest at the bottom: runs of messages from one person (their photo only by the last one), a time
  * label after gaps over 15 minutes, "Seen" under your last read message, typing dots, and older messages on scroll up.
+ * In a group, `senderOf` gives each message's author, `nameOf` labels each run, and `typing` is the member typing.
  */
-export default function MessageList({ items, me, other, seenUntil, typing, hasMore, onLoadOlder, ...handlers }) {
+export default function MessageList({ items, me, other, seenUntil, typing, hasMore, onLoadOlder, senderOf = () => other, nameOf, ...handlers }) {
   const scroller = useRef(null);
   const sentinel = useRef(null);
   const atBottom = useRef(true);
@@ -143,14 +148,14 @@ export default function MessageList({ items, me, other, seenUntil, typing, hasMo
           <Fragment key={message._id}>
             {section && <p className="pb-1 pt-4 text-center text-xs font-medium text-muted">{separatorLabel(message.createdAt)}</p>}
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={`flex items-end gap-2 ${mine ? 'justify-end' : ''} ${joinsPrevious ? 'mt-0.5' : 'mt-2'}`}>
-              {!mine && (joinsNext ? <span className="w-7 shrink-0" /> : <Avatar user={other} size={28} />)}
-              <MessageRow message={message} mine={mine} position={position} {...handlers} />
+              {!mine && (joinsNext ? <span className="w-7 shrink-0" /> : <Avatar user={senderOf(message)} size={28} />)}
+              <MessageRow message={message} mine={mine} position={position} label={!mine && !joinsPrevious && nameOf?.(message)} {...handlers} />
             </motion.div>
             {message === lastMine && seen && <p className="mt-1 pr-1 text-right text-[11px] text-muted">Seen</p>}
           </Fragment>
         );
       })}
-      {typing && <TypingDots user={other} />}
+      {typing && <TypingDots user={typing === true ? other : typing} />}
     </div>
   );
 }

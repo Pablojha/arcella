@@ -5,7 +5,8 @@ export const STORY_TTL_SECONDS = 24 * 60 * 60;
 
 const storySchema = new Schema({
   author: ref('User', { required: true }),
-  college: ref('College'),
+  // The author's verified colleges when posted: their members see the story too.
+  colleges: [ref('College')],
   image: { type: String, required: true },
   caption: String,
   viewers: [ref('User')],
@@ -13,6 +14,6 @@ const storySchema = new Schema({
 });
 
 storySchema.index({ author: 1, createdAt: 1 });
-storySchema.index({ college: 1, createdAt: 1 });
+storySchema.index({ colleges: 1, createdAt: 1 });
 
 export default model('Story', storySchema);

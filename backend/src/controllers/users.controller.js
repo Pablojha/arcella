@@ -4,8 +4,10 @@ import User from '../models/User.js';
 import { CARD } from '../config/constants.js';
 import { deleteAccount, exportAccount } from '../services/account.js';
 import { hiddenIds } from '../services/blocks.js';
+import * as membership from '../services/membership.js';
 import { profileOf } from '../services/profile.js';
 import { removeFiles, saveFile } from '../services/storage.js';
+import { memberCollegeIds, membersOf } from '../utils/access.js';
 import { ApiError, found } from '../utils/errors.js';
 import { paginate } from '../utils/query.js';
 import { has, same } from '../utils/shape.js';
@@ -21,7 +23,7 @@ export async function search(req, res) {
     filter.$or = [{ name: rx }, { headline: rx }, { skills: rx }, { software: rx }];
   }
   if (software) filter.software = new RegExp(`^${escapeRegex(software)}$`, 'i');
-  if (college) filter.college = college;
+  if (college) Object.assign(filter, membersOf(college));
   if (type) filter.type = type;
   const query = User.find(filter).select(`${CARD} college`).populate('college', 'name short').sort({ verified: -1, connectionsCount: -1, _id: -1 });
   const page = await paginate(query, req.query);
@@ -34,7 +36,7 @@ export async function suggestions(req, res) {
   const exclude = [me._id, ...(await hiddenIds(me)), ...linked.map((row) => (same(row.from, me._id) ? row.to : row.from))];
   const items = await User.aggregate([
     { $match: { _id: { $nin: exclude } } },
-    { $addFields: { sameCollege: me.college ? { $eq: ['$college', me.college] } : false } },
+    { $addFields: { sameCollege: { $gt: [{ $size: { $setIntersection: [{ $ifNull: ['$memberships.college', []] }, memberCollegeIds(me)] } }, 0] } } },
     { $sort: { sameCollege: -1, verified: -1, connectionsCount: -1, _id: -1 } },
     { $limit: 12 },
     { $project: CARD_FIELDS },
@@ -46,7 +48,11 @@ export async function suggestions(req, res) {
 export async function profile(req, res) {
   const { id } = req.params;
   const filter = isObjectIdOrHexString(id) ? { _id: id } : { username: id.toLowerCase() };
-  const user = await User.findOne({ ...filter, blocked: { $ne: req.user._id } }).select('-email -passwordChangedAt').populate('college', 'name short city').lean();
+  const user = await User.findOne({ ...filter, blocked: { $ne: req.user._id } })
+    .select('-email -passwordChangedAt')
+    .populate('college', 'name short city')
+    .populate('memberships.college', 'name short city')
+    .lean();
   found(user, 'Profile');
   res.json({ user, status: await Connection.statusOf(req.user._id, user._id), blocked: has(req.user.blocked, user._id) });
 }
@@ -79,6 +85,27 @@ export async function toggleBlock(req, res) {
 
 export async function blockedList(req, res) {
   res.json({ items: await User.find({ _id: { $in: req.user.blocked } }).select(CARD).lean() });
+}
+
+/** Adds a college to the member's education; `membership` is the new entry's id, for verifying it next. */
+export async function addMembership(req, res) {
+  const entry = await membership.addMembership(req.user, req.body);
+  res.status(201).json({ user: await profileOf(req.user), membership: entry._id });
+}
+
+export async function updateMembership(req, res) {
+  await membership.updateMembership(req.user, req.params.membershipId, req.body);
+  res.json({ user: await profileOf(req.user) });
+}
+
+export async function removeMembership(req, res) {
+  await membership.removeMembership(req.user, req.params.membershipId);
+  res.json({ user: await profileOf(req.user) });
+}
+
+export async function choosePrimary(req, res) {
+  await membership.choosePrimary(req.user, req.params.membershipId);
+  res.json({ user: await profileOf(req.user) });
 }
 
 /** "Download your data": the member's data as a JSON file. */

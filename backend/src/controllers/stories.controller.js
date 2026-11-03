@@ -6,16 +6,16 @@ import { hiddenIds } from '../services/blocks.js';
 import { removeContent } from '../services/content.js';
 import { deliverMessage } from '../services/realtime.js';
 import { saveFile } from '../services/storage.js';
+import { memberCollegeIds } from '../utils/access.js';
 import { ApiError, found } from '../utils/errors.js';
 import { has, same } from '../utils/shape.js';
 
-/** Live stories from the viewer, their connections and (when verified) their college mates, minus blocked members. */
+/** Live stories from the viewer, their connections and their college mates (in any of their colleges), minus blocked members. */
 async function visibleTo(user) {
-  const authors = { author: { $in: [user._id, ...(await Connection.idsOf(user._id))] } };
   return {
     createdAt: { $gt: new Date(Date.now() - STORY_TTL_SECONDS * 1000) },
     author: { $nin: await hiddenIds(user) },
-    $or: user.verified ? [authors, { college: user.college }] : [authors],
+    $or: [{ author: { $in: [user._id, ...(await Connection.idsOf(user._id))] } }, { colleges: { $in: memberCollegeIds(user) } }],
   };
 }
 
@@ -38,7 +38,7 @@ export async function create(req, res) {
   if (!req.file) throw new ApiError(400, 'Choose a photo for your story');
   const story = await Story.create({
     author: req.user._id,
-    college: req.user.verified ? req.user.college : undefined,
+    colleges: memberCollegeIds(req.user),
     image: await saveFile(req.file, 'stories'),
     caption: req.body.caption,
   });

@@ -4,35 +4,9 @@ import { auth } from '../middleware/auth.js';
 import { writeLimiter } from '../middleware/rateLimit.js';
 import { chatAttachment } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
-import { bool, decimal, int, objectId, text, z } from '../utils/zod.js';
+import { bool, objectId, z } from '../utils/zod.js';
+import { attachmentSchema, reactionSchema, sendSchema } from './chat.schemas.js';
 
-const parseJson = (value) => {
-  try {
-    return typeof value === 'string' && value ? JSON.parse(value) : undefined;
-  } catch {
-    return value;
-  }
-};
-
-const giphyUrl = z.string().url().refine((url) => /^https:\/\/(media\d?|i)\.giphy\.com\//.test(url), 'Pick a GIF from the GIF search');
-const sendSchema = z
-  .object({ text: text(2000).optional(), gif: z.object({ url: giphyUrl, width: int(1, 4000), height: int(1, 4000) }).optional() })
-  .refine((body) => body.text || body.gif, { message: 'Write a message' });
-const attachmentSchema = z.object({
-  kind: z.enum(['image', 'video', 'voice']),
-  width: int(1, 20000),
-  height: int(1, 20000),
-  duration: decimal(0, 3600),
-  waveform: z.preprocess(parseJson, z.array(z.number().min(0).max(1)).max(64).optional()),
-});
-const reactionSchema = z.object({
-  emoji: z
-    .string()
-    .trim()
-    .min(1)
-    .max(16)
-    .refine((value) => /\p{Extended_Pictographic}/u.test(value) && !/[\p{L}\p{N}<>]/u.test(value), 'Pick an emoji'),
-});
 const stateSchema = z
   .object({ pinned: z.boolean().optional(), hidden: z.boolean().optional() })
   .refine((body) => body.pinned !== undefined || body.hidden !== undefined, { message: 'Choose pin or hide' });

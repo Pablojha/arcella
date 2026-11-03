@@ -7,6 +7,13 @@ export const USER_TYPES = [
 
 export const COLLEGE_ROLES = USER_TYPES.slice(0, 3);
 
+/** Degree levels a member can list for each college (the API's DEGREE_LEVELS), with degrees to suggest. */
+export const DEGREE_LEVELS = [
+  { value: 'undergraduate', label: 'Undergraduate', hint: 'B.Arch, B.Plan, B.Des', degrees: ['B.Arch', 'B.Plan', 'B.Des', 'B.Sc. Interior Design'] },
+  { value: 'postgraduate', label: 'Postgraduate', hint: 'M.Arch, M.Plan, M.Des', degrees: ['M.Arch', 'M.Plan', 'M.Des', 'M.Tech', 'M.L.A. (Landscape)'] },
+  { value: 'research', label: 'Advanced research', hint: 'PhD and research degrees', degrees: ['PhD', 'Postdoctoral research'] },
+];
+
 /** The two roles a college group can give its members. */
 export const GROUP_ROLES = { admin: 'Admin', coAdmin: 'Co-admin' };
 

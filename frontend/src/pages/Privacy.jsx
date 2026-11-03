@@ -20,10 +20,11 @@ const SECTIONS = [
     body: (
       <ul>
         <li>Account details: your name, email address, member type, and your password, which is stored only as an Argon2id hash that can&apos;t be turned back into the password.</li>
-        <li>Profile details you choose to add: photo, cover, headline, bio, location, website, software, skills, experience and mentoring availability.</li>
+        <li>Profile details you choose to add: photo, cover, headline, bio, location, website, software, skills, experience, education (each college with your role, degree level, degree and years) and mentoring availability.</li>
         <li>What you share: posts with photos or videos, comments and replies, likes, reactions, reposts, saves, stories, projects, critiques, questions, answers, resources, events, jobs, firm pages and reports.</li>
         <li>Messages: text, photos, videos, voice notes and GIFs, reactions, read receipts, and your chat settings (pinned and hidden chats).</li>
-        <li>College verification: your college, role and batch year, plus either your college email address (to send a code) or a document you upload.</li>
+        <li>College verification, for each college you verify: the college, your role, degree and years, plus either your college email address (to send a code) or a document you upload.</li>
+        <li>College group chats: your messages there, with their photos, videos, voice notes, GIFs and reactions.</li>
         <li>Activity the service needs: when you were last active and whether you are online (shown to people who can message you), and your notifications.</li>
         <li>Notifications on your devices: if you turn them on, your browser gives us a push address and encryption keys for that device.</li>
         <li>Technical data: your IP address and browser details reach our hosting providers with every request. We use IP addresses to limit repeated sign-in attempts. We use no analytics or advertising trackers.</li>
@@ -49,10 +50,11 @@ const SECTIONS = [
     body: (
       <ul>
         <li>Signed-in members can see your profile, public posts, projects, questions and answers. Projects also appear in the public Explore gallery.</li>
-        <li>College group posts, group chats and college-only events are visible only to verified members of that college and to Arcella admins. Group posts can&apos;t be reposted.</li>
+        <li>Your education is shown on your profile, with a tick on each college you verified.</li>
+        <li>College group posts, group chats (with their photos, videos, voice notes and reactions) and college-only events are visible only to verified members of that college and to Arcella admins. Group posts can&apos;t be reposted.</li>
         <li>Messages, including their photos, videos, voice notes and reactions, are visible only to you and the person you are talking to.</li>
         <li>Posts you save and chats you pin or hide are visible only to you.</li>
-        <li>Stories are visible to your connections and college mates for 24 hours.</li>
+        <li>Stories are visible to your connections and to verified members of your colleges for 24 hours.</li>
         <li>Your email address is never shown to other members.</li>
         <li>Verification documents can be seen only by Arcella admins and your college&apos;s admin and co-admin.</li>
       </ul>

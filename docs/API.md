@@ -23,6 +23,11 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | `message:update` | server → both people | `{ _id, reactions }` |
 | `message:alert` | server → recipient | a notification (`{ chat, title, body, url, tag, badge, user? }`) for windows not showing that chat |
 | `typing` | both ways | client sends `{ to, typing }`; server relays `{ from, typing }` to people the sender may message |
+| `group:join` / `group:leave` | client → server | `{ college }`: an open group chat joins its college's room (members and site admins only; the acknowledgement says whether it joined) |
+| `group:new` | server → college room | `{ college, _id }`: a new message; each chat fetches it with `GET /api/colleges/:id/chat?after=`, so blocks apply |
+| `group:update` | server → college room | `{ college, _id, reactions }` (reactions name who reacted) |
+| `group:remove` | server → college room | `{ college, _id }`: a message was deleted |
+| `group:typing` | both ways | client sends `{ college, typing }`; server relays `{ college, user, typing }` to the room, except people blocked either way |
 | `presence` | client → server | `{ visible, chat, endpoint }`, so notifications skip a chat being read or a screen that is on (optional ack) |
 
 ## Push notifications
@@ -48,6 +53,10 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | DELETE | `/api/users/me` | member | deleteMe |
 | GET | `/api/users/me/blocked` | member | blockedList |
 | GET | `/api/users/me/export` | member | exportMe (JSON file download, 5 an hour) |
+| POST | `/api/users/me/memberships` | member | addMembership (a college in your education, unverified) |
+| PUT | `/api/users/me/memberships/:membershipId` | member | updateMembership (verified ones keep their batch and faculty status) |
+| DELETE | `/api/users/me/memberships/:membershipId` | member | removeMembership (a verified one leaves that group) |
+| POST | `/api/users/me/memberships/:membershipId/primary` | member | choosePrimary (the college shown on cards and the profile) |
 | POST | `/api/users/me/avatar` | member | updateImage |
 | POST | `/api/users/me/cover` | member | updateImage |
 | GET | `/api/users/:id` | member | profile |
@@ -120,8 +129,10 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | GET | `/api/colleges/:id/members` | member | members |
 | PATCH | `/api/colleges/:id/roles` | member | setRole |
 | GET | `/api/colleges/:id/chat` | member | inline |
-| POST | `/api/colleges/:id/chat` | member · write limit | inline |
-| DELETE | `/api/colleges/:id/chat/:messageId` | member | inline |
+| POST | `/api/colleges/:id/chat` | member · write limit | send (text or GIF) |
+| POST | `/api/colleges/:id/chat/attachments` | member · write limit | sendAttachment (photo, video or voice note) |
+| PUT | `/api/colleges/:id/chat/:messageId/reaction` | member · write limit | react (one emoji per member; the same one again removes it) |
+| DELETE | `/api/colleges/:id/chat/:messageId` | member | remove |
 | GET | `/api/verification/me` | member | mine |
 | POST | `/api/verification/email/send` | member · code limit | sendCode |
 | POST | `/api/verification/email/confirm` | member · code limit | confirmCode |

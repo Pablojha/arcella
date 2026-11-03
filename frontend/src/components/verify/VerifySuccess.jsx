@@ -20,7 +20,7 @@ export default function VerifySuccess({ college, pending = false }) {
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="mx-auto mt-2 max-w-sm text-muted">
           {pending ? `An admin of ${college.name} will review your document. We'll notify you as soon as it's done.` : `Welcome to the ${college.name} group.`}
         </motion.p>
-        <Button to="/college" size="lg" className="mt-6">
+        <Button to={pending ? '/college' : `/college?id=${college._id}`} size="lg" className="mt-6">
           {pending ? 'Back to college' : 'Open your college group'}
         </Button>
       </div>
