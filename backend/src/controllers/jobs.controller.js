@@ -1,6 +1,7 @@
 import path from 'node:path';
 import Application from '../models/Application.js';
 import Firm from '../models/Firm.js';
+import Resume from '../models/Resume.js';
 import Job, { openRoles } from '../models/Job.js';
 import { CARD } from '../config/constants.js';
 import { removeContent } from '../services/content.js';
@@ -100,11 +101,14 @@ export async function apply(req, res) {
   const job = found(await Job.findOne({ _id: req.params.id, ...openRoles() }), 'Open role');
   if (job.applyLink) throw new ApiError(400, "This role takes applications on the employer's own site");
   if (same(job.postedBy, req.user._id)) throw new ApiError(400, "You can't apply to a role you posted");
-  if (!req.file) throw new ApiError(400, 'Attach your resume (PDF or Word)');
+  const saved = !req.file && req.body.savedResume && (await Resume.findOne({ user: req.user._id }).select('+data').lean());
+  if (!req.file && !saved) throw new ApiError(400, 'Attach your resume (PDF or Word)');
   const previous = await Application.findOne({ job: job._id, applicant: req.user._id });
   if (previous && previous.status !== 'withdrawn') throw new ApiError(409, 'You have already applied to this role');
   if (previous) await previous.deleteOne();
-  const resume = { name: path.basename(req.file.originalname), mime: RESUME_MIME[path.extname(req.file.originalname).slice(1).toLowerCase()], size: req.file.size, data: req.file.buffer };
+  const resume = saved
+    ? { name: saved.name, mime: saved.mime, size: saved.size, data: saved.data }
+    : { name: path.basename(req.file.originalname), mime: RESUME_MIME[path.extname(req.file.originalname).slice(1).toLowerCase()], size: req.file.size, data: req.file.buffer };
   const application = await Application.create({ job: job._id, applicant: req.user._id, note: req.body.note, resume, history: [{ status: 'applied' }] });
   await Job.updateOne({ _id: job._id }, { $inc: { applicationsCount: 1 } });
   await notifyMany({ users: await hiringTeam(job), actor: req.user._id, type: 'application', text: job.title, link: `/jobs/${job._id}/applicants` });

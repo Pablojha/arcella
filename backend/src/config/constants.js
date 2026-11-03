@@ -1,3 +1,6 @@
+/** Who may see a contact detail on a profile. */
+export const VISIBILITY = ['nobody', 'connections', 'everyone'];
+
 export const USER_TYPES = ['student', 'alumni', 'faculty', 'professional'];
 export const COLLEGE_ROLES = ['student', 'alumni', 'faculty'];
 /** Degree levels a member can list for each college they studied at. */

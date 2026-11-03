@@ -1,6 +1,8 @@
 import { isObjectIdOrHexString } from 'mongoose';
 import Connection from '../models/Connection.js';
 import Follow from '../models/Follow.js';
+import ProfileView from '../models/ProfileView.js';
+import Resume from '../models/Resume.js';
 import User from '../models/User.js';
 import { CARD } from '../config/constants.js';
 import { deleteAccount, exportAccount } from '../services/account.js';
@@ -51,7 +53,7 @@ export async function profile(req, res) {
   const { id } = req.params;
   const filter = isObjectIdOrHexString(id) ? { _id: id } : { username: id.toLowerCase() };
   const user = await User.findOne({ ...filter, blocked: { $ne: req.user._id } })
-    .select('-email -passwordChangedAt -signedOutAt -twoFactor -status -suspendedUntil -statusReason')
+    .select('-passwordChangedAt -signedOutAt -twoFactor -status -suspendedUntil -statusReason')
     .populate('college', 'name short city')
     .populate('memberships.college', 'name short city')
     .lean();
@@ -61,8 +63,12 @@ export async function profile(req, res) {
     Follow.countDocuments({ following: user._id }),
     Follow.exists({ follower: req.user._id, following: user._id }),
   ]);
-  delete user.notificationsOff;
-  res.json({ user: { ...user, followersCount }, status, following: Boolean(following), blocked: has(req.user.blocked, user._id) });
+  const self = same(user._id, req.user._id);
+  const shows = (visibility) => self || visibility === 'everyone' || (visibility === 'connections' && status === 'connected');
+  const { email, contact = {}, notificationsOff, ...visible } = user;
+  const contactInfo = { email: shows(contact.emailVisibility) ? email : undefined, phone: shows(contact.phoneVisibility) ? contact.phone : undefined };
+  if (!self) await ProfileView.updateOne({ viewer: req.user._id, viewed: user._id, day: new Date().toISOString().slice(0, 10) }, { $setOnInsert: { at: new Date() } }, { upsert: true });
+  res.json({ user: { ...visible, followersCount }, contactInfo, status, following: Boolean(following), blocked: has(req.user.blocked, user._id) });
 }
 
 /** Follows or unfollows a member. Blocks either way rule it out; the person followed is told. */
@@ -148,5 +154,40 @@ export async function deleteMe(req, res) {
   const user = await User.findById(req.user._id).select('+password');
   if (!(await user.checkPassword(req.body.password))) throw new ApiError(400, 'That password is not right');
   await deleteAccount(user._id);
+  res.json({ ok: true });
+}
+
+/** Who viewed the member's profile in the last 30 days: the count and the latest viewers (hidden people left out). */
+export async function profileViews(req, res) {
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const filter = { viewed: req.user._id, at: { $gte: since }, viewer: { $nin: await hiddenIds(req.user) } };
+  const [count, recent] = await Promise.all([
+    ProfileView.countDocuments(filter),
+    ProfileView.find(filter).sort({ at: -1 }).limit(20).populate('viewer', CARD).lean(),
+  ]);
+  res.json({ count, viewers: recent.filter((view) => view.viewer).map((view) => ({ ...view.viewer, viewedAt: view.at })) });
+}
+
+const RESUME_MIME = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+
+export async function myResume(req, res) {
+  res.json({ resume: await Resume.findOne({ user: req.user._id }).select('name size updatedAt').lean() });
+}
+
+export async function saveResume(req, res) {
+  if (!req.file) throw new ApiError(400, 'Choose a PDF or Word file');
+  const name = req.file.originalname.split(/[\\/]/).pop();
+  const fields = { name, mime: RESUME_MIME[name.split('.').pop().toLowerCase()], size: req.file.size, data: req.file.buffer };
+  await Resume.updateOne({ user: req.user._id }, { $set: fields }, { upsert: true });
+  res.json({ resume: await Resume.findOne({ user: req.user._id }).select('name size updatedAt').lean() });
+}
+
+export async function downloadResume(req, res) {
+  const resume = found(await Resume.findOne({ user: req.user._id }).select('+data'), 'Resume');
+  res.set({ 'Cache-Control': 'no-store', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(resume.name)}`, 'X-Content-Type-Options': 'nosniff' }).type(resume.mime || 'application/octet-stream').send(resume.data);
+}
+
+export async function removeResume(req, res) {
+  await Resume.deleteOne({ user: req.user._id });
   res.json({ ok: true });
 }

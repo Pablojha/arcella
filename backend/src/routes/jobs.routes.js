@@ -36,7 +36,7 @@ const listSchema = listQuery({
   hiring: bool,
 });
 
-const applySchema = z.object({ note: text(1500).optional() });
+const applySchema = z.object({ note: text(1500).optional(), savedResume: bool });
 const statusQuery = listQuery({ status: z.enum(APPLICATION_STATUSES).optional() });
 const statusSchema = z.object({
   status: z.enum(APPLICATION_STATUSES.filter((status) => status !== 'withdrawn')),

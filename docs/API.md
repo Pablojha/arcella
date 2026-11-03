@@ -70,6 +70,10 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | POST | `/api/users/me/cover` | member | updateImage |
 | GET | `/api/users/:id` | member | profile |
 | POST | `/api/users/:id/follow` | member | follow or unfollow (`following`, `followersCount`); refused between blocked members |
+| GET | `/api/users/me/views` | member | profile views in the last 30 days: `count` and the latest `viewers` |
+| GET | `/api/users/me/resume` | member | the saved resume's name and size (the file itself: `/api/users/me/resume/file`) |
+| PUT | `/api/users/me/resume` | member | save or replace the resume: multipart `resume` (PDF, DOC or DOCX, up to 3 MB); private to the member |
+| DELETE | `/api/users/me/resume` | member | remove the saved resume |
 | PUT | `/api/users/me/notifications` | member | `off`: notification groups to switch off (`likes`, `comments`, `mentions`, `network`, `posts`, `jobs`, `mentoring`) |
 | POST | `/api/users/:id/block` | member | toggleBlock |
 | GET | `/api/connections` | member | list |

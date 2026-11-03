@@ -69,6 +69,12 @@ export const STAFF_ROLES = [
   { value: 'super_admin', label: 'Super admin' },
 ];
 
+export const VISIBILITY = [
+  { value: 'nobody', label: 'Only me' },
+  { value: 'connections', label: 'Connections' },
+  { value: 'everyone', label: 'Everyone' },
+];
+
 export const FIRM_SIZES = ['1-10', '11-50', '51-200', '200+'];
 
 export const EVENT_TYPES = [

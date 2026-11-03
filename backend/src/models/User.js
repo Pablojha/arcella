@@ -1,7 +1,7 @@
 import { Schema, model } from 'mongoose';
 import argon2 from 'argon2';
 import bcrypt from 'bcryptjs';
-import { COLLEGE_ROLES, DEGREE_LEVELS, USER_TYPES } from '../config/constants.js';
+import { COLLEGE_ROLES, DEGREE_LEVELS, USER_TYPES, VISIBILITY } from '../config/constants.js';
 import { ROLES, isAdminRole } from '../config/permissions.js';
 import { randomSlug } from '../utils/text.js';
 import { ref } from './types.js';
@@ -45,6 +45,14 @@ const userSchema = new Schema(
     software: [String],
     skills: [String],
     experience: [{ title: String, org: String, start: String, end: String, description: String }],
+    languages: [String],
+    certifications: [{ name: String, issuer: String, year: Number, url: String }],
+    // Contact details and who sees them; the sign-in email is shown only if the member chooses to.
+    contact: {
+      phone: String,
+      emailVisibility: { type: String, enum: VISIBILITY, default: 'nobody' },
+      phoneVisibility: { type: String, enum: VISIBILITY, default: 'nobody' },
+    },
     memberships: [membershipSchema],
     // The primary membership (the first verified one, or the one the member picks), shown on cards and profiles.
     college: ref('College'),

@@ -877,6 +877,45 @@ test('sends one message request to strangers, lists it under requests, and lets 
   await call('POST', `/messages/${dev.user._id}`, { token: eve.token, body: { text: 'hi' }, status: 403 });
 });
 
+test('keeps languages, certifications, contact details by visibility, profile views and a private saved resume', async () => {
+  const [fay, gus, hal] = await Promise.all([join('fay', 'Fay Mehta', 'alumni'), join('gus', 'Gus Pinto', 'student'), join('hal', 'Hal Verma', 'student')]);
+  const profile = { languages: ['English', 'Hindi'], certifications: [{ name: 'LEED Green Associate', issuer: 'USGBC', year: 2025, url: 'usgbc.org' }], contact: { phone: '+91 98765 43210', emailVisibility: 'connections', phoneVisibility: 'nobody' } };
+  const { user } = await call('PATCH', '/users/me', { token: fay.token, body: profile });
+  assert.deepEqual(user.languages, ['English', 'Hindi']);
+  assert.equal(user.certifications[0].url, 'https://usgbc.org');
+  await call('PATCH', '/users/me', { token: fay.token, body: { contact: { phone: 'call me maybe' } }, status: 400 });
+
+  // Contact details follow their visibility: email for connections only, phone for nobody.
+  const asStranger = await call('GET', `/users/${fay.user.username}`, { token: gus.token });
+  assert.deepEqual(asStranger.contactInfo, {});
+  assert.equal('contact' in asStranger.user || 'email' in asStranger.user, false);
+  await call('POST', `/connections/${fay.user._id}`, { token: hal.token });
+  await call('POST', `/connections/${hal.user._id}/accept`, { token: fay.token });
+  assert.deepEqual((await call('GET', `/users/${fay.user.username}`, { token: hal.token })).contactInfo, { email: 'fay@test.arcella' });
+  assert.deepEqual((await call('GET', `/users/${fay.user.username}`, { token: fay.token })).contactInfo, { email: 'fay@test.arcella', phone: '+91 98765 43210' });
+
+  // Profile views: once a day per viewer, never your own.
+  await call('GET', `/users/${fay.user.username}`, { token: gus.token });
+  const views = await call('GET', '/users/me/views', { token: fay.token });
+  assert.equal(views.count, 2);
+  assert.deepEqual(views.viewers.map((viewer) => viewer.name).sort(), ['Gus Pinto', 'Hal Verma']);
+
+  // A saved resume is private and can be attached to an application in one step.
+  assert.equal((await call('GET', '/users/me/resume', { token: gus.token })).resume, null);
+  await call('PUT', '/users/me/resume', { token: gus.token, form: { resume: file('cv.exe', 'application/octet-stream') }, status: 400 });
+  const saved = await call('PUT', '/users/me/resume', { token: gus.token, form: { resume: file('gus-cv.pdf', 'application/pdf') } });
+  assert.equal(saved.resume.name, 'gus-cv.pdf');
+  assert.ok((await call('GET', '/users/me/resume/file', { token: gus.token })).toString().startsWith('%PDF'));
+  assert.equal((await call('GET', '/users/me/resume', { token: hal.token })).resume, null, "nobody else's resume is reachable");
+  const job = await call('POST', '/jobs', { token: fay.token, body: { title: 'Visualiser', type: 'freelance', company: 'Fay Studio' } });
+  const application = await call('POST', `/jobs/${job._id}/applications`, { token: gus.token, form: { savedResume: 'true' } });
+  assert.equal(application.resume.name, 'gus-cv.pdf');
+  assert.ok((await call('GET', `/jobs/applications/${application._id}/resume`, { token: fay.token })).toString().startsWith('%PDF'));
+  await call('POST', `/jobs/${job._id}/applications`, { token: hal.token, form: { savedResume: 'true' }, status: 400 });
+  await call('DELETE', '/users/me/resume', { token: gus.token });
+  assert.equal((await call('GET', '/users/me/resume', { token: gus.token })).resume, null);
+});
+
 test('searches people, projects, jobs, firms and questions in one go', async () => {
   const result = await call('GET', '/search?q=bilal', { token: people.asha.token });
   assert.equal(result.people[0].name, 'Bilal Khan');

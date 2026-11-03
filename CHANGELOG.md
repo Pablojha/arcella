@@ -1,5 +1,12 @@
 # Changelog
 
+## November 2026: richer profiles
+
+- **Languages and certifications** (name, issuer, year, link) on profiles.
+- **Contact details with privacy:** members choose who sees their email and an optional phone number (only me, connections or everyone); `GET /api/users/:id` returns only what the viewer may see as `contactInfo`.
+- **Profile views:** each viewer counts once a day; your profile shows how many people viewed it in 30 days and who (kept 90 days, only visible to you).
+- **Saved resume:** keep one private resume on your profile and apply to jobs with it in one tap.
+
 ## November 2026: message requests, unsend and chat search
 
 - **Message requests:** anyone who isn't blocked can send one first message to a member they aren't connected with (Message on any profile). It waits under **Messages → Message requests** until the member replies, and the sender can't send more meanwhile. Connections, verified batchmates and existing chats work as before.

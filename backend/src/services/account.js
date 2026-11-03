@@ -8,6 +8,8 @@ import Device from '../models/Device.js';
 import Event from '../models/Event.js';
 import Firm from '../models/Firm.js';
 import Follow from '../models/Follow.js';
+import ProfileView from '../models/ProfileView.js';
+import Resume from '../models/Resume.js';
 import GroupMessage from '../models/GroupMessage.js';
 import Job from '../models/Job.js';
 import LoginEvent from '../models/LoginEvent.js';
@@ -145,6 +147,8 @@ export async function deleteAccount(userId) {
     PushSubscription.deleteMany({ user: userId }),
     Device.deleteMany({ user: userId }),
     Follow.deleteMany({ $or: [{ follower: userId }, { following: userId }] }),
+    ProfileView.deleteMany({ $or: [{ viewer: userId }, { viewed: userId }] }),
+    Resume.deleteMany({ user: userId }),
     LoginEvent.deleteMany({ user: userId }),
     Notification.deleteMany({ $or: [{ user: userId }, { actor: userId }] }),
     Session.deleteMany({ $or: [{ mentor: userId }, { mentee: userId }] }),

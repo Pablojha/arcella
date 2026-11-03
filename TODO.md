@@ -63,7 +63,8 @@ Started 3 November 2026 from tag `v1.0-pre-hardening` (the live version before t
 - [x] M3 Admin RBAC: staff roles and permissions, suspend/ban/restore, audit log, job and firm moderation, verified firms
 - [x] M4 Social: edit posts, mentions, hashtags, follow, notification preferences
 - [x] M5 Messaging: delete own message, search, message requests
-- [ ] M6 Profiles and companies: certifications, languages, resume, profile views, contact privacy; firm co-admins, posts, analytics
+- [x] M6a Profiles: certifications, languages, saved resume, profile views, contact privacy
+- [ ] M6b Companies: firm co-admins, company posts, analytics
 - [ ] M7 Help Center, Contact Support, Report a problem
 - [ ] M8 AI features (**needs ANTHROPIC_API_KEY**)
 - [ ] M9 Premium (**blocked on the owner:** payment provider and business details)

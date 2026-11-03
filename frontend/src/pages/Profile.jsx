@@ -8,6 +8,7 @@ import ConnectButton from '../components/network/ConnectButton';
 import ProjectCard from '../components/portfolio/ProjectCard';
 import EditProfile from '../components/profile/EditProfile';
 import Education from '../components/profile/Education';
+import OwnerPanel from '../components/profile/OwnerPanel';
 import ReportSheet from '../components/ReportSheet';
 import Avatar from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
@@ -51,15 +52,57 @@ function TagList({ title, items }) {
   );
 }
 
-function About({ person, own }) {
-  const empty = !person.bio && !person.software?.length && !person.skills?.length && !person.experience?.length && !person.memberships?.length;
+function About({ person, own, contactInfo = {} }) {
+  const empty = !person.bio && !person.software?.length && !person.skills?.length && !person.experience?.length && !person.memberships?.length && !person.languages?.length && !person.certifications?.length;
   if (empty && !own) return <EmptyState icon={Pencil} title="Nothing here yet" text="This member hasn't filled in their profile." />;
   return (
     <div className="card space-y-6 p-4 md:p-6">
+      {own && <OwnerPanel />}
       {person.bio && <p className="whitespace-pre-line break-words leading-relaxed">{person.bio}</p>}
       <Education person={person} own={own} />
       <TagList title="Software" items={person.software} />
       <TagList title="Skills" items={person.skills} />
+      <TagList title="Languages" items={person.languages} />
+      {person.certifications?.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-muted">Certifications</h3>
+          <ul className="space-y-2">
+            {person.certifications.map((item) => (
+              <li key={item._id} className="text-sm">
+                {safeHref(item.url) ? (
+                  <a href={safeHref(item.url)} target="_blank" rel="noopener noreferrer nofollow" className="font-semibold text-brand hover:underline">
+                    {item.name}
+                  </a>
+                ) : (
+                  <span className="font-semibold">{item.name}</span>
+                )}
+                <span className="text-muted">{[item.issuer, item.year].filter(Boolean).length > 0 && ` · ${[item.issuer, item.year].filter(Boolean).join(' · ')}`}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {(contactInfo.email || contactInfo.phone) && (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-muted">Contact</h3>
+          <ul className="space-y-1 text-sm">
+            {contactInfo.email && (
+              <li>
+                <a href={`mailto:${contactInfo.email}`} className="text-brand hover:underline">
+                  {contactInfo.email}
+                </a>
+              </li>
+            )}
+            {contactInfo.phone && (
+              <li>
+                <a href={`tel:${contactInfo.phone.replace(/[^\d+]/g, '')}`} className="text-brand hover:underline">
+                  {contactInfo.phone}
+                </a>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
       {person.experience?.length > 0 && (
         <div>
           <h3 className="mb-3 text-sm font-semibold text-muted">Experience</h3>
@@ -265,7 +308,7 @@ export default function Profile() {
       </section>
 
       <Tabs tabs={TABS} value={tab} onChange={(value) => setParams({ tab: value }, { replace: true })} />
-      {tab === 'about' && <About person={person} own={own} />}
+      {tab === 'about' && <About person={person} own={own} contactInfo={data.contactInfo} />}
       {tab === 'portfolio' && <Portfolio person={person} own={own} />}
       {tab === 'activity' && <Activity person={person} />}
 
