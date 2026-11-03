@@ -38,8 +38,10 @@ test('sign up with consent and a code, log out, log back in, and reset a forgott
   await page.getByRole('button', { name: 'Log in' }).click();
   await expect(page.getByText('Wrong email or password')).toBeVisible();
 
-  // Forgot password: a code by email, a new password, and you are in.
+  // Forgot password: a code by email, a new password, and you are in. (Wait for the reset page itself: while its
+  // code loads, the login form is still on screen.)
   await page.getByRole('link', { name: 'Forgot password?' }).click();
+  await expect(page.getByRole('heading', { name: 'Forgot your password?' })).toBeVisible();
   await page.getByLabel('Email').fill(email);
   const requested = page.waitForResponse((res) => res.url().endsWith('/auth/forgot'));
   await page.getByRole('button', { name: 'Send code' }).click();
@@ -47,6 +49,7 @@ test('sign up with consent and a code, log out, log back in, and reset a forgott
   await page.getByLabel('Verification code').fill(reset.devCode);
   await password.fill('a-new-password-456');
   await page.getByRole('button', { name: 'Save password' }).click();
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('link', { name: 'Home' }).first()).toBeVisible();
 
   // The new password works and the old one doesn't.
