@@ -17,6 +17,8 @@ const postSchema = new Schema(
     repostOf: ref('Post'),
     repostsCount: { type: Number, default: 0 },
     college: ref('College', { default: null }),
+    // Posted on behalf of a firm by its owner or one of its admins; it shows under the firm's name.
+    firm: ref('Firm'),
     // Read from the text: #hashtags (lowercase) and the members it @mentions.
     tags: [String],
     mentions: [ref('User')],
@@ -30,5 +32,6 @@ postSchema.index({ author: 1, _id: -1 });
 postSchema.index({ saves: 1, _id: -1 });
 postSchema.index({ repostOf: 1, author: 1 });
 postSchema.index({ tags: 1, _id: -1 });
+postSchema.index({ firm: 1, _id: -1 });
 
 export default model('Post', postSchema);

@@ -12,10 +12,11 @@ const feedSchema = listQuery({
   college: objectId.optional(),
   saved: bool,
   video: bool,
+  firm: objectId.optional(),
   tag: z.string().trim().regex(/^[\p{L}\p{N}_-]{2,40}$/u, 'Invalid hashtag').optional(),
 });
 
-const postSchema = z.object({ text: text(3000).optional(), college: optionalId, important: bool, aspect: decimal(0.05, 20) });
+const postSchema = z.object({ text: text(3000).optional(), college: optionalId, firm: optionalId, important: bool, aspect: decimal(0.05, 20) });
 const repostSchema = z.object({ text: text(3000).optional() });
 const commentSchema = z.object({ text: required(1000), parent: optionalId });
 

@@ -113,6 +113,8 @@ const ACTIONS = {
   'firm.verify': 'verified a firm',
   'firm.unverify': 'removed a firm badge',
   'firm.remove': 'removed a firm',
+  'support.reply': 'answered a support request',
+  'support.close': 'closed a support request',
 };
 
 /** Who did what, newest first. */

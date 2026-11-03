@@ -23,7 +23,8 @@ const SHORTCUTS = [
 ];
 
 /** "Create a post" sheet. In the main feed it also offers quick links to the other creators. */
-export default function CreatePost({ open, onClose, onCreated, college, onStory }) {
+/** With `firm`, the post goes out under the firm's name (for its owner and admins). */
+export default function CreatePost({ open, onClose, onCreated, college, firm, onStory }) {
   const { user } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
@@ -51,7 +52,7 @@ export default function CreatePost({ open, onClose, onCreated, college, onStory 
     try {
       // The first photo's shape lets the feed size the post before its photos load.
       const aspect = images[0] && (await aspectOf(images[0]));
-      const post = await api.post('/posts', toFormData({ text, college, images, video, important: important || undefined, aspect }), upload.config);
+      const post = await api.post('/posts', toFormData({ text, college, firm: firm?._id, images, video, important: important || undefined, aspect }), upload.config);
       onCreated(post);
       setText('');
       setImages([]);
@@ -92,8 +93,8 @@ export default function CreatePost({ open, onClose, onCreated, college, onStory 
         <div className="flex items-center gap-3">
           <Avatar user={user} size={42} />
           <div className="min-w-0">
-            <p className="truncate font-medium">{user.name}</p>
-            <p className="text-xs text-muted">{college ? 'Only verified members of your college will see this' : 'Visible to everyone on Arcella'}</p>
+            <p className="truncate font-medium">{firm ? `${firm.name} · by ${user.name}` : user.name}</p>
+            <p className="text-xs text-muted">{college ? 'Only verified members of your college will see this' : firm ? 'Visible to everyone, and in the feeds of the firm’s followers' : 'Visible to everyone on Arcella'}</p>
           </div>
         </div>
         <textarea value={text} onChange={(event) => setText(event.target.value)} rows={5} maxLength={3000} placeholder="Share a sketch, a site visit, a jury moment…" className={`input resize-none ${important ? 'border-alert' : ''}`} />

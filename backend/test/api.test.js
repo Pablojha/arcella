@@ -916,6 +916,73 @@ test('keeps languages, certifications, contact details by visibility, profile vi
   assert.equal((await call('GET', '/users/me/resume', { token: gus.token })).resume, null);
 });
 
+test('lets a firm owner choose admins, who post as the firm and see its insights', async () => {
+  const [owner, mia, ned] = await Promise.all([join('owner6', 'Olga Firm', 'professional'), join('mia', 'Mia Rao', 'professional'), join('ned', 'Ned Shah', 'student')]);
+  const firm = await call('POST', '/firms', { token: owner.token, form: { name: 'Insight Studio' } });
+
+  // Admins come from the team list, and only the owner chooses them.
+  await call('PUT', `/firms/${firm._id}/admins/${mia.user._id}`, { token: owner.token, status: 400 });
+  await call('POST', `/firms/${firm._id}/work`, { token: mia.token });
+  await call('PUT', `/firms/${firm._id}/admins/${mia.user._id}`, { token: ned.token, status: 403 });
+  assert.deepEqual((await call('PUT', `/firms/${firm._id}/admins/${mia.user._id}`, { token: owner.token })).admins, [mia.user._id]);
+  assert.ok((await call('GET', '/notifications', { token: mia.token })).items.some((note) => note.type === 'firm_admin'));
+
+  // An admin posts roles and posts as the firm; others can't.
+  const job = await call('POST', '/jobs', { token: mia.token, body: { title: 'Junior architect', type: 'full-time', firm: firm._id } });
+  await call('POST', `/jobs/${job._id}/applications`, { token: ned.token, form: { resume: file('ned.pdf', 'application/pdf') } });
+  await call('POST', '/posts', { token: ned.token, form: { text: 'We are hiring!', firm: firm._id }, status: 403 });
+  const post = await call('POST', '/posts', { token: mia.token, form: { text: 'We are hiring a junior architect', firm: firm._id } });
+  assert.equal(post.firm.name, 'Insight Studio');
+  assert.deepEqual((await call('GET', `/posts?firm=${firm._id}`, { token: ned.token })).items.map((item) => item._id), [post._id]);
+
+  // Followers of the firm see its posts in their network feed.
+  assert.ok(!(await call('GET', '/posts?scope=network', { token: ned.token })).items.some((item) => item._id === post._id));
+  await call('POST', `/firms/${firm._id}/follow`, { token: ned.token });
+  assert.ok((await call('GET', '/posts?scope=network', { token: ned.token })).items.some((item) => item._id === post._id));
+
+  // Insights for the owner and admins only.
+  const seen = await call('GET', `/firms/${firm.slug}`, { token: mia.token });
+  assert.deepEqual(seen.stats, { followers: 1, roles: 1, openRoles: 1, applications: 1, byStatus: { applied: 1 } });
+  assert.equal('stats' in (await call('GET', `/firms/${firm.slug}`, { token: ned.token })), false);
+
+  // Leaving the team ends the admin role.
+  await call('POST', `/firms/${firm._id}/work`, { token: mia.token });
+  await call('POST', '/posts', { token: mia.token, form: { text: 'Still here?', firm: firm._id }, status: 403 });
+});
+
+test('takes support requests and problem reports, answered by support staff', async () => {
+  const [pia, sol] = await Promise.all([join('pia', 'Pia Joshi', 'student'), join('sol', 'Sol Bhat', 'student')]);
+  const { admin } = people;
+  await call('POST', '/support', { token: pia.token, body: { topic: 'other', subject: 'Hi', message: 'short' }, status: 400 });
+  const ticket = await call('POST', '/support', { token: pia.token, body: { topic: 'problem', subject: 'Feed photo is blank', message: 'The first photo on my feed shows nothing.', page: '/posts/123' } });
+  assert.equal(ticket.status, 'open');
+  assert.equal(ticket.page, '/posts/123');
+  for (let index = 0; index < 4; index += 1) await call('POST', '/support', { token: pia.token, body: { topic: 'other', subject: `Question ${index}`, message: 'Another question for the team.' } });
+  await call('POST', '/support', { token: pia.token, body: { topic: 'other', subject: 'One too many', message: 'This should wait for replies.' }, status: 429 });
+
+  // Members only see their own; staff need the support permission.
+  assert.equal((await call('GET', '/support/mine', { token: sol.token })).items.length, 0);
+  await call('GET', '/support/queue', { token: sol.token, status: 403 });
+  await call('POST', `/support/${ticket._id}/answer`, { token: sol.token, body: { text: 'hijack' }, status: 403 });
+  await call('PATCH', `/admin/users/${sol.user._id}/role`, { token: admin.token, body: { role: 'support' } });
+  const queue = await call('GET', '/support/queue', { token: sol.token });
+  assert.ok(queue.items.some((item) => item._id === ticket._id && item.user.email === 'pia@test.arcella'));
+
+  const answered = await call('POST', `/support/${ticket._id}/answer`, { token: sol.token, body: { text: 'Fixed: photos now show a placeholder when missing.' } });
+  assert.equal(answered.status, 'answered');
+  assert.ok((await call('GET', '/notifications', { token: pia.token })).items.some((note) => note.type === 'support_reply'));
+  const followed = await call('POST', `/support/${ticket._id}/replies`, { token: pia.token, body: { text: 'Thanks, it works now.' } });
+  assert.equal(followed.status, 'open');
+  await call('POST', `/support/${ticket._id}/replies`, { token: sol.token, body: { text: 'not mine' }, status: 404 });
+  await call('POST', `/support/${ticket._id}/answer`, { token: sol.token, body: { close: true } });
+  const mine = await call('GET', '/support/mine', { token: pia.token });
+  const closed = mine.items.find((item) => item._id === ticket._id);
+  assert.equal(closed.status, 'closed');
+  assert.deepEqual(closed.replies.map((reply) => reply.staff), [true, false]);
+  assert.ok((await call('GET', '/admin/audit?action=support', { token: admin.token })).items.some((entry) => entry.action === 'support.reply'));
+  await call('PATCH', `/admin/users/${sol.user._id}/role`, { token: admin.token, body: { role: 'user' } });
+});
+
 test('searches people, projects, jobs, firms and questions in one go', async () => {
   const result = await call('GET', '/search?q=bilal', { token: people.asha.token });
   assert.equal(result.people[0].name, 'Bilal Khan');

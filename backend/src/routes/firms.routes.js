@@ -27,5 +27,7 @@ router.get('/:slug', ctrl.get);
 router.patch('/:id', firmFiles, validate(updateSchema), ctrl.update);
 router.post('/:id/follow', ctrl.follow);
 router.post('/:id/work', ctrl.work);
+router.put('/:id/admins/:userId', ctrl.setAdmin);
+router.delete('/:id/admins/:userId', ctrl.setAdmin);
 
 export default router;

@@ -1,5 +1,18 @@
 # Changelog
 
+## November 2026: help and support
+
+- **Help** (More → Help and support): a Help center answering common questions from how Arcella works, **Contact support** by topic, and **My requests** with the team's replies and follow-ups.
+- **Report a problem** (in the app's footer) opens the form with the page you were on, sent along with your browser to help find the problem.
+- **Admin → Support** for the support role and above: open, answered and closed requests, reply and close. Members are notified of replies, and every reply or closing is in the audit log. Support requests are included in data exports and deleted with the account.
+
+## November 2026: firm admins, firm posts and insights
+
+- **Firm admins:** the owner picks admins from the firm's team list (Team tab). Admins post roles, see applicants and post as the firm; leaving the team ends the role.
+- **Posts as the firm** (firm page → Posts) appear under the firm's name with "Posted by…", and reach the firm's followers in their My network feed.
+- **Insights** for the owner and admins: followers, open roles, applications, shortlisted, interviews and offers.
+- Notifications for firm admin roles and for job or firm pages removed by moderators now have their own wording.
+
 ## November 2026: richer profiles
 
 - **Languages and certifications** (name, issuer, year, link) on profiles.

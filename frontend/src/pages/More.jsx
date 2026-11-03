@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Bell, BookOpen, Bookmark, Building, CalendarDays, ChevronRight, Clapperboard, Compass, HandHeart, LogOut, MessageCircleQuestionMark, Settings, ShieldCheck, Shield } from 'lucide-react';
+import { Bell, BookOpen, Bookmark, Building, CalendarDays, ChevronRight, Clapperboard, Compass, HandHeart, LifeBuoy, LogOut, MessageCircleQuestionMark, Settings, ShieldCheck, Shield } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import SiteFooter from '../components/layout/SiteFooter';
 import Avatar from '../components/ui/Avatar';
@@ -23,6 +23,7 @@ const MODULES = [
   { to: '/saved', label: 'Saved', text: 'Posts you bookmarked', icon: Bookmark },
   { to: '/notifications', label: 'Notifications', text: 'Your updates', icon: Bell, badge: 'notifications' },
   { to: '/settings', label: 'Settings', text: 'Password, privacy, account', icon: Settings },
+  { to: '/help', label: 'Help and support', text: 'Answers, or write to the team', icon: LifeBuoy },
 ];
 
 export default function More() {

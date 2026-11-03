@@ -1,5 +1,6 @@
 import Comment from '../models/Comment.js';
 import Connection from '../models/Connection.js';
+import Firm from '../models/Firm.js';
 import Follow from '../models/Follow.js';
 import Post from '../models/Post.js';
 import User from '../models/User.js';
@@ -16,8 +17,9 @@ import { excerpt, tokensOf } from '../utils/text.js';
 
 const AUTHOR = { path: 'author', select: CARD };
 const MENTIONS = { path: 'mentions', select: 'username' };
+const FIRM = { path: 'firm', select: 'name slug logo verified' };
 const REPLY_TO = { path: 'replyTo', select: 'name username' };
-const WITH_ORIGINAL = [AUTHOR, MENTIONS, { path: 'repostOf', populate: [AUTHOR, MENTIONS] }];
+const WITH_ORIGINAL = [AUTHOR, MENTIONS, FIRM, { path: 'repostOf', populate: [AUTHOR, MENTIONS, FIRM] }];
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Feed photos range from portrait 4:5 to landscape 1.91:1, like Instagram; anything beyond is cropped to fit.
 const MIN_ASPECT = 4 / 5;
@@ -90,12 +92,13 @@ async function readablePost(req) {
 }
 
 export async function feed(req, res) {
-  const { scope, author, college, saved, video, tag } = req.query;
+  const { scope, author, college, saved, video, tag, firm } = req.query;
   if (college) assertMember(req.user, college);
   const hidden = await hiddenIds(req.user);
   const filter = { college: college ?? null, author: { $nin: hidden } };
   if (video) filter.video = { $type: 'string' };
   if (tag) filter.tags = tag.toLowerCase();
+  if (firm) filter.firm = firm;
   if (saved) {
     filter.saves = req.user._id;
     // Saved group posts stay listed only while the viewer can still read that group.
@@ -103,7 +106,11 @@ export async function feed(req, res) {
     else filter.college = { $in: [null, ...memberCollegeIds(req.user)] };
   }
   if (author) filter.author.$eq = author;
-  else if (scope === 'network') filter.author.$in = [req.user._id, ...(await Connection.idsOf(req.user._id)), ...(await Follow.find({ follower: req.user._id }).distinct('following'))];
+  else if (scope === 'network') {
+    // People the viewer is connected with or follows, plus posts by firms they follow.
+    const people = [req.user._id, ...(await Connection.idsOf(req.user._id)), ...(await Follow.find({ follower: req.user._id }).distinct('following'))];
+    filter.$or = [{ author: { $in: people } }, { firm: { $in: await Firm.find({ followers: req.user._id }).distinct('_id') } }];
+  }
   const page = await paginate(Post.find(filter).sort({ _id: -1 }).populate(WITH_ORIGINAL), req.query);
   res.json({ ...page, items: await cards(req.user, page.items, hidden) });
 }
@@ -116,7 +123,11 @@ export async function get(req, res) {
 }
 
 export async function create(req, res) {
-  const { text, college, important, aspect } = req.body;
+  const { text, college, important, aspect, firm } = req.body;
+  if (firm && college) throw new ApiError(400, 'Firm posts are public, not for a college group');
+  if (firm && !req.user.isAdmin && !(await Firm.exists({ _id: firm, $or: [{ owner: req.user._id }, { admins: req.user._id }] }))) {
+    throw new ApiError(403, "Only the firm's owner and admins can post as the firm");
+  }
   const { images = [], video: [video] = [] } = req.files ?? {};
   if (!text && !images.length && !video) throw new ApiError(400, 'Write something or add a photo or video');
   if (images.length && video) throw new ApiError(400, 'Add photos or one video, not both');
@@ -128,6 +139,7 @@ export async function create(req, res) {
     text,
     tags,
     mentions,
+    firm,
     college,
     important,
     images: await saveFiles(images, 'posts'),
@@ -136,7 +148,7 @@ export async function create(req, res) {
   });
   if (important) await announce(req.user, post);
   await notifyMentions(req.user, mentions, { text, link: `/posts/${post._id}`, college });
-  await post.populate([AUTHOR, MENTIONS]);
+  await post.populate([AUTHOR, MENTIONS, FIRM]);
   const [card] = await cards(req.user, [post.toObject()]);
   res.status(201).json(card);
 }

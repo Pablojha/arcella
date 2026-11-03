@@ -35,6 +35,7 @@ const NewFirm = page(() => import('./pages/NewFirm'));
 const NewJob = page(() => import('./pages/NewJob'));
 const Applicants = page(() => import('./pages/Applicants'));
 const Tag = page(() => import('./pages/Tag'));
+const Help = page(() => import('./pages/Help'));
 const NewProject = page(() => import('./pages/NewProject'));
 const NotFound = page(() => import('./pages/NotFound'));
 const Notifications = page(() => import('./pages/Notifications'));
@@ -96,6 +97,7 @@ const PROTECTED = [
   ['saved', Saved],
   ['search', Search],
   ['settings', Settings],
+  ['help', Help],
   ['more', More],
   ['admin', Admin],
 ];

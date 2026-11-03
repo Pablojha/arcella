@@ -12,6 +12,7 @@ import Button from '../ui/Button';
 import MoreMenu from '../ui/MoreMenu';
 import RichText from '../ui/RichText';
 import Sheet from '../ui/Sheet';
+import FirmLogo from '../ui/FirmLogo';
 import UserChip from '../ui/UserChip';
 import CommentsSheet from './CommentsSheet';
 import MediaCarousel from './MediaCarousel';
@@ -149,7 +150,17 @@ function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = fal
         </p>
       )}
       <header className="flex items-center justify-between gap-3 px-3 py-2.5">
-        <UserChip user={author} size={36} />
+        {post.firm ? (
+          <Link to={`/firms/${post.firm.slug}`} className="flex min-w-0 items-center gap-2.5 hover:opacity-80">
+            <FirmLogo logo={post.firm.logo} name={post.firm.name} size={36} />
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold">{post.firm.name}</span>
+              <span className="block truncate text-xs text-muted">Posted by {author?.name ?? 'a team member'}</span>
+            </span>
+          </Link>
+        ) : (
+          <UserChip user={author} size={36} />
+        )}
         <MoreMenu
           label="Post options"
           items={[

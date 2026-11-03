@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ArrowBigUp, AtSign, BadgeCheck, Bell, BriefcaseBusiness, CircleAlert, CircleCheck, HandHeart, Heart, MessageSquare, MessageSquareText, Repeat2, Reply, Rss, Shield, ShieldAlert, ShieldCheck, TriangleAlert, UserCheck, UserPlus } from 'lucide-react';
+import { ArrowBigUp, AtSign, LifeBuoy, BadgeCheck, Bell, BriefcaseBusiness, CircleAlert, CircleCheck, HandHeart, Heart, MessageSquare, MessageSquareText, Repeat2, Reply, Rss, Shield, ShieldAlert, ShieldCheck, TriangleAlert, UserCheck, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Logo from '../components/brand/Logo';
 import Avatar from '../components/ui/Avatar';
@@ -35,12 +35,16 @@ const TYPES = {
   accepted: { icon: CircleCheck, text: 'accepted your answer' },
   application: { icon: BriefcaseBusiness, text: 'applied to your role' },
   mention: { icon: AtSign, text: 'mentioned you' },
+  firm_admin: { icon: Shield, text: 'made you an admin of their firm page' },
+  support_reply: { icon: LifeBuoy, text: 'The Arcella team replied to your request' },
+  job_removed: { icon: CircleAlert, text: 'removed your job post' },
+  firm_removed: { icon: CircleAlert, text: 'removed your firm page' },
   follow: { icon: Rss, text: 'started following you' },
   application_status: { icon: BriefcaseBusiness, text: 'updated your application' },
   new_login: { icon: ShieldAlert, text: "Your account was signed in on a new device. If it wasn't you, reset your password.", detail: deviceName },
 };
 
-const SYSTEM = new Set(['verify_approved', 'verify_rejected', 'new_login']);
+const SYSTEM = new Set(['verify_approved', 'verify_rejected', 'new_login', 'support_reply']);
 
 export default function Notifications() {
   const { refresh } = useBadges();

@@ -122,6 +122,8 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | GET | `/api/firms/:slug` | member | get |
 | PATCH | `/api/firms/:id` | member | update |
 | POST | `/api/firms/:id/follow` | member | follow |
+| PUT | `/api/firms/:id/admins/:userId` | the firm's owner or a site admin | make a team member a firm admin (they're notified) |
+| DELETE | `/api/firms/:id/admins/:userId` | the firm's owner or a site admin | remove a firm admin |
 | POST | `/api/firms/:id/work` | member | "I work here" (self-declared, so it grants no hiring rights) |
 | GET | `/api/mentorship/mentors` | member | mentors |
 | PUT | `/api/mentorship/settings` | member | settings |
@@ -181,6 +183,11 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | POST | `/api/notifications/read` | member | markRead |
 | GET | `/api/search` | member | search |
 | POST | `/api/reports` | member · write limit | create |
+| POST | `/api/support` | member · write limit | a support request: `topic` (account, verification, jobs, safety, problem, other), `subject`, `message`, and for problems the `page`; at most 5 open at once |
+| GET | `/api/support/mine` | member | the member's requests with replies |
+| POST | `/api/support/:id/replies` | the member who asked | follow up (reopens the request) |
+| GET | `/api/support/queue` | staff · `support:read` | requests by `status` (open by default) |
+| POST | `/api/support/:id/answer` | staff · `support:answer` | reply with `text` and/or `close`; the member is notified, the action audited |
 | GET | `/api/admin/stats` | staff · `stats:read` | live counts, `joined7`, `joined30`, `active7` and 12 weeks of sign-ups (`growth`) |
 | GET | `/api/admin/users` | staff · `users:read` | users (`q`, `college`, `role`, `status`) |
 | GET | `/api/admin/users/:id` | staff · `users:read` | one member: account state, reports about them, recent sign-ins, staff actions |
@@ -205,7 +212,7 @@ Site staff roles, each with every permission of the roles before it (`backend/sr
 
 | Role | Adds |
 |---|---|
-| `support` | `admin:access`, `users:read`, `reports:read`, `stats:read` |
+| `support` | `admin:access`, `users:read`, `reports:read`, `stats:read`, `support:read`, `support:answer` |
 | `moderator` | `reports:resolve`, `users:suspend`, `jobs:moderate` |
 | `admin` | `users:verify`, `users:ban`, `colleges:manage`, `firms:moderate`, `audit:read` (and `isAdmin`, which ownership checks across the API use) |
 | `super_admin` | `roles:manage`. Addresses in `ADMIN_EMAIL` are always super admins. |

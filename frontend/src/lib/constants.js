@@ -75,6 +75,15 @@ export const VISIBILITY = [
   { value: 'everyone', label: 'Everyone' },
 ];
 
+export const SUPPORT_TOPICS = [
+  { value: 'account', label: 'My account' },
+  { value: 'verification', label: 'College verification' },
+  { value: 'jobs', label: 'Jobs and applications' },
+  { value: 'safety', label: 'Safety and abuse' },
+  { value: 'problem', label: 'Something is broken' },
+  { value: 'other', label: 'Something else' },
+];
+
 export const FIRM_SIZES = ['1-10', '11-50', '51-200', '200+'];
 
 export const EVENT_TYPES = [

@@ -4,6 +4,7 @@ import CollegesAdmin from '../components/admin/CollegesAdmin';
 import { AuditAdmin, FirmsAdmin, JobsAdmin } from '../components/admin/ListingsAdmin';
 import ReportsAdmin from '../components/admin/ReportsAdmin';
 import SignupChart from '../components/admin/SignupChart';
+import SupportAdmin from '../components/admin/SupportAdmin';
 import UsersAdmin from '../components/admin/UsersAdmin';
 import VerificationQueue from '../components/college/VerificationQueue';
 import PageHeader from '../components/ui/PageHeader';
@@ -62,6 +63,7 @@ const TABS = [
   { value: 'overview', label: 'Overview', permission: 'stats:read', Panel: Overview },
   { value: 'verifications', label: 'Verifications', permission: 'users:verify', Panel: VerificationQueue },
   { value: 'reports', label: 'Reports', permission: 'reports:read', Panel: ReportsAdmin },
+  { value: 'support', label: 'Support', permission: 'support:read', Panel: SupportAdmin },
   { value: 'users', label: 'Users', permission: 'users:read', Panel: UsersAdmin },
   { value: 'jobs', label: 'Jobs', permission: 'jobs:moderate', Panel: JobsAdmin },
   { value: 'firms', label: 'Firms', permission: 'firms:moderate', Panel: FirmsAdmin },

@@ -18,6 +18,7 @@ import reportRoutes from './reports.routes.js';
 import resourceRoutes from './resources.routes.js';
 import searchRoutes from './search.routes.js';
 import storyRoutes from './stories.routes.js';
+import supportRoutes from './support.routes.js';
 import userRoutes from './users.routes.js';
 import verificationRoutes from './verification.routes.js';
 
@@ -44,6 +45,7 @@ router.use('/gifs', gifRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/search', searchRoutes);
 router.use('/reports', reportRoutes);
+router.use('/support', supportRoutes);
 router.use('/admin', adminRoutes);
 
 export default router;

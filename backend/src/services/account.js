@@ -10,6 +10,7 @@ import Firm from '../models/Firm.js';
 import Follow from '../models/Follow.js';
 import ProfileView from '../models/ProfileView.js';
 import Resume from '../models/Resume.js';
+import SupportTicket from '../models/SupportTicket.js';
 import GroupMessage from '../models/GroupMessage.js';
 import Job from '../models/Job.js';
 import LoginEvent from '../models/LoginEvent.js';
@@ -88,13 +89,14 @@ async function removeApplications(userId) {
  * conversations and settings. Passwords, push keys and verification document files are never included.
  */
 export async function exportAccount(userId) {
-  const [account, created, applications, signedIn, signIns, follows, messages, groupMessages, connections, notifications, chatSettings, savedPosts, verifications, reports, devices] = await Promise.all([
+  const [account, created, applications, signedIn, signIns, follows, supportRequests, messages, groupMessages, connections, notifications, chatSettings, savedPosts, verifications, reports, devices] = await Promise.all([
     User.findById(userId).select('+blocked').populate('blocked', PERSON).populate('memberships.college', 'name').lean(),
     Promise.all(OWNED.map(async ([type, Model, field]) => [`${type}s`, (await Model.find({ [field]: userId }).sort({ _id: 1 }).lean()).map((doc) => countIds(Model, doc))])),
     Application.find({ applicant: userId }).sort({ _id: 1 }).populate('job', 'title company').lean(),
     Device.find({ user: userId }).select('agent ip createdAt lastSeenAt').lean(),
     LoginEvent.find({ user: userId }).sort({ _id: 1 }).select('ok reason agent ip createdAt').lean(),
     Follow.find({ follower: userId }).populate('following', PERSON).lean(),
+    SupportTicket.find({ user: userId }).select('-agent').lean(),
     Message.find({ $or: [{ from: userId }, { to: userId }] }).sort({ _id: 1 }).populate('from to', PERSON).lean(),
     GroupMessage.find({ author: userId }).sort({ _id: 1 }).populate('college', 'name').lean(),
     Connection.find({ $or: [{ from: userId }, { to: userId }] }).populate('from to', PERSON).lean(),
@@ -112,6 +114,7 @@ export async function exportAccount(userId) {
     applications,
     signedInDevices: signedIn,
     signIns,
+    supportRequests,
     following: follows.map((follow) => ({ ...follow.following, since: follow.createdAt })),
     messages,
     groupMessages,
@@ -149,6 +152,7 @@ export async function deleteAccount(userId) {
     Follow.deleteMany({ $or: [{ follower: userId }, { following: userId }] }),
     ProfileView.deleteMany({ $or: [{ viewer: userId }, { viewed: userId }] }),
     Resume.deleteMany({ user: userId }),
+    SupportTicket.deleteMany({ user: userId }),
     LoginEvent.deleteMany({ user: userId }),
     Notification.deleteMany({ $or: [{ user: userId }, { actor: userId }] }),
     Session.deleteMany({ $or: [{ mentor: userId }, { mentee: userId }] }),

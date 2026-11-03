@@ -1,21 +1,71 @@
 import { useState } from 'react';
-import { Building, Check, Globe, MapPin, Pencil, Plus, UserPlus, Users } from 'lucide-react';
+import { Building, Check, Globe, MapPin, Newspaper, Pencil, Plus, Shield, ShieldMinus, UserPlus, Users } from 'lucide-react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import CreatePost from '../components/feed/CreatePost';
+import PostCard from '../components/feed/PostCard';
 import FirmForm from '../components/firms/FirmForm';
 import JobCard from '../components/jobs/JobCard';
 import Button from '../components/ui/Button';
 import EmptyState from '../components/ui/EmptyState';
 import FirmLogo from '../components/ui/FirmLogo';
 import Lightbox from '../components/ui/Lightbox';
+import LoadMore from '../components/ui/LoadMore';
 import Sheet from '../components/ui/Sheet';
 import { Skeleton } from '../components/ui/Skeleton';
 import Tabs from '../components/ui/Tabs';
 import UserChip from '../components/ui/UserChip';
 import { useToast } from '../context/ToastContext';
 import { useApi } from '../hooks/useApi';
+import { usePaged } from '../hooks/usePaged';
 import api from '../lib/api';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
 import { mediaUrl, plural, safeHref } from '../lib/format';
+
+/** The firm's own posts, newest first; its owner and admins can post as the firm here. */
+function FirmPosts({ firm }) {
+  const posts = usePaged('/posts', { firm: firm._id });
+  const [composing, setComposing] = useState(false);
+  return (
+    <div className="space-y-4">
+      {firm.canHire && (
+        <Button icon={Plus} variant="secondary" onClick={() => setComposing(true)}>
+          Post as {firm.name}
+        </Button>
+      )}
+      {posts.items.map((post) => (
+        <PostCard key={post._id} post={post} onDeleted={(id) => posts.setItems((items) => items.filter((item) => item._id !== id))} />
+      ))}
+      {!posts.loading && !posts.items.length && <EmptyState icon={Newspaper} title="No posts yet" text="Follow the firm to see its news in your network feed." />}
+      <LoadMore hasMore={posts.hasMore} loading={posts.loading} onLoad={posts.loadMore} />
+      {firm.canHire && <CreatePost open={composing} onClose={() => setComposing(false)} firm={firm} onCreated={(post) => posts.setItems((items) => [post, ...items])} />}
+    </div>
+  );
+}
+
+/** For the owner and admins: followers, roles and where applicants stand. */
+function FirmStats({ stats }) {
+  const tiles = [
+    ['Followers', stats.followers],
+    ['Open roles', stats.openRoles],
+    ['Applications', stats.applications],
+    ['Shortlisted', stats.byStatus.shortlisted ?? 0],
+    ['Interviews', stats.byStatus.interview ?? 0],
+    ['Offers', stats.byStatus.offered ?? 0],
+  ];
+  return (
+    <div className="card p-4">
+      <h2 className="mb-3 text-sm font-semibold text-muted">Insights · only the firm's admins see this</h2>
+      <dl className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+        {tiles.map(([label, value]) => (
+          <div key={label}>
+            <dd className="font-display text-2xl font-bold tabular-nums">{value}</dd>
+            <dt className="text-xs text-muted">{label}</dt>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
 
 export default function FirmDetail() {
   const { slug } = useParams();
@@ -38,8 +88,19 @@ export default function FirmDetail() {
     }
   };
 
+  const setAdmin = async (member, adding) => {
+    try {
+      const { admins } = await (adding ? api.put : api.delete)(`/firms/${firm._id}/admins/${member._id}`);
+      setData((current) => ({ ...current, admins }));
+      toast.success(adding ? `${member.name} is now an admin` : `${member.name} is no longer an admin`);
+    } catch (actionError) {
+      toast.error(actionError.message);
+    }
+  };
+
   const tabs = [
     { value: 'about', label: 'About' },
+    { value: 'posts', label: 'Posts' },
     { value: 'team', label: `Team · ${firm.team.length}` },
     { value: 'roles', label: 'Open roles', count: firm.jobs.length },
   ];
@@ -92,8 +153,11 @@ export default function FirmDetail() {
 
       <Tabs tabs={tabs} value={tab} onChange={(value) => setParams({ tab: value }, { replace: true })} />
 
+      {tab === 'posts' && <FirmPosts firm={firm} />}
+
       {tab === 'about' && (
         <div className="space-y-4">
+          {firm.stats && <FirmStats stats={firm.stats} />}
           <div className="card p-5">
             <p className="whitespace-pre-line break-words leading-relaxed">{firm.about || 'This firm has not written an introduction yet.'}</p>
           </div>
@@ -112,8 +176,20 @@ export default function FirmDetail() {
       {tab === 'team' && (
         <div className="card divide-y divide-line">
           {firm.team.map((member) => (
-            <div key={member._id} className="px-4 py-3">
-              <UserChip user={member} />
+            <div key={member._id} className="flex items-center gap-3 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <UserChip user={member} sub={member._id === firm.owner ? 'Owner' : firm.admins?.includes(member._id) ? 'Admin' : undefined} />
+              </div>
+              {firm.canEdit && member._id !== firm.owner && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon={firm.admins?.includes(member._id) ? ShieldMinus : Shield}
+                  onClick={() => setAdmin(member, !firm.admins?.includes(member._id))}
+                >
+                  {firm.admins?.includes(member._id) ? 'Remove admin' : 'Make admin'}
+                </Button>
+              )}
             </div>
           ))}
           {!firm.team.length && <p className="p-5 text-sm text-muted">Work here? Tap “I work here” to join the team list.</p>}

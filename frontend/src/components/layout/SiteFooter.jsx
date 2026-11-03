@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { SITE } from '../../config/site';
 import { openStorageSettings } from '../../lib/consent';
 import Logo from '../brand/Logo';
@@ -17,6 +17,7 @@ export const LEGAL_LINKS = [
 export default function SiteFooter({ compact = false, className = '' }) {
   // At least 24 px tall, so wrapped rows of links stay easy to tap (WCAG 2.2 target size).
   const link = 'inline-flex min-h-6 items-center rounded transition hover:text-ink hover:underline';
+  const { pathname } = useLocation();
   return (
     <footer className={`text-muted ${compact ? 'space-y-2 text-xs' : 'flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between'} ${className}`}>
       <p className="flex items-center gap-2">
@@ -36,6 +37,17 @@ export default function SiteFooter({ compact = false, className = '' }) {
         <button type="button" onClick={openStorageSettings} className={link}>
           Cookie settings
         </button>
+        {/* The compact footer sits inside the signed-in app, where help and problem reports are open to members. */}
+        {compact && (
+          <>
+            <Link to="/help" className={link}>
+              Help
+            </Link>
+            <Link to={`/help?tab=contact&topic=problem&page=${encodeURIComponent(pathname)}`} className={link}>
+              Report a problem
+            </Link>
+          </>
+        )}
       </nav>
     </footer>
   );

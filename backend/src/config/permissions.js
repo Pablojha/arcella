@@ -5,7 +5,7 @@
 export const ROLES = ['user', 'support', 'moderator', 'admin', 'super_admin'];
 
 const GRANTS = {
-  support: ['admin:access', 'users:read', 'reports:read', 'stats:read'],
+  support: ['admin:access', 'users:read', 'reports:read', 'stats:read', 'support:read', 'support:answer'],
   moderator: ['reports:resolve', 'users:suspend', 'jobs:moderate'],
   admin: ['users:verify', 'users:ban', 'colleges:manage', 'firms:moderate', 'audit:read'],
   super_admin: ['roles:manage'],

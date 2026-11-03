@@ -3,7 +3,7 @@ export const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@e2e.arcella';
 export const PASSWORD = 'password123';
 
 export const PUBLIC_PAGES = ['/', '/explore', '/login', '/register', '/reset', '/privacy', '/terms', '/cookies', '/refunds', '/guidelines', '/copyright', '/accessibility'];
-export const MEMBER_PAGES = ['/', '/network', '/college', '/jobs', '/events', '/qa', '/resources', '/messages', '/notifications', '/more', '/settings', '/saved', '/jobs/new', '/jobs?tab=applied'];
+export const MEMBER_PAGES = ['/', '/network', '/college', '/jobs', '/events', '/qa', '/resources', '/messages', '/notifications', '/more', '/settings', '/saved', '/jobs/new', '/jobs?tab=applied', '/help'];
 
 const unique = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 

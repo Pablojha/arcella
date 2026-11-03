@@ -1,6 +1,9 @@
 /** Who may see a contact detail on a profile. */
 export const VISIBILITY = ['nobody', 'connections', 'everyone'];
 
+/** What a support request is about; `problem` is a bug report from "Report a problem". */
+export const SUPPORT_TOPICS = ['account', 'verification', 'jobs', 'safety', 'problem', 'other'];
+
 export const USER_TYPES = ['student', 'alumni', 'faculty', 'professional'];
 export const COLLEGE_ROLES = ['student', 'alumni', 'faculty'];
 /** Degree levels a member can list for each college they studied at. */
