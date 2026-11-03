@@ -35,7 +35,10 @@ test.describe('public pages', () => {
     for (const [label, heading] of [
       ['Terms', 'Terms of Use'],
       ['Privacy', 'Privacy Policy'],
+      ['Guidelines', 'Community Guidelines'],
       ['Cookies', 'Cookie Policy'],
+      ['Copyright', 'Copyright Policy'],
+      ['Accessibility', 'Accessibility Statement'],
       ['Refunds', 'Refund Policy'],
     ]) {
       await footer.getByRole('link', { name: label, exact: true }).click();

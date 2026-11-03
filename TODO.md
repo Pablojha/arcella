@@ -35,5 +35,25 @@ Started 3 November 2026 from tag `v1.0-pre-hardening` (the live version before t
 - [x] CI workflow (API tests + audit, website build + audit, Playwright)
 - [x] README, SECURITY.md, docs/API.md, CHANGELOG.md
 
+## Round 2 (owner's requests, 3 November 2026)
+
+### Legal and compliance
+- [x] Terms: disclaimers and limitation of liability, intellectual property (licence, copyright, trademarks), copyright complaints (notice and counter-notice), Grievance Officer (India IT Rules 2021), indemnity
+- [x] Privacy: rights under India's DPDP Act 2023, GDPR (EU/UK) and CCPA/CPRA (California); legal bases; "we don't sell or share"; how to exercise rights; grievance redressal
+- [x] New pages: Community Guidelines (moderation policy), Copyright policy (takedown procedure), Accessibility statement (WCAG 2.2 AA / ADA / EN 301 549 status and known gaps)
+- [x] In the app: download my data (Settings), "copyright or IP" as a report reason
+- [x] docs/COMPLIANCE.md: status and owner to-dos for every area, including payments/PCI, contracts, and business structure and tax (no legal advice; points to a lawyer/CA)
+- [ ] **Owner decisions** raised there: minimum age 16 vs DPDP's under-18 parental consent, IT Rules 180-day retention, CERT-In incident reporting and logs, trademark, code licence
+
+### Several colleges per member (chosen: join several college groups)
+- [ ] `memberships` on users: college, role, level (undergraduate/postgraduate/research), degree, batch, verified; migrate existing single-college members without losing data
+- [ ] Group access, members lists, Important-post audiences and admin roles work per verified membership
+- [ ] Verification per college (several requests allowed); the first verified college stays the primary one
+- [ ] Profile education section (add/edit/remove colleges by level and degree); college switcher on the College page
+
+### Group chat like direct messages
+- [ ] Group messages: photos, videos, voice notes, GIFs, reactions; live over Socket.IO college rooms with typing
+- [ ] Same UI as DMs (bubbles, composer, reactions, lightbox, voice) plus sender names and admin badges; moderators can delete
+
 ## Deploy
 - [x] Pushed and verified: Render live, Vercel live, CI green (API tests, website build, Playwright), and a live smoke test of every public page (no console errors, nothing blocked by the CSP)

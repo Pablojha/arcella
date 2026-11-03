@@ -66,6 +66,7 @@ export const REPORT_REASONS = [
   { value: 'harassment', label: 'Harassment or hate', hint: 'Bullying, threats, abuse' },
   { value: 'inappropriate', label: 'Inappropriate content', hint: 'Explicit, violent or offensive' },
   { value: 'fake', label: 'Fake or plagiarised', hint: "Impersonation or someone else's work" },
+  { value: 'copyright', label: 'Copyright or IP', hint: 'My own work or design used without permission' },
   { value: 'other', label: 'Something else', hint: 'Tell us in the note below' },
 ];
 

@@ -2,7 +2,7 @@
 
 A professional network for architecture students, alumni, faculty and firms in India: a feed of photo posts and vertical video reels with likes, comments, reposts, saves and Important alerts, portfolios with critiques, private college groups with verified membership, a group chat and their own admin and co-admin, stories, jobs, firm pages, mentorship, events, Q&A, study resources and direct messages. It works as a website, an installable PWA and an Android app.
 
-It also includes what a public launch needs: email verification with a one-time code at sign-up, search across the whole network, password reset by code, account deletion, reporting and blocking with an admin moderation queue, Terms, Privacy, Cookie and Refund pages with a cookie notice, consent at sign-up, strict security headers, anti-spam rate limits, and automated accessibility (WCAG 2.2 AA), API and browser tests that run on every push.
+It also includes what a public launch needs: email verification with a one-time code at sign-up, search across the whole network, password reset by code, account deletion, reporting and blocking with an admin moderation queue, Terms, Privacy, Cookie, Refund, Community Guidelines, Copyright and Accessibility pages with a cookie notice, a "download your data" export, consent at sign-up, strict security headers, anti-spam rate limits, and automated accessibility (WCAG 2.2 AA), API and browser tests that run on every push.
 
 Live at **[arcella-seven.vercel.app](https://arcella-seven.vercel.app)**.
 
@@ -12,7 +12,7 @@ Live at **[arcella-seven.vercel.app](https://arcella-seven.vercel.app)**.
 | `frontend/` | React 19, Vite, Tailwind CSS 4, Framer Motion, React Router, axios, lucide-react | Vercel (`vercel.json`) |
 | `e2e/` | Playwright with axe-core | GitHub Actions (`.github/workflows/ci.yml`) |
 
-More documentation: [SECURITY.md](SECURITY.md) (security model and incident steps), [docs/API.md](docs/API.md) (endpoints), [CHANGELOG.md](CHANGELOG.md), [docs/AUDIT.md](docs/AUDIT.md) (the November 2026 audit) and [APP.md](APP.md) (Android app).
+More documentation: [SECURITY.md](SECURITY.md) (security model and incident steps), [docs/API.md](docs/API.md) (endpoints), [docs/COMPLIANCE.md](docs/COMPLIANCE.md) (legal and compliance status), [CHANGELOG.md](CHANGELOG.md), [docs/AUDIT.md](docs/AUDIT.md) (the November 2026 audit) and [APP.md](APP.md) (Android app).
 
 ## Run it locally
 
@@ -134,7 +134,7 @@ Notes:
 
 ### 5. Before you go public
 
-- Fill in the operator's details in `frontend/src/config/site.js` (legal name, postal address, governing law) and set `VITE_CONTACT_EMAIL` on Vercel. Until then the Terms, Privacy, Cookie and Refund pages show them as clearly marked placeholders. Read the pages and adjust them to how you actually run Arcella.
+- Fill in the operator's details in `frontend/src/config/site.js` (legal name, postal address, governing law, Grievance Officer, liability cap) and set `VITE_CONTACT_EMAIL` on Vercel. Until then the policy pages show them as clearly marked placeholders. Read the pages and adjust them to how you actually run Arcella, and work through [docs/COMPLIANCE.md](docs/COMPLIANCE.md) with a lawyer.
 - Set up email (section 4), then make yourself admin with `ADMIN_EMAIL` and check the official email domains under **Admin → Colleges**. Only well-known domains are pre-filled.
 - If you add a custom domain or move the API, update `CLIENT_URL` on Render, `VITE_SITE_URL` on Vercel, the API address in the Content-Security-Policy in `frontend/vercel.json` (and `PRODUCTION_API` in `vite.config.js`), and the URLs in `index.html`, `robots.txt` and `sitemap.xml`.
 - Atlas's free M0 tier has no automatic backups: see [SECURITY.md](SECURITY.md#backups) for a backup routine.
@@ -156,7 +156,7 @@ Anyone can mark one post a day as **Important** (site admins and college admins 
 - **Report and block:** members can report posts, comments, projects, questions, answers and profiles, and block other members from a post, profile or conversation. Blocking hides posts, stories and comments both ways, stops messages and connection requests, and removes any existing connection.
 - **Moderation:** open reports appear in **Admin → Reports** with a preview. Admins can remove the content (or delete the account) or dismiss the report.
 - **Accounts:** new emails are confirmed with a 6-digit code. Codes expire after 10 minutes, allow 5 attempts and can be resent after 30 seconds. Password reset also uses a code. Passwords are hashed with Argon2id (older bcrypt hashes upgrade at the next sign-in). Changing your password signs out other devices and stops their notifications, and **Settings → Delete account** removes the member and everything they created.
-- **Privacy controls:** members agree to the Terms and Privacy Policy at sign-up (the time is recorded). Arcella stores nothing for ads or analytics. The cookie notice and **Cookie settings** decide whether preferences such as dark mode are remembered across visits.
+- **Privacy controls:** members agree to the Terms and Privacy Policy at sign-up (the time is recorded). Arcella stores nothing for ads or analytics. The cookie notice and **Cookie settings** decide whether preferences such as dark mode are remembered across visits. **Settings → Your data** downloads a copy of everything Arcella stores about the member as a JSON file.
 - **Rate limits:** login, sign-up and password routes are limited per IP; codes, posts, comments, messages, connection requests and reports are limited per account.
 
 ## Installable app

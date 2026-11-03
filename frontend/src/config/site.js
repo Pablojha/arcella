@@ -14,5 +14,9 @@ export const SITE = {
   address: null,
   /** The law and courts that govern the Terms, e.g. "the laws of India; courts of Roorkee, Uttarakhand". */
   governingLaw: null,
+  /** The Grievance Officer India's IT Rules 2021 require (name; complaints go to the contact email). */
+  grievanceOfficer: null,
+  /** Any cap on Arcella's liability under the Terms, as decided by the operator with legal advice. */
+  liabilityCap: null,
   policiesUpdated: '3 November 2026',
 };

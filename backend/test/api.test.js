@@ -499,6 +499,25 @@ test('searches people, projects, jobs, firms and questions in one go', async () 
   assert.deepEqual(Object.keys(result), ['people', 'projects', 'jobs', 'firms', 'questions']);
 });
 
+test('exports a member’s own data as a file, without secrets', async () => {
+  const post = await call('POST', '/posts', { token: tokenOf('asha'), body: { text: 'Site visit notes' } });
+  await call('POST', `/posts/${post._id}/like`, { token: tokenOf('bilal') });
+  const res = await fetch(`${base}/users/me/export`, { headers: { Authorization: `Bearer ${tokenOf('asha')}` } });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('content-disposition'), /^attachment; filename="arcella-data-.+\.json"$/);
+  const raw = await res.text();
+  const data = JSON.parse(raw);
+  assert.equal(data.account.email, 'asha@test.arcella');
+  assert.ok(data.posts.length >= 1 && data.messages.length >= 1);
+  assert.ok(data.messages.every((message) => typeof message.from.username === 'string'));
+  assert.ok(!raw.includes('"password"') && !raw.includes('$argon2') && !raw.includes('p256dh'), 'no password hashes or push keys');
+  // Who liked a post is other people's data: the export carries the count only.
+  assert.equal(data.posts.find((item) => item._id === post._id).likes, 1);
+  assert.ok(data.posts.every((item) => typeof item.likes === 'number' && typeof item.saves === 'number'));
+  assert.deepEqual(data.account.blocked, []);
+  await call('GET', '/users/me/export', { status: 401 });
+});
+
 test('deletes an account with everything it created', async () => {
   const { chitra, bilal } = people;
   await call('POST', `/connections/${bilal.user._id}`, { token: chitra.token });

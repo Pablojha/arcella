@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { LEGAL_LINKS } from '../components/layout/SiteFooter';
 import BlockedMembers from '../components/settings/BlockedMembers';
 import ChangePassword from '../components/settings/ChangePassword';
+import DataExport from '../components/settings/DataExport';
 import DeleteAccount from '../components/settings/DeleteAccount';
 import PushSetting from '../components/settings/PushSetting';
 import Button from '../components/ui/Button';
@@ -57,7 +58,10 @@ export default function Settings() {
           </Button>
         </div>
       </Section>
-      <Section title="Delete account" index={5} danger>
+      <Section title="Your data" index={5}>
+        <DataExport />
+      </Section>
+      <Section title="Delete account" index={6} danger>
         <DeleteAccount />
       </Section>
     </div>

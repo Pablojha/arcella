@@ -2,7 +2,7 @@ import { isObjectIdOrHexString } from 'mongoose';
 import Connection from '../models/Connection.js';
 import User from '../models/User.js';
 import { CARD } from '../config/constants.js';
-import { deleteAccount } from '../services/account.js';
+import { deleteAccount, exportAccount } from '../services/account.js';
 import { hiddenIds } from '../services/blocks.js';
 import { profileOf } from '../services/profile.js';
 import { removeFiles, saveFile } from '../services/storage.js';
@@ -79,6 +79,13 @@ export async function toggleBlock(req, res) {
 
 export async function blockedList(req, res) {
   res.json({ items: await User.find({ _id: { $in: req.user.blocked } }).select(CARD).lean() });
+}
+
+/** "Download your data": the member's data as a JSON file. */
+export async function exportMe(req, res) {
+  const date = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Disposition', `attachment; filename="arcella-data-${req.user.username}-${date}.json"`);
+  res.json(await exportAccount(req.user._id));
 }
 
 export async function deleteMe(req, res) {

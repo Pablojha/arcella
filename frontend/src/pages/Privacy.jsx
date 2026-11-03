@@ -103,22 +103,61 @@ const SECTIONS = [
     ),
   },
   {
+    id: 'breaches',
+    title: 'If something goes wrong',
+    body: <p>If a personal data breach affects you, we will tell you and the authorities the law requires us to tell, with what happened and what you can do.</p>,
+  },
+  {
     id: 'choices',
-    title: 'Your choices',
+    title: 'Your choices and rights',
+    body: (
+      <>
+        <p>Anyone can, at any time:</p>
+        <ul>
+          <li>edit your profile, or delete anything you have shared;</li>
+          <li>
+            download a copy of your data in <Link to="/settings" className="text-brand">Settings</Link> → Your data;
+          </li>
+          <li>delete your account in Settings → Delete account, which permanently removes your profile and everything you created;</li>
+          <li>turn notifications off for a device in Settings → Notifications;</li>
+          <li>block members, hide chats, and report content that breaks the rules;</li>
+          <li>
+            choose what your browser remembers in <Link to="/cookies" className="text-brand">cookie settings</Link>.
+          </li>
+        </ul>
+        <p>Depending on where you live, the law gives you further rights:</p>
+        <ul>
+          <li>
+            <strong>India</strong> (Digital Personal Data Protection Act, 2023): to get a summary of your data and how it is used, to have it corrected, completed, updated or erased, to have your grievances addressed, and to
+            nominate someone to exercise these rights if you die or can&apos;t.
+          </li>
+          <li>
+            <strong>EU and UK</strong> (GDPR): to access, correct and erase your data, to restrict or object to its use, to take it with you, to withdraw consent, and to complain to your data protection authority.
+          </li>
+          <li>
+            <strong>California</strong> (CCPA/CPRA): to know what we collect, and to delete or correct it. Arcella doesn&apos;t sell or share personal information and doesn&apos;t use it for targeted advertising, and you won&apos;t be
+            treated differently for using your rights.
+          </li>
+        </ul>
+        <p>
+          For anything you can&apos;t do in Settings, write to <ContactEmail />. We may ask you to confirm it&apos;s you, and we reply within the time the law requires. Complaints can also go to our Grievance Officer (see the{' '}
+          <Link to="/terms#grievances" className="text-brand">
+            Terms
+          </Link>
+          ).
+        </p>
+      </>
+    ),
+  },
+  {
+    id: 'legal-bases',
+    title: 'Why we may use your data (EU and UK)',
     body: (
       <ul>
-        <li>Edit your profile or delete anything you have shared, at any time.</li>
-        <li>
-          Delete your account in <Link to="/settings" className="text-brand hover:underline">Settings</Link> → Delete account. This permanently removes your profile and everything you created.
-        </li>
-        <li>Turn notifications off for a device in Settings → Notifications.</li>
-        <li>Block members, hide chats and report content that breaks the rules.</li>
-        <li>
-          Ask for a copy of your data, a correction, or anything else about your privacy: write to <ContactEmail />.
-        </li>
-        <li>
-          Choose what your browser remembers in <Link to="/cookies" className="text-brand hover:underline">cookie settings</Link>.
-        </li>
+        <li>To provide Arcella to you (our contract): your account, profile, posts, messages and college groups.</li>
+        <li>With your consent: notifications on your devices, and remembering preferences in your browser. You can withdraw consent at any time.</li>
+        <li>For legitimate interests: keeping Arcella secure and free of abuse, for example rate limits, reports and moderation.</li>
+        <li>To meet legal obligations, such as answering lawful requests.</li>
       </ul>
     ),
   },

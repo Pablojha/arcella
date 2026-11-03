@@ -47,6 +47,7 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | PATCH | `/api/users/me` | member | updateMe |
 | DELETE | `/api/users/me` | member | deleteMe |
 | GET | `/api/users/me/blocked` | member | blockedList |
+| GET | `/api/users/me/export` | member | exportMe (JSON file download, 5 an hour) |
 | POST | `/api/users/me/avatar` | member | updateImage |
 | POST | `/api/users/me/cover` | member | updateImage |
 | GET | `/api/users/:id` | member | profile |

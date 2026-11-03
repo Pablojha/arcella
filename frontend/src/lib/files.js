@@ -18,14 +18,19 @@ export async function compressImage(file, maxSide = 2048, quality = 0.85) {
   }
 }
 
+/** Hands the browser a file to save under `name`. */
+export function saveBlob(blob, name) {
+  const href = URL.createObjectURL(blob);
+  Object.assign(document.createElement('a'), { href, download: name }).click();
+  setTimeout(() => URL.revokeObjectURL(href), 2000);
+}
+
 /** Saves a file under its original name; falls back to opening it when the host blocks fetches. */
 export async function downloadFile(url, name) {
   try {
     const response = await fetch(url);
     if (!response.ok) throw new Error(response.statusText);
-    const href = URL.createObjectURL(await response.blob());
-    Object.assign(document.createElement('a'), { href, download: name }).click();
-    setTimeout(() => URL.revokeObjectURL(href), 2000);
+    saveBlob(await response.blob(), name);
   } catch {
     window.open(url, '_blank', 'noopener');
   }

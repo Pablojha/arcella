@@ -10,7 +10,7 @@ export const SUBJECTS = ['Design', 'Structures', 'Thesis', 'Software', 'NATA', '
 export const RESOURCE_KINDS = ['notes', 'cad-blocks', 'sheets', 'templates', 'other'];
 export const SESSION_STATUSES = ['pending', 'accepted', 'declined', 'done', 'cancelled'];
 export const REPORT_TYPES = ['post', 'comment', 'project', 'story', 'question', 'answer', 'resource', 'job', 'event', 'firm', 'message', 'chat', 'user'];
-export const REPORT_REASONS = ['spam', 'harassment', 'inappropriate', 'fake', 'other'];
+export const REPORT_REASONS = ['spam', 'harassment', 'inappropriate', 'fake', 'copyright', 'other'];
 
 /** Public user fields used whenever a user is shown as a card or byline. */
 export const CARD = 'name username avatar headline type verified';

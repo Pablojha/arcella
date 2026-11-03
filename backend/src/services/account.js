@@ -59,6 +59,48 @@ async function removeMessages(userId) {
   await removeFiles(files);
 }
 
+/** Lists of other members' ids (likes, followers, viewers…) become counts, so an export holds only the member's own data. */
+function countIds(Model, doc) {
+  const lists = Object.keys(Model.schema.paths).filter((path) => Model.schema.path(path).$embeddedSchemaType?.instance === 'ObjectId' && Array.isArray(doc[path]));
+  return { ...doc, ...Object.fromEntries(lists.map((path) => [path, doc[path].length])) };
+}
+
+const PERSON = 'name username';
+
+/**
+ * Everything Arcella stores about a member, for "Download your data": their account, what they created, their
+ * conversations and settings. Passwords, push keys and verification document files are never included.
+ */
+export async function exportAccount(userId) {
+  const [account, created, messages, groupMessages, connections, notifications, chatSettings, savedPosts, verifications, reports, devices] = await Promise.all([
+    User.findById(userId).select('+blocked').populate('blocked', PERSON).lean(),
+    Promise.all(OWNED.map(async ([type, Model, field]) => [`${type}s`, (await Model.find({ [field]: userId }).sort({ _id: 1 }).lean()).map((doc) => countIds(Model, doc))])),
+    Message.find({ $or: [{ from: userId }, { to: userId }] }).sort({ _id: 1 }).populate('from to', PERSON).lean(),
+    GroupMessage.find({ author: userId }).sort({ _id: 1 }).populate('college', 'name').lean(),
+    Connection.find({ $or: [{ from: userId }, { to: userId }] }).populate('from to', PERSON).lean(),
+    Notification.find({ user: userId }).sort({ _id: 1 }).populate('actor', PERSON).lean(),
+    ChatState.find({ user: userId }).populate('other', PERSON).lean(),
+    Post.find({ saves: userId }).select('author text createdAt').populate('author', PERSON).lean(),
+    Verification.find({ user: userId }).populate('college', 'name').lean(),
+    Report.find({ reporter: userId }).lean(),
+    PushSubscription.find({ user: userId }).select('endpoint createdAt').lean(),
+  ]);
+  return {
+    exportedAt: new Date().toISOString(),
+    account,
+    ...Object.fromEntries(created),
+    messages,
+    groupMessages,
+    connections,
+    notifications,
+    chatSettings,
+    savedPosts,
+    verifications,
+    reports,
+    notificationDevices: devices.map(({ endpoint, createdAt }) => ({ pushService: new URL(endpoint).host, addedAt: createdAt })),
+  };
+}
+
 /** Permanently removes a member and everything they created, keeping other members' counters right. */
 export async function deleteAccount(userId) {
   const user = await User.findById(userId).select('avatar cover');

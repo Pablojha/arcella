@@ -1,5 +1,14 @@
 # Changelog
 
+## November 2026: legal and compliance
+
+- **Terms of Use** now cover disclaimers, limitation of liability (cap to be set by the operator), indemnity, intellectual property and licences, moderation, a Grievance Officer under India's IT Rules 2021 (acknowledge in 24 hours, resolve in 15 days), and how the terms end or change.
+- **Privacy Policy** now covers rights under India's DPDP Act 2023, GDPR (EU and UK) and CCPA/CPRA (California), legal bases, data location, breaches and how to use each right.
+- New **Community Guidelines** (`/guidelines`, the moderation policy), **Copyright Policy** (`/copyright`, notice and counter-notice) and **Accessibility Statement** (`/accessibility`, WCAG 2.2 AA status and known gaps). All are in the footer, Settings and the sitemap.
+- **Settings → Your data** downloads a JSON copy of the member's account, content, messages, connections and settings (`GET /api/users/me/export`). It never includes password hashes or push keys, and shows other people's likes and follows as counts.
+- "Copyright or IP" is a new report reason.
+- [docs/COMPLIANCE.md](docs/COMPLIANCE.md) lists what is in place and the owner's to-dos for each area: data protection, liability, IP, payments (PCI DSS), user content, accessibility, contracts, and business structure and tax.
+
 ## November 2026: production hardening
 
 Starting point: tag `v1.0-pre-hardening`. Findings and reasoning: [docs/AUDIT.md](docs/AUDIT.md).

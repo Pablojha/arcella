@@ -6,13 +6,17 @@ import Logo from '../brand/Logo';
 export const LEGAL_LINKS = [
   ['/terms', 'Terms'],
   ['/privacy', 'Privacy'],
+  ['/guidelines', 'Guidelines'],
   ['/cookies', 'Cookies'],
+  ['/copyright', 'Copyright'],
+  ['/accessibility', 'Accessibility'],
   ['/refunds', 'Refunds'],
 ];
 
 /** Copyright, the policy pages and cookie settings. `compact` fits the app's sidebar and the More page. */
 export default function SiteFooter({ compact = false, className = '' }) {
-  const link = 'rounded transition hover:text-ink hover:underline';
+  // At least 24 px tall, so wrapped rows of links stay easy to tap (WCAG 2.2 target size).
+  const link = 'inline-flex min-h-6 items-center rounded transition hover:text-ink hover:underline';
   return (
     <footer className={`text-muted ${compact ? 'space-y-2 text-xs' : 'flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between'} ${className}`}>
       <p className="flex items-center gap-2">

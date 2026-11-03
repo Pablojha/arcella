@@ -12,5 +12,7 @@ const perAccount = { keyGenerator: (req) => String(req.user._id) };
 
 export const otpLimiter = limiter(8, 15, 'Too many code requests. Please wait a few minutes.', perAccount);
 
+export const exportLimiter = limiter(5, 60, 'You can download your data a few times an hour. Please try again later.', perAccount);
+
 /** Anti-spam cap on posting, commenting, messaging and reporting. */
 export const writeLimiter = limiter(60, 1, "You're doing that too fast. Please slow down for a minute.", perAccount);

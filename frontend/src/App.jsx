@@ -38,7 +38,10 @@ const NotFound = page(() => import('./pages/NotFound'));
 const Notifications = page(() => import('./pages/Notifications'));
 const PasswordReset = page(() => import('./pages/PasswordReset'));
 const PostPage = page(() => import('./pages/PostPage'));
+const Accessibility = page(() => import('./pages/Accessibility'));
 const Cookies = page(() => import('./pages/Cookies'));
+const Copyright = page(() => import('./pages/Copyright'));
+const Guidelines = page(() => import('./pages/Guidelines'));
 const Privacy = page(() => import('./pages/Privacy'));
 const Refunds = page(() => import('./pages/Refunds'));
 const Terms = page(() => import('./pages/Terms'));
@@ -135,6 +138,9 @@ export default function App() {
               <Route path="terms" element={<Terms />} />
               <Route path="cookies" element={<Cookies />} />
               <Route path="refunds" element={<Refunds />} />
+              <Route path="guidelines" element={<Guidelines />} />
+              <Route path="copyright" element={<Copyright />} />
+              <Route path="accessibility" element={<Accessibility />} />
               <Route path="projects/:id" element={<ProjectDetail />} />
               <Route element={<RequireAuth />}>
                 {PROTECTED.map(([path, Page]) => (
