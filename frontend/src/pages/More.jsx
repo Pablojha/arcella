@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Bell, BookOpen, Bookmark, Building, CalendarDays, ChevronRight, Clapperboard, Compass, HandHeart, LogOut, MessageCircleQuestionMark, Settings, ShieldCheck, Shield } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import SiteFooter from '../components/layout/SiteFooter';
 import Avatar from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
 import CountBadge from '../components/ui/CountBadge';
@@ -74,14 +75,14 @@ export default function More() {
         variant="secondary"
         icon={LogOut}
         className="w-full"
-        onClick={async () => {
-          await logout();
+        onClick={() => {
+          logout();
           navigate('/', { replace: true });
         }}
       >
         Log out
       </Button>
-      <p className="text-center text-xs text-muted">Arcella · made for Indian architecture</p>
+      <SiteFooter compact className="[&>*]:justify-center" />
     </div>
   );
 }

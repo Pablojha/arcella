@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion';
 import Logo from '../components/brand/Logo';
 import Button from '../components/ui/Button';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { useTitle } from '../hooks/useTitle';
 
 export default function NotFound() {
   useTitle('Page not found');
+  usePageMeta({ description: "This page doesn't exist on Arcella.", noindex: true });
   return (
     <div className="flex flex-col items-center py-20 text-center">
       <motion.div initial={{ rotate: -12, scale: 0.8, opacity: 0 }} animate={{ rotate: 0, scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 12 }}>

@@ -7,6 +7,7 @@ import Field from '../components/ui/Field';
 import PasswordInput from '../components/ui/PasswordInput';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { useTitle } from '../hooks/useTitle';
 import api from '../lib/api';
 
@@ -20,6 +21,7 @@ export default function PasswordReset() {
   const [sent, setSent] = useState(null);
   const [busy, setBusy] = useState(false);
   useTitle('Reset password');
+  usePageMeta({ path: '/reset', description: 'Reset your Arcella password with a one-time code sent to your email.', noindex: true });
 
   const requestCode = async (event) => {
     event.preventDefault();

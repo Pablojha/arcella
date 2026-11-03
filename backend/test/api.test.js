@@ -54,7 +54,7 @@ async function call(method, url, { token, body, form, status = [200, 201] } = {}
 
 /** Signs up and confirms the email with the code (shown as devCode because tests send no email). */
 const join = async (key, name, type, email = `${key}@test.arcella`) => {
-  const step = await call('POST', '/auth/register', { body: { name, email, password: 'password123', type } });
+  const step = await call('POST', '/auth/register', { body: { name, email, password: 'password123', type, acceptTerms: true } });
   people[key] = await call('POST', '/auth/verify-email', { body: { email, code: step.devCode } });
   return people[key];
 };
@@ -107,7 +107,7 @@ after(async () => {
 });
 
 test('confirms new emails with a one-time code before signing in', async () => {
-  const step = await call('POST', '/auth/register', { body: { name: 'Dana Iyer', email: 'dana@test.arcella', password: 'password123', type: 'student' } });
+  const step = await call('POST', '/auth/register', { body: { name: 'Dana Iyer', email: 'dana@test.arcella', password: 'password123', type: 'student', acceptTerms: true } });
   assert.equal(step.verify, true);
   assert.equal('token' in step, false);
   const again = await call('POST', '/auth/login', { body: { email: 'dana@test.arcella', password: 'password123' } });
@@ -136,9 +136,13 @@ test('registers members, keeps passwords private and grants admin by email', asy
 
 test('gives admin rights only once the admin email is proven with a code', async () => {
   const users = mongoose.connection.collection('users');
-  const step = await call('POST', '/auth/register', { body: { name: 'Boss Admin', email: 'boss@test.arcella', password: 'password123', type: 'faculty' } });
+  const details = { name: 'Boss Admin', email: 'boss@test.arcella', password: 'password123', type: 'faculty' };
+  const refused = await call('POST', '/auth/register', { body: details, status: 400 });
+  assert.equal(refused.message, 'Please accept the Terms of Use and Privacy Policy');
+  const step = await call('POST', '/auth/register', { body: { ...details, acceptTerms: true } });
   assert.equal('token' in step, false);
-  assert.equal((await users.findOne({ email: 'boss@test.arcella' })).isAdmin, false);
+  const stored = await users.findOne({ email: 'boss@test.arcella' });
+  assert.deepEqual([stored.isAdmin, stored.termsAcceptedAt instanceof Date], [false, true]);
   const session = await call('POST', '/auth/verify-email', { body: { email: 'boss@test.arcella', code: step.devCode } });
   assert.equal(session.user.isAdmin, true);
 });

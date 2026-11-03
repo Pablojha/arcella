@@ -2,14 +2,17 @@
 
 A professional network for architecture students, alumni, faculty and firms in India: a feed of photo posts and vertical video reels with likes, comments, reposts, saves and Important alerts, portfolios with critiques, private college groups with verified membership, a group chat and their own admin and co-admin, stories, jobs, firm pages, mentorship, events, Q&A, study resources and direct messages. It works as a website, an installable PWA and an Android app.
 
-It also includes what a public launch needs: email verification with a one-time code at sign-up, search across the whole network, password reset by code, account deletion, reporting and blocking with an admin moderation queue, a privacy page, and anti-spam rate limits.
+It also includes what a public launch needs: email verification with a one-time code at sign-up, search across the whole network, password reset by code, account deletion, reporting and blocking with an admin moderation queue, Terms, Privacy, Cookie and Refund pages with a cookie notice, consent at sign-up, strict security headers, anti-spam rate limits, and automated accessibility (WCAG 2.2 AA), API and browser tests that run on every push.
 
 Live at **[arcella-seven.vercel.app](https://arcella-seven.vercel.app)**.
 
 | Folder | Stack | Hosting |
 | --- | --- | --- |
-| `backend/` | Node.js, Express 5, MongoDB (Mongoose), JWT, bcrypt, multer, zod | Render (`render.yaml`) |
+| `backend/` | Node.js, Express 5, MongoDB (Mongoose), Socket.IO, JWT, Argon2id, zod 4, multer, Cloudinary, Web Push | Render (`render.yaml`) |
 | `frontend/` | React 19, Vite, Tailwind CSS 4, Framer Motion, React Router, axios, lucide-react | Vercel (`vercel.json`) |
+| `e2e/` | Playwright with axe-core | GitHub Actions (`.github/workflows/ci.yml`) |
+
+More documentation: [SECURITY.md](SECURITY.md) (security model and incident steps), [docs/API.md](docs/API.md) (endpoints), [CHANGELOG.md](CHANGELOG.md), [docs/AUDIT.md](docs/AUDIT.md) (the November 2026 audit) and [APP.md](APP.md) (Android app).
 
 ## Run it locally
 
@@ -39,11 +42,31 @@ npm install
 npm run dev               # http://localhost:5173
 ```
 
-Register with the address in `ADMIN_EMAIL` to become a site admin. If you registered first, set the variable and log in again.
+Register with an address in `ADMIN_EMAIL` and confirm it with the one-time code to become a site admin. Admin rights need an email proven with a code, so in production set up email (section 4 of [Deploy](#deploy)) before creating the admin account. If you registered first, set the variable and log in again.
 
-**Codes in development.** With no Resend or SMTP settings, the 6-digit codes (sign-up, password reset, college email) are printed in the API terminal and shown on screen. In production, sign-up skips the code step until email is configured, so the site works from day one; password reset and college email codes need email.
+**Codes in development.** With no Resend or SMTP settings, the 6-digit codes (sign-up, password reset, college email) are printed in the API terminal and shown on screen. In production, sign-up skips the code step until email is configured, so the site works from day one; password reset, college email and admin rights need email.
 
-**Tests.** With MongoDB running, `cd backend && npm test` runs the API test suite against a separate `arcella_test` database (override with `MONGODB_TEST_URI`). Email and Cloudinary are switched off during tests, so nothing leaves your machine.
+## Testing
+
+| Suite | Command | Needs |
+| --- | --- | --- |
+| API (19 end-to-end tests: auth, admin rights, posts, comments, chat, reactions, push notifications, colleges, moderation, account deletion) | `cd backend && npm test` | MongoDB. Uses a separate `arcella_test` database (override with `MONGODB_TEST_URI`); email and Cloudinary are switched off, so nothing leaves your machine |
+| Browser (Playwright: public pages and SEO tags, cookie notice, sign-up/login/logout/password reset, access control, 10 screen widths from 320 to 1920 px, WCAG 2.2 AA via axe-core in light and dark, internal links) | `cd e2e && npm test` | The API and a production build running (below) |
+
+To run the browser suite locally:
+
+```bash
+# 1. API outside production (codes come back in responses), allowing the preview origin
+cd backend && CLIENT_URL=http://localhost:4173 ADMIN_EMAIL=admin@e2e.arcella AUTH_RATE_LIMIT=1000 npm run dev
+# 2. Production build served with the same security headers as Vercel
+cd frontend && VITE_API_URL=http://localhost:5000 npm run build && VITE_API_URL=http://localhost:5000 npm run preview
+# 3. The suite (first time: npx playwright install chromium, or set E2E_CHANNEL=msedge|chrome to use an installed browser)
+cd e2e && npm install && npm test
+```
+
+Settings: `E2E_BASE_URL` (default `http://localhost:4173`), `E2E_API_URL` (default `http://localhost:5000/api`), `E2E_ADMIN_EMAIL` (must be in the API's `ADMIN_EMAIL`, default `admin@e2e.arcella`) and `E2E_CHANNEL`.
+
+GitHub Actions runs all of it on every push and pull request (`.github/workflows/ci.yml`): the API tests and a dependency audit, the website build and audit, then the Playwright suite against a real API and database.
 
 ## Environment variables
 
@@ -60,14 +83,20 @@ Register with the address in `ADMIN_EMAIL` to become a site admin. If you regist
 | `UPLOAD_DIR` | no | Folder for local uploads, default `backend/uploads` (for example a Render persistent disk) |
 | `RESEND_API_KEY` or `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | for email | One-time codes for sign-up, password reset and college email. Resend is tried first, then SMTP |
 | `MAIL_FROM` | with email | Sender, e.g. `Arcella <no-reply@yourdomain.in>` |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | for notifications | Web Push keys: generate the pair once with `npx web-push generate-vapid-keys` and never change it (new keys cancel everyone's notifications). The subject is a contact for push services, e.g. your site URL |
+| `GIPHY_API_KEY` | no | GIF search in chats (free key from developers.giphy.com) |
+| `AUTH_RATE_LIMIT` | no | Sign-in, sign-up and code attempts per IP per 15 minutes, default 30. Raise it only for local testing |
 | `PORT` | no | Defaults to 5000 (Render sets it automatically) |
 
 ### `frontend/.env`
 
+Everything here ends up in the browser bundle, so it must never hold a secret.
+
 | Variable | Purpose |
 | --- | --- |
 | `VITE_API_URL` | API base URL without `/api`, e.g. `https://arcella-api-pablojha.onrender.com` |
-| `VITE_CONTACT_EMAIL` | Optional contact address shown on the privacy page |
+| `VITE_CONTACT_EMAIL` | Public contact address shown on the policy pages for privacy and legal requests |
+| `VITE_SITE_URL` | The site's public address for canonical links and social previews, default `https://arcella-seven.vercel.app` |
 
 ## Deploy
 
@@ -105,8 +134,10 @@ Notes:
 
 ### 5. Before you go public
 
-- Read the privacy page (`frontend/src/pages/Privacy.jsx`), adjust it to how you actually run Arcella, and set `VITE_CONTACT_EMAIL`.
-- Make yourself admin with `ADMIN_EMAIL`, then check the official email domains under **Admin → Colleges**. Only well-known domains are pre-filled.
+- Fill in the operator's details in `frontend/src/config/site.js` (legal name, postal address, governing law) and set `VITE_CONTACT_EMAIL` on Vercel. Until then the Terms, Privacy, Cookie and Refund pages show them as clearly marked placeholders. Read the pages and adjust them to how you actually run Arcella.
+- Set up email (section 4), then make yourself admin with `ADMIN_EMAIL` and check the official email domains under **Admin → Colleges**. Only well-known domains are pre-filled.
+- If you add a custom domain or move the API, update `CLIENT_URL` on Render, `VITE_SITE_URL` on Vercel, the API address in the Content-Security-Policy in `frontend/vercel.json` (and `PRODUCTION_API` in `vite.config.js`), and the URLs in `index.html`, `robots.txt` and `sitemap.xml`.
+- Atlas's free M0 tier has no automatic backups: see [SECURITY.md](SECURITY.md#backups) for a backup routine.
 
 ## How college verification works
 
@@ -118,13 +149,14 @@ Site admins manage colleges, email domains and manual verification from **More �
 
 ## Important posts
 
-Anyone can mark one post a day as **Important** (site admins and college admins in their group have no limit). It gets a red tag and border, and a notification goes to the author's connections, to every member of the college for a group post, or to everyone on Arcella when a site admin posts it.
+Anyone can mark one post a day as **Important** (site admins and college admins in their group have no limit). It gets a red Important strip, and a notification goes to the author's connections, to every member of the college for a group post, or to everyone on Arcella when a site admin posts it.
 
 ## Safety and accounts
 
 - **Report and block:** members can report posts, comments, projects, questions, answers and profiles, and block other members from a post, profile or conversation. Blocking hides posts, stories and comments both ways, stops messages and connection requests, and removes any existing connection.
 - **Moderation:** open reports appear in **Admin → Reports** with a preview. Admins can remove the content (or delete the account) or dismiss the report.
-- **Accounts:** new emails are confirmed with a 6-digit code. Codes expire after 10 minutes, allow 5 attempts and can be resent after 30 seconds. Password reset also uses a code. Changing your password signs out other devices, and **Settings → Delete account** removes the member and everything they created.
+- **Accounts:** new emails are confirmed with a 6-digit code. Codes expire after 10 minutes, allow 5 attempts and can be resent after 30 seconds. Password reset also uses a code. Passwords are hashed with Argon2id (older bcrypt hashes upgrade at the next sign-in). Changing your password signs out other devices and stops their notifications, and **Settings → Delete account** removes the member and everything they created.
+- **Privacy controls:** members agree to the Terms and Privacy Policy at sign-up (the time is recorded). Arcella stores nothing for ads or analytics. The cookie notice and **Cookie settings** decide whether preferences such as dark mode are remembered across visits.
 - **Rate limits:** login, sign-up and password routes are limited per IP; codes, posts, comments, messages, connection requests and reports are limited per account.
 
 ## Installable app
@@ -143,3 +175,5 @@ Anyone can mark one post a day as **Important** (site admins and college admins 
 | frontend | `npm run build` | Production build into `dist/` |
 | frontend | `npm run preview` | Serve the production build locally |
 | frontend | `npm run android` | Build, sync to Android and open Android Studio |
+| e2e | `npm test` | Playwright browser suite (see [Testing](#testing)) |
+| e2e | `npm run report` | Open the last Playwright report |

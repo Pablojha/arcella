@@ -28,7 +28,7 @@ export async function register(req, res) {
   const existing = await User.findOne({ email });
   if (existing && (existing.emailVerified || !signupNeedsCode)) throw new ApiError(409, 'An account with this email already exists. Try logging in.');
   const user = existing ?? new User({ email });
-  user.set({ name, password, type });
+  user.set({ name, password, type, termsAcceptedAt: new Date() });
   await user.save();
   res.status(201).json(needsCode(user) ? await verificationStep(user) : await session(user));
 }

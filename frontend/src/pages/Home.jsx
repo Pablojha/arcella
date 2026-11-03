@@ -8,6 +8,7 @@ import ProfileCard from '../components/home/ProfileCard';
 import ProfileStrength from '../components/home/ProfileStrength';
 import Suggestions from '../components/home/Suggestions';
 import UpcomingEvents from '../components/home/UpcomingEvents';
+import SiteFooter from '../components/layout/SiteFooter';
 import Avatar from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
 import EmptyState from '../components/ui/EmptyState';
@@ -71,6 +72,7 @@ export default function Home() {
       <aside className="hidden space-y-4 lg:block">
         <Suggestions />
         <UpcomingEvents />
+        <SiteFooter compact className="px-2" />
       </aside>
 
       <motion.button

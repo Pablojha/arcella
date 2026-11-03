@@ -11,6 +11,7 @@ import SearchInput from '../components/ui/SearchInput';
 import { GridSkeleton } from '../components/ui/Skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useDebounce } from '../hooks/useDebounce';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { usePaged } from '../hooks/usePaged';
 import { PROJECT_CATEGORIES } from '../lib/constants';
 
@@ -18,6 +19,7 @@ const GRID = 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
 
 export default function Explore() {
   const { user } = useAuth();
+  usePageMeta({ path: '/explore', description: 'Explore architecture projects by students and graduates across India: thesis, studio work, competitions and more.' });
   const [category, setCategory] = useState('');
   const [query, setQuery] = useState('');
   const projects = usePaged('/projects', { category, q: useDebounce(query), limit: 16 });

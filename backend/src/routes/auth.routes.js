@@ -9,7 +9,13 @@ import { email, required, z } from '../utils/zod.js';
 const password = z.string().min(8).max(100);
 const code = z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code from your email');
 
-const registerSchema = z.object({ name: required(60, 2), email, password, type: z.enum(USER_TYPES) });
+const registerSchema = z.object({
+  name: required(60, 2),
+  email,
+  password,
+  type: z.enum(USER_TYPES),
+  acceptTerms: z.unknown().refine((value) => value === true, 'Please accept the Terms of Use and Privacy Policy'),
+});
 const loginSchema = z.object({ email, password: z.string().min(1).max(100) });
 const verifySchema = z.object({ email, code });
 const resetSchema = z.object({ email, code, password });

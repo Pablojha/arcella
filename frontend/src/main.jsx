@@ -1,4 +1,5 @@
 import { StrictMode } from 'react';
+import { MotionConfig } from 'framer-motion';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import '@fontsource-variable/inter';
@@ -17,7 +18,10 @@ createRoot(document.getElementById('root')).render(
         <ToastProvider>
           <AuthProvider>
             <BadgeProvider>
-              <App />
+              {/* Honour the system "reduce motion" setting: movement is skipped, fades stay. */}
+              <MotionConfig reducedMotion="user">
+                <App />
+              </MotionConfig>
             </BadgeProvider>
           </AuthProvider>
         </ToastProvider>

@@ -42,12 +42,16 @@ export async function syncPush() {
   if (supported() && Notification.permission === 'granted' && (await registration()) && (await keyOf())) await subscribe();
 }
 
-/** Stops notifications on this device: the server forgets it (skipped when the session is already gone) and it unsubscribes. */
-export async function disablePush({ signedOut = false } = {}) {
+/**
+ * Stops notifications on this device: the server forgets it and it unsubscribes. `session` is the token to send
+ * (on sign-out it is already cleared locally); with `signedOut` the session has ended, so only the browser forgets.
+ */
+export async function disablePush({ signedOut = false, session } = {}) {
   if (!supported()) return;
   const subscription = await (await registration())?.pushManager.getSubscription();
   if (!subscription) return;
-  if (!signedOut) await api.delete('/push/subscriptions', { data: { endpoint: subscription.endpoint } }).catch(() => {});
+  const headers = session ? { Authorization: `Bearer ${session}` } : undefined;
+  if (!signedOut) await api.delete('/push/subscriptions', { data: { endpoint: subscription.endpoint }, headers }).catch(() => {});
   await subscription.unsubscribe();
   window.dispatchEvent(new Event(PUSH_CHANGED));
 }

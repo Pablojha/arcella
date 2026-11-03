@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, BadgeCheck, BookOpen, Briefcase, FolderOpen, GraduationCap, HandHeart, MessageSquareText, Star } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import Logo from '../components/brand/Logo';
 import Wordmark from '../components/brand/Wordmark';
+import SiteFooter from '../components/layout/SiteFooter';
 import Button from '../components/ui/Button';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { useTitle } from '../hooks/useTitle';
 
 const FEATURES = [
@@ -55,6 +56,7 @@ function HeroArt() {
 
 export default function Landing() {
   useTitle();
+  usePageMeta({ path: '/' });
   const reveal =(index = 0) => ({ initial: { opacity: 0, y: 24 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, margin: '-60px' }, transition: { duration: 0.5, delay: index * 0.06 } });
 
   return (
@@ -139,19 +141,7 @@ export default function Landing() {
         </motion.section>
       </main>
 
-      <footer className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 pb-10 pt-4 text-sm text-muted md:px-6">
-        <span className="flex items-center gap-2">
-          <Logo size={22} /> © {new Date().getFullYear()} Arcella
-        </span>
-        <span className="flex gap-4">
-          <Link to="/explore" className="hover:text-ink">
-            Explore
-          </Link>
-          <Link to="/privacy" className="hover:text-ink">
-            Privacy
-          </Link>
-        </span>
-      </footer>
+      <SiteFooter className="mx-auto max-w-6xl px-4 pb-10 pt-4 md:px-6" />
     </div>
   );
 }

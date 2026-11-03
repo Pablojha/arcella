@@ -167,7 +167,7 @@ function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = fal
           </MoreText>
         )}
         {commentsCount > 0 && (
-          <button type="button" onClick={() => setCommentsOpen(true)} className="block px-3 text-sm text-muted hover:text-ink">
+          <button type="button" onClick={() => setCommentsOpen(true)} className="block px-3 py-0.5 text-sm text-muted hover:text-ink">
             {commentsCount === 1 ? 'View 1 comment' : `View all ${commentsCount} comments`}
           </button>
         )}

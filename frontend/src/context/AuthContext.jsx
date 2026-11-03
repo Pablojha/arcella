@@ -5,7 +5,6 @@ import { disablePush } from '../lib/push';
 
 const AuthContext = createContext(null);
 const USER_KEY = 'arcella_user';
-const SIGN_OUT_WAIT_MS = 3000;
 
 function cachedUser() {
   try {
@@ -26,21 +25,30 @@ export function AuthProvider({ children }) {
     else localStorage.removeItem(USER_KEY);
   }, []);
 
+  // Whether the member signed out themselves (then members-only pages lead home, not to the login page).
+  const [leftOnPurpose, setLeftOnPurpose] = useState(false);
+
   const login = useCallback(
     (session) => {
       cache.clear();
       token.set(session.token);
+      setLeftOnPurpose(false);
       setUser(session.user);
     },
     [setUser],
   );
 
-  /** Signs out, and this device stops getting the account's notifications (`signedOut`: the session has already ended). */
+  /**
+   * Signs out at once. In the background this device also stops getting the account's notifications, using the
+   * session being ended (`signedOut`: it has already ended, so only the browser forgets the device). `expired` marks
+   * a session that ran out rather than one the member ended.
+   */
   const logout = useCallback(
-    async ({ signedOut = false } = {}) => {
-      await Promise.race([disablePush({ signedOut }).catch(() => {}), new Promise((resolve) => setTimeout(resolve, SIGN_OUT_WAIT_MS))]);
+    ({ signedOut = false, expired = false } = {}) => {
+      disablePush({ signedOut, session: token.get() }).catch(() => {});
       cache.clear();
       token.clear();
+      setLeftOnPurpose(!expired);
       setUser(null);
     },
     [setUser],
@@ -51,12 +59,12 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (token.get()) refresh().catch(() => {}).finally(() => setReady(true));
     else api.get('/health').catch(() => {});
-    const expired = () => logout({ signedOut: true });
+    const expired = () => logout({ signedOut: true, expired: true });
     window.addEventListener('auth:expired', expired);
     return () => window.removeEventListener('auth:expired', expired);
   }, [refresh, logout]);
 
-  return <AuthContext value={{ user, ready, login, logout, refresh, setUser }}>{children}</AuthContext>;
+  return <AuthContext value={{ user, ready, login, logout, refresh, setUser, leftOnPurpose }}>{children}</AuthContext>;
 }
 
 export const useAuth = () => useContext(AuthContext);

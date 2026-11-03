@@ -29,10 +29,10 @@ function Vote({ item, onVote }) {
       whileTap={{ scale: 0.85 }}
       onClick={onVote}
       aria-pressed={item.upvoted}
-      aria-label="Upvote"
       className={`flex w-12 shrink-0 flex-col items-center rounded-2xl py-1.5 transition ${item.upvoted ? 'bg-brand text-on-brand' : 'bg-ink/5 text-ink/70 hover:bg-ink/10'}`}
     >
-      <ArrowBigUp size={22} className={item.upvoted ? 'fill-current' : ''} />
+      <ArrowBigUp size={22} className={item.upvoted ? 'fill-current' : ''} aria-hidden="true" />
+      <span className="sr-only">Upvote, votes:</span>
       <span className="font-display text-sm font-bold">{item.upvotesCount}</span>
     </motion.button>
   );

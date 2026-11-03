@@ -6,8 +6,11 @@ import RequireAuth from './components/layout/RequireAuth';
 import LoadingScreen from './components/LoadingScreen';
 import MessageAlerts from './components/MessageAlerts';
 import OfflineBanner from './components/OfflineBanner';
+import StorageNotice from './components/StorageNotice';
 import { useAuth } from './context/AuthContext';
 import { socket } from './lib/realtime';
+// Bundled up front: it is the first page new visitors see, so it shouldn't wait for a second download.
+import Landing from './pages/Landing';
 
 /** A lazily loaded page that can also be fetched ahead of time. */
 const page = (load) => Object.assign(lazy(load), { preload: load });
@@ -23,7 +26,6 @@ const Firms = page(() => import('./pages/Firms'));
 const Home = page(() => import('./pages/Home'));
 const JobDetail = page(() => import('./pages/JobDetail'));
 const Jobs = page(() => import('./pages/Jobs'));
-const Landing = page(() => import('./pages/Landing'));
 const Mentors = page(() => import('./pages/Mentors'));
 const Messages = page(() => import('./pages/Messages'));
 const More = page(() => import('./pages/More'));
@@ -36,7 +38,10 @@ const NotFound = page(() => import('./pages/NotFound'));
 const Notifications = page(() => import('./pages/Notifications'));
 const PasswordReset = page(() => import('./pages/PasswordReset'));
 const PostPage = page(() => import('./pages/PostPage'));
+const Cookies = page(() => import('./pages/Cookies'));
 const Privacy = page(() => import('./pages/Privacy'));
+const Refunds = page(() => import('./pages/Refunds'));
+const Terms = page(() => import('./pages/Terms'));
 const Profile = page(() => import('./pages/Profile'));
 const ProjectDetail = page(() => import('./pages/ProjectDetail'));
 const QuestionDetail = page(() => import('./pages/QuestionDetail'));
@@ -53,6 +58,8 @@ const TAB_PAGES = [Home, Network, College, Jobs, Messages, More, Notifications, 
 
 const SPLASH_KEY = 'arcella_splash_seen';
 const SPLASH_MS = 2100;
+// The branded launch animation plays when Arcella opens as an installed app; in a browser tab, content shows at once.
+const INSTALLED_APP = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || Boolean(window.Capacitor);
 
 const PROTECTED = [
   ['posts/:id', PostPage],
@@ -88,7 +95,7 @@ const PROTECTED = [
 export default function App() {
   const { user, ready } = useAuth();
   const signedIn = Boolean(user);
-  const [splashDone, setSplashDone] = useState(() => sessionStorage.getItem(SPLASH_KEY) === '1');
+  const [splashDone, setSplashDone] = useState(() => !INSTALLED_APP || sessionStorage.getItem(SPLASH_KEY) === '1');
 
   useEffect(() => {
     if (splashDone) return undefined;
@@ -125,6 +132,9 @@ export default function App() {
               {user && <Route index element={<Home />} />}
               <Route path="explore" element={<Explore />} />
               <Route path="privacy" element={<Privacy />} />
+              <Route path="terms" element={<Terms />} />
+              <Route path="cookies" element={<Cookies />} />
+              <Route path="refunds" element={<Refunds />} />
               <Route path="projects/:id" element={<ProjectDetail />} />
               <Route element={<RequireAuth />}>
                 {PROTECTED.map(([path, Page]) => (
@@ -136,6 +146,7 @@ export default function App() {
           </Routes>
         </Suspense>
       )}
+      {ready && splashDone && <StorageNotice />}
     </>
   );
 }

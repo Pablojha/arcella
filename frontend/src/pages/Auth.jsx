@@ -7,6 +7,7 @@ import Field from '../components/ui/Field';
 import PasswordInput from '../components/ui/PasswordInput';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { useTitle } from '../hooks/useTitle';
 import api from '../lib/api';
 import { USER_TYPES } from '../lib/constants';
@@ -17,12 +18,18 @@ export default function Auth({ mode }) {
   const { user, login } = useAuth();
   const toast = useToast();
   const [params] = useSearchParams();
-  const [form, setForm] = useState({ name: '', email: '', password: '', type: 'student' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', type: 'student', acceptTerms: false });
   const [pending, setPending] = useState(null);
   const [busy, setBusy] = useState(false);
   const next = /^\/(?!\/)/.test(params.get('next') ?? '') ? params.get('next') : '/';
   const set = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
   useTitle(register ? 'Create account' : 'Log in');
+  usePageMeta({
+    path: register ? '/register' : '/login',
+    description: register
+      ? 'Create your free Arcella account: portfolios, crits, private college groups, internships and mentorship for architecture in India.'
+      : 'Log in to Arcella, the professional network for architecture students, alumni, faculty and firms in India.',
+  });
 
   if (user) return <Navigate to={next} replace />;
 
@@ -88,6 +95,7 @@ export default function Auth({ mode }) {
                 <button
                   key={type.value}
                   type="button"
+                  aria-pressed={form.type === type.value}
                   onClick={() => set('type')(type.value)}
                   className={`rounded-2xl border p-3 text-left transition ${form.type === type.value ? 'border-brand bg-brand/10 ring-4 ring-brand/10' : 'border-line bg-card hover:border-ink/30'}`}
                 >
@@ -98,18 +106,25 @@ export default function Auth({ mode }) {
             </div>
           </Field>
         )}
+        {register && (
+          <label className="flex items-start gap-2.5 text-sm text-muted">
+            <input type="checkbox" checked={form.acceptTerms} onChange={(event) => set('acceptTerms')(event.target.checked)} required className="mt-0.5 size-4 shrink-0 accent-brand" />
+            <span>
+              I agree to the{' '}
+              <Link to="/terms" className="font-medium text-brand underline underline-offset-2">
+                Terms of Use
+              </Link>{' '}
+              and the{' '}
+              <Link to="/privacy" className="font-medium text-brand underline underline-offset-2">
+                Privacy Policy
+              </Link>
+              .
+            </span>
+          </label>
+        )}
         <Button type="submit" size="lg" className="w-full" loading={busy}>
           {register ? 'Create account' : 'Log in'}
         </Button>
-        {register && (
-          <p className="text-center text-xs text-muted">
-            By joining you agree to how we handle your data in our{' '}
-            <Link to="/privacy" className="underline hover:text-ink">
-              privacy policy
-            </Link>
-            .
-          </p>
-        )}
       </form>
 
       <p className="mt-6 text-center text-sm text-muted">

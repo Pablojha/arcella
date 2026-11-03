@@ -14,6 +14,7 @@ import UserChip from '../components/ui/UserChip';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useApi } from '../hooks/useApi';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { useTitle } from '../hooks/useTitle';
 import api from '../lib/api';
 import { mediaUrl } from '../lib/format';
@@ -29,6 +30,10 @@ export default function ProjectDetail() {
   const [editing, setEditing] = useState(false);
   const [reporting, setReporting] = useState(null);
   useTitle(project?.title);
+  usePageMeta({
+    path: `/projects/${id}`,
+    description: project ? `${project.title} by ${project.owner?.name ?? 'an Arcella member'}: an architecture project on Arcella.` : undefined,
+  });
 
   if (loading) return <Skeleton className="aspect-video w-full rounded-3xl" />;
   if (error) return <EmptyState icon={FolderX} title="Project not found" text={error.message} />;

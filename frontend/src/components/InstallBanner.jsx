@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Download, Share, X } from 'lucide-react';
+import { readPreference, savePreference } from '../lib/consent';
 import Logo from './brand/Logo';
 import Button from './ui/Button';
 
@@ -14,7 +15,7 @@ export default function InstallBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (standalone || localStorage.getItem(DISMISS_KEY)) return undefined;
+    if (standalone || readPreference(DISMISS_KEY)) return undefined;
     const onPrompt = (event) => {
       event.preventDefault();
       setPrompt(event);
@@ -29,7 +30,7 @@ export default function InstallBanner() {
   }, []);
 
   const dismiss = () => {
-    localStorage.setItem(DISMISS_KEY, '1');
+    savePreference(DISMISS_KEY, '1');
     setVisible(false);
   };
 

@@ -35,10 +35,11 @@ export default function StoriesBar({ composerOpen, onComposerOpen }) {
   return (
     <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
       <div className="relative flex w-[72px] shrink-0 flex-col items-center gap-1.5">
-        <button type="button" onClick={() => (mineIndex >= 0 ? setViewing(mineIndex) : onComposerOpen(true))} aria-label={mineIndex >= 0 ? 'View your story' : 'Add a story'}>
+        <button type="button" onClick={() => (mineIndex >= 0 ? setViewing(mineIndex) : onComposerOpen(true))}>
           <Ring seen={mineIndex < 0}>
             <Avatar user={user} size={60} />
           </Ring>
+          <span className="sr-only">{mineIndex >= 0 ? 'View your story' : 'Add a story'}</span>
         </button>
         <button type="button" onClick={() => onComposerOpen(true)} aria-label="Add a story" className="absolute right-0.5 top-[46px] grid size-6 place-items-center rounded-full border-2 border-paper bg-brand text-on-brand">
           <Plus size={14} strokeWidth={3} />

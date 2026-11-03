@@ -1,19 +1,14 @@
 import { useEffect, useState } from 'react';
 import { BellRing } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { readPreference, savePreference } from '../../lib/consent';
 import { enablePush, pushState } from '../../lib/push';
 import Button from '../ui/Button';
 
 const DISMISSED_KEY = 'arcella_push_prompt_dismissed';
 const ASK_AGAIN_MS = 14 * 24 * 60 * 60 * 1000;
 
-function dismissedLately() {
-  try {
-    return Date.now() - Number(localStorage.getItem(DISMISSED_KEY) || 0) < ASK_AGAIN_MS;
-  } catch {
-    return false;
-  }
-}
+const dismissedLately = () => Date.now() - Number(readPreference(DISMISSED_KEY) || 0) < ASK_AGAIN_MS;
 
 /**
  * Invites the member to turn on message notifications. It appears in Messages, where they matter, rather than on
@@ -45,11 +40,7 @@ export default function PushPrompt() {
   };
 
   const later = () => {
-    try {
-      localStorage.setItem(DISMISSED_KEY, String(Date.now()));
-    } catch {
-      // Private browsing: it simply shows again next time.
-    }
+    savePreference(DISMISSED_KEY, String(Date.now()));
     setState('later');
   };
 

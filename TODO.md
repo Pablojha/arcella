@@ -13,25 +13,26 @@ Started 3 November 2026 from tag `v1.0-pre-hardening` (the live version before t
 - [x] Patch updates (express-rate-limit, mongoose, @vitejs/plugin-react)
 
 ## Legal and privacy
-- [ ] Terms, Cookie Policy and Refund Policy pages; Privacy updated (push, chats, storage, third parties)
-- [ ] Footer links on public pages and in the app
-- [ ] Consent on sign-up
-- [ ] Browser-storage notice with preferences (only essential storage exists; nothing to opt into)
-- [ ] **Blocked on the owner:** operator name, public contact email, postal address/city, governing law, and whether paid features are planned
+- [x] Terms, Cookie Policy and Refund Policy pages; Privacy updated (chats, notifications, storage, third parties, retention)
+- [x] Footer links on public pages and in the app; policy buttons in Settings
+- [x] Consent on sign-up (checkbox, enforced by the API, recorded as `termsAcceptedAt`)
+- [x] Cookie notice and Cookie settings (essential only by default; preferences across visits only with consent)
+- [ ] **Blocked on the owner:** operator name, public contact email, postal address/city, governing law, and whether paid features are planned. Fill them in `frontend/src/config/site.js` and `VITE_CONTACT_EMAIL`.
 
 ## Accessibility, SEO, performance
-- [ ] axe-core WCAG 2.2 AA scan of every route; fix violations
-- [ ] Per-page descriptions and canonical URLs; social image; JSON-LD; robots.txt; sitemap.xml
-- [ ] Immutable caching for hashed assets; vendor chunks; Lighthouse before/after
+- [x] axe-core WCAG 2.2 AA scan of every route: 6 rule failures fixed, now 0 (light and dark, phone and desktop)
+- [x] Per-page descriptions and canonical URLs; social image; JSON-LD; robots.txt; sitemap.xml; noindex on 404 and reset
+- [x] Immutable caching for hashed assets; vendor chunks; splash only for the installed app; landing page bundled
+- [ ] Lighthouse after deploy (baseline: performance 92/91, accessibility 100, best practices 100, SEO 91/92; largest paint 3.1 s)
 
 ## UI and responsiveness
-- [ ] Sweep every route at 320–1920 px (10 widths), light and dark; fix issues
-- [ ] Consistent public footer and legal page layout
+- [x] Sweep every route at 320, 375, 768 and 1280 px in light and dark: no overflow or runtime errors. The Playwright suite covers all 10 widths.
+- [x] Consistent public footer and legal page layout; cookie table becomes cards on phones
 
 ## Tests and docs
-- [ ] Playwright suite in the repo (journeys, responsive overflow, accessibility)
-- [ ] CI workflow (API tests, build, audit)
-- [ ] README, SECURITY.md, docs/API.md, CHANGELOG.md
+- [x] Playwright suite in `e2e/` (public pages, cookie notice, auth journeys, access control, 10 widths, WCAG, links): 30 passed, 4 skipped by design. It caught a real bug (logout landing on the login page), now fixed.
+- [x] CI workflow (API tests + audit, website build + audit, Playwright)
+- [x] README, SECURITY.md, docs/API.md, CHANGELOG.md
 
 ## Deploy
 - [ ] Push and verify Render and Vercel (authorized: the owner asked to deploy everywhere)

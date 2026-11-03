@@ -96,7 +96,7 @@ export default function FirmDetail() {
           {firm.gallery.length > 0 && (
             <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
               {firm.gallery.map((src, index) => (
-                <button key={src} type="button" onClick={() => setLightbox(index)} className="aspect-[4/3] overflow-hidden rounded-2xl bg-line">
+                <button key={src} type="button" onClick={() => setLightbox(index)} aria-label={`Open photo ${index + 1} of ${firm.gallery.length}`} className="aspect-[4/3] overflow-hidden rounded-2xl bg-line">
                   <img src={mediaUrl(src, 800)} alt="" loading="lazy" className="size-full object-cover transition duration-500 hover:scale-105" />
                 </button>
               ))}

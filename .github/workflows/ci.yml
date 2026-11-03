@@ -1,0 +1,107 @@
+# Every push and pull request: API tests and audit, the website build and audit, then the Playwright suite against
+# a production build (with the real security headers) talking to a real API and database.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: API tests
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports: ['27017:27017']
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm test
+        env:
+          MONGODB_TEST_URI: mongodb://localhost:27017/arcella_test
+      - run: npm audit --omit=dev --audit-level=high
+
+  web:
+    name: Website build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+
+  e2e:
+    name: End-to-end (Playwright)
+    needs: [api, web]
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports: ['27017:27017']
+    env:
+      E2E_ADMIN_EMAIL: admin@e2e.arcella
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Start the API (not in production mode, so one-time codes come back in responses)
+        working-directory: backend
+        env:
+          MONGODB_URI: mongodb://localhost:27017/arcella_e2e
+          CLIENT_URL: http://localhost:4173
+          ADMIN_EMAIL: admin@e2e.arcella
+          AUTH_RATE_LIMIT: '1000'
+        run: |
+          npm ci
+          nohup npm start > ../api.log 2>&1 &
+      - name: Build and serve the website
+        working-directory: frontend
+        env:
+          VITE_API_URL: http://localhost:5000
+        run: |
+          npm ci
+          npm run build
+          nohup npx vite preview --port 4173 --strictPort > ../web.log 2>&1 &
+      - name: Wait for both servers
+        run: npx --yes wait-on@8 --timeout 90000 http://localhost:5000/api/health http://localhost:4173
+      - name: Install Playwright and its browser
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run the suite
+        working-directory: e2e
+        run: npx playwright test
+      - name: Keep the report and server logs when something fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            api.log
+            web.log

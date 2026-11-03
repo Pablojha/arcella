@@ -1,6 +1,7 @@
 // Arcella service worker: network-first app shell (so deploys show up at once), cache-first static assets.
-const CACHE = 'arcella-v1';
-const SHELL = ['/', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.png'];
+// Bump the version whenever an unhashed file in public/ changes, so every visitor drops the old copies.
+const CACHE = 'arcella-v2';
+const SHELL = ['/', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.png', '/theme.js'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));

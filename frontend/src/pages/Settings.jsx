@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { LEGAL_LINKS } from '../components/layout/SiteFooter';
 import BlockedMembers from '../components/settings/BlockedMembers';
 import ChangePassword from '../components/settings/ChangePassword';
 import DeleteAccount from '../components/settings/DeleteAccount';
@@ -7,6 +7,7 @@ import PushSetting from '../components/settings/PushSetting';
 import Button from '../components/ui/Button';
 import PageHeader from '../components/ui/PageHeader';
 import { useAuth } from '../context/AuthContext';
+import { openStorageSettings } from '../lib/consent';
 import { formatDate } from '../lib/format';
 
 function Section({ title, index, danger = false, children }) {
@@ -43,14 +44,18 @@ export default function Settings() {
       <Section title="Blocked members" index={3}>
         <BlockedMembers />
       </Section>
-      <Section title="Privacy" index={4}>
-        <p className="text-sm text-muted">
-          See what we store and who can see it in our{' '}
-          <Link to="/privacy" className="font-medium text-brand hover:underline">
-            privacy policy
-          </Link>
-          .
-        </p>
+      <Section title="Privacy and policies" index={4}>
+        <p className="text-sm text-muted">See what Arcella stores, who can see it and the rules everyone follows.</p>
+        <div className="flex flex-wrap gap-2">
+          {LEGAL_LINKS.map(([to, label]) => (
+            <Button key={to} to={to} variant="secondary" size="sm">
+              {label}
+            </Button>
+          ))}
+          <Button variant="secondary" size="sm" onClick={openStorageSettings}>
+            Cookie settings
+          </Button>
+        </div>
       </Section>
       <Section title="Delete account" index={5} danger>
         <DeleteAccount />

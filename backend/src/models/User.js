@@ -32,6 +32,8 @@ const userSchema = new Schema(
     blocked: { type: [ref('User')], select: false },
     passwordChangedAt: Date,
     lastActiveAt: Date,
+    // When the member agreed to the Terms of Use and Privacy Policy at sign-up.
+    termsAcceptedAt: Date,
   },
   {
     timestamps: true,

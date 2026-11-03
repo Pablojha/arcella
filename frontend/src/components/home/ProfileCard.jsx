@@ -21,6 +21,7 @@ export default function ProfileCard() {
       <div className="-mt-8 px-4 pb-4">
         <Link to={`/u/${user.username}`} className="inline-block rounded-full ring-4 ring-card">
           <Avatar user={user} size={64} />
+          <span className="sr-only">Your profile</span>
         </Link>
         <Link to={`/u/${user.username}`} className="mt-2 flex items-center gap-1 font-display text-lg font-semibold hover:underline">
           <span className="truncate">{user.name}</span>

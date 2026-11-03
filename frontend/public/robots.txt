@@ -1,0 +1,11 @@
+# Public pages may be indexed; members-only pages need an account anyway.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /messages
+Disallow: /notifications
+Disallow: /saved
+Disallow: /settings
+Disallow: /reset
+
+Sitemap: https://arcella-seven.vercel.app/sitemap.xml

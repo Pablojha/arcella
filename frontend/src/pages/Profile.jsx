@@ -160,9 +160,9 @@ export default function Profile() {
       <section className="card overflow-hidden">
         <div className="grid-paper relative h-36 bg-brand/15 bg-cover bg-center md:h-52" style={person.cover ? { backgroundImage: `url(${mediaUrl(person.cover, 1600)})` } : undefined}>
           {own && (
-            <label className="absolute right-3 top-3 flex cursor-pointer items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white backdrop-blur hover:bg-black/70">
+            <label className="absolute right-3 top-3 flex cursor-pointer items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white backdrop-blur focus-within:ring-2 focus-within:ring-white hover:bg-black/70">
               <Camera size={14} /> Cover
-              <input type="file" accept="image/*" hidden onChange={upload('cover')} />
+              <input type="file" accept="image/*" className="sr-only" onChange={upload('cover')} />
             </label>
           )}
         </div>
@@ -171,9 +171,10 @@ export default function Profile() {
             <div className="relative rounded-full ring-4 ring-card">
               <Avatar user={person} size={112} />
               {own && (
-                <label className="absolute bottom-1 right-1 grid size-9 cursor-pointer place-items-center rounded-full border-2 border-card bg-brand text-on-brand" aria-label="Change photo">
-                  <Camera size={16} />
-                  <input type="file" accept="image/*" hidden onChange={upload('avatar')} />
+                <label className="absolute bottom-1 right-1 grid size-9 cursor-pointer place-items-center rounded-full border-2 border-card bg-brand text-on-brand focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2">
+                  <Camera size={16} aria-hidden="true" />
+                  <span className="sr-only">Change photo</span>
+                  <input type="file" accept="image/*" className="sr-only" onChange={upload('avatar')} />
                 </label>
               )}
             </div>

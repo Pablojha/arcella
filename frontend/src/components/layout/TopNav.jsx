@@ -72,8 +72,9 @@ export default function TopNav({ hideOnMobile = false }) {
               <IconButton icon={Bell} label="Notifications" className="md:hidden" onClick={() => navigate('/notifications')}>
                 <CountBadge count={badges.notifications} className="right-1 top-1" />
               </IconButton>
-              <Link to={`/u/${user.username}`} aria-label="Your profile" className="ml-1 rounded-full ring-brand/40 transition hover:ring-4">
+              <Link to={`/u/${user.username}`} className="ml-1 rounded-full ring-brand/40 transition hover:ring-4">
                 <Avatar user={user} size={34} />
+                <span className="sr-only">Your profile</span>
               </Link>
             </>
           ) : (
