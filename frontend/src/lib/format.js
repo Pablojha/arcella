@@ -16,7 +16,10 @@ const UNITS = [
 export function mediaUrl(url, width) {
   if (!url) return '';
   if (url.startsWith('/')) return `${API_URL}${url}`;
-  return width && url.includes('/image/upload/') ? url.replace('/image/upload/', `/image/upload/f_auto,q_auto,c_limit,w_${width}/`) : url;
+  if (!url.includes('/image/upload/')) return url;
+  // Photos browsers can't all show (iPhone HEIC, AVIF) are delivered as JPEG, which Cloudinary converts to on request.
+  const shown = url.replace(/\.(heic|heif|avif)$/i, '.jpg');
+  return width ? shown.replace('/image/upload/', `/image/upload/f_auto,q_auto,c_limit,w_${width}/`) : shown;
 }
 
 /**

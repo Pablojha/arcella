@@ -1,8 +1,15 @@
 const COMPRESSIBLE = ['image/jpeg', 'image/png', 'image/webp'];
+// What the API stores as photos. GIFs stay as they are so they keep moving.
+const ACCEPTED = [...COMPRESSIBLE, 'image/gif'];
 
-/** Downscales large photos (phones shoot 4–12 MB) so uploads stay quick on mobile data. */
+/**
+ * Downscales large photos (phones shoot 4–12 MB) so uploads stay quick on mobile data, and turns other formats the
+ * browser can open (AVIF, BMP, and HEIC in Safari) into JPEG. Anything it can't open, such as iPhone HEIC photos in
+ * Chrome or Edge, goes up as it is; the API accepts HEIC and the image service converts it for display.
+ */
 export async function compressImage(file, maxSide = 2048, quality = 0.85) {
-  if (!COMPRESSIBLE.includes(file.type) || file.size < 600 * 1024) return file;
+  const convert = !ACCEPTED.includes(file.type);
+  if (!convert && (!COMPRESSIBLE.includes(file.type) || file.size < 600 * 1024)) return file;
   try {
     const bitmap = await createImageBitmap(file);
     const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
@@ -12,7 +19,7 @@ export async function compressImage(file, maxSide = 2048, quality = 0.85) {
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
-    return blob && blob.size < file.size ? new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }) : file;
+    return blob && (convert || blob.size < file.size) ? new File([blob], file.name.replace(/(\.\w+)?$/, '.jpg'), { type: 'image/jpeg' }) : file;
   } catch {
     return file;
   }

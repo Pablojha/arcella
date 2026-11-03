@@ -70,7 +70,8 @@ export default function CreatePost({ open, onClose, onCreated, college, onStory 
   return (
     <Sheet open={open} onClose={onClose} title="Create a post">
       {onStory && (
-        <div className="no-scrollbar -mx-5 mb-4 flex gap-2 overflow-x-auto px-5">
+        // Swiped sideways on phones; on wider screens, where there's no swipe, the chips wrap so none is cut off.
+        <div className="no-scrollbar -mx-5 mb-4 flex gap-2 overflow-x-auto px-5 md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
           {SHORTCUTS.map((item, index) => (
             <motion.button
               key={item.label}

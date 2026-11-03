@@ -9,6 +9,8 @@ import { env } from '../config/env.js';
 export const UPLOAD_DIR = env.uploadDir ? path.resolve(env.uploadDir) : fileURLToPath(new URL('../../uploads', import.meta.url));
 
 const useCloud = Object.values(env.cloudinary).every(Boolean);
+/** Whether uploads go to Cloudinary (which can also take and convert formats browsers can't show, like HEIC). */
+export const cloudStorage = useCloud;
 if (useCloud) cloudinary.config({ ...env.cloudinary, secure: true });
 
 function toCloud(file, folder) {

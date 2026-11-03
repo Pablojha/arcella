@@ -1,10 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import multer from 'multer';
+import { cloudStorage } from '../services/storage.js';
 import { ApiError } from '../utils/errors.js';
 
 const MB = 1024 * 1024;
-const IMAGES = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+// iPhone HEIC photos are kept only with Cloudinary, which converts them for browsers; on local disk they couldn't be shown.
+const IMAGES = ['jpg', 'jpeg', 'png', 'webp', 'gif', ...(cloudStorage ? ['heic', 'heif', 'avif'] : [])];
 const VIDEOS = ['mp4', 'mov', 'webm', 'm4v'];
 const AUDIO = ['webm', 'ogg', 'oga', 'm4a', 'mp4', 'mp3', 'wav', 'aac'];
 const CHAT_KINDS = { image: IMAGES, video: VIDEOS, voice: AUDIO };
