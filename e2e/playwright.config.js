@@ -11,7 +11,8 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   workers: 1,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  // On GitHub, failures also appear as annotations on the run, readable without downloading the report.
+  reporter: process.env.CI ? [['github'], ['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: process.env.E2E_BASE_URL || 'http://localhost:4173',
     actionTimeout: 20_000,

@@ -8,7 +8,14 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 async function violationsOn(page, path) {
   await page.goto(path, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(800); // let entrance fades finish, so colours are measured as members see them
+  // Entrance fades must finish first, so colours are measured as members see them (slow machines take longer).
+  // Endless animations, like loading shimmers, are ignored.
+  await page.waitForFunction(
+    () => document.getAnimations().every((animation) => animation.playState !== 'running' || animation.effect?.getComputedTiming().endTime === Infinity),
+    null,
+    { timeout: 10_000 },
+  );
+  await page.waitForTimeout(300);
   const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
   return violations.map((violation) => `${path}: ${violation.id} (${violation.nodes.length}) ${violation.nodes[0]?.target.join(' ')}`);
 }
