@@ -784,6 +784,99 @@ test('gives staff roles only the permissions they carry, suspends and bans accou
   await call('GET', '/admin/stats', { token: asha.token, status: 403 });
 });
 
+test('edits posts, links #hashtags and @mentions, follows members and respects notification settings', async () => {
+  const [ana, ben] = await Promise.all([join('ana', 'Ana Das', 'student'), join('ben', 'Ben Roy', 'student')]);
+  const notes = async (token, type) => (await call('GET', '/notifications', { token })).items.filter((note) => note.type === type);
+
+  // Hashtags and mentions are read from the text; mentioned members are told, an email address isn't a mention.
+  const post = await call('POST', '/posts', { token: ana.token, form: { text: `Jury day #Thesis #thesis with @${ben.user.username}, mail me at ana@studio.in` } });
+  assert.deepEqual(post.mentions.map((user) => user.username), [ben.user.username]);
+  assert.equal((await notes(ben.token, 'mention')).length, 1);
+  assert.deepEqual((await call('GET', '/posts?tag=THESIS', { token: ben.token })).items.map((item) => item._id), [post._id]);
+  await call('GET', '/posts?tag=%3Cscript%3E', { token: ben.token, status: 400 });
+
+  // Only the author edits; re-mentioning someone doesn't notify them twice.
+  await call('PATCH', `/posts/${post._id}`, { token: ben.token, body: { text: 'hijacked' }, status: 403 });
+  const edited = await call('PATCH', `/posts/${post._id}`, { token: ana.token, body: { text: `Jury day #crits with @${ben.user.username} and @${people.asha.user.username}` } });
+  assert.ok(edited.editedAt);
+  assert.equal((await call('GET', '/posts?tag=thesis', { token: ben.token })).items.length, 0);
+  assert.equal((await call('GET', '/posts?tag=crits', { token: ben.token })).items.length, 1);
+  assert.equal((await notes(ben.token, 'mention')).length, 1);
+  assert.equal((await notes(people.asha.token, 'mention')).length, 1);
+  await call('PATCH', `/posts/${post._id}`, { token: ana.token, body: { text: '' }, status: 400 });
+
+  // Comments can mention too.
+  await call('POST', `/posts/${post._id}/comments`, { token: people.asha.token, body: { text: `@${ben.user.username} see this` } });
+  assert.equal((await notes(ben.token, 'mention')).length, 2);
+
+  // Following: the followed member is told and their posts join the follower's network feed.
+  assert.ok(!(await call('GET', '/posts?scope=network', { token: ben.token })).items.some((item) => item._id === post._id));
+  const followed = await call('POST', `/users/${ana.user._id}/follow`, { token: ben.token });
+  assert.deepEqual(followed, { following: true, followersCount: 1 });
+  assert.equal((await call('GET', `/users/${ana.user.username}`, { token: ben.token })).following, true);
+  assert.equal((await notes(ana.token, 'follow')).length, 1);
+  assert.ok((await call('GET', '/posts?scope=network', { token: ben.token })).items.some((item) => item._id === post._id));
+  await call('POST', `/users/${ben.user._id}/follow`, { token: ben.token, status: 400 });
+
+  // Switched-off groups stop arriving; security notices can't be switched off.
+  await call('PUT', '/users/me/notifications', { token: ana.token, body: { off: ['likes', 'network'] } });
+  await call('PUT', '/users/me/notifications', { token: ana.token, body: { off: ['security'] }, status: 400 });
+  await call('POST', `/posts/${post._id}/like`, { token: ben.token });
+  await call('POST', `/users/${ana.user._id}/follow`, { token: ben.token });
+  await call('POST', `/users/${ana.user._id}/follow`, { token: ben.token });
+  assert.equal((await notes(ana.token, 'like')).length, 0);
+  assert.equal((await notes(ana.token, 'follow')).length, 1);
+  assert.deepEqual((await call('GET', '/auth/me', { token: ana.token })).user.notificationsOff, ['likes', 'network']);
+  assert.equal('notificationsOff' in (await call('GET', `/users/${ana.user.username}`, { token: ben.token })).user, false);
+
+  // Blocking ends follows both ways.
+  await call('POST', `/users/${ben.user._id}/block`, { token: ana.token });
+  assert.equal((await call('GET', `/users/${ben.user.username}`, { token: ana.token })).user.followersCount, 0);
+  await call('POST', `/users/${ana.user._id}/follow`, { token: ben.token, status: 403 });
+});
+
+test('sends one message request to strangers, lists it under requests, and lets people unsend and search', async () => {
+  const [cara, dev] = await Promise.all([join('cara', 'Cara Sen', 'student'), join('dev', 'Dev Nair', 'student')]);
+  const threadOf = (token, other) => call('GET', `/messages/${other}`, { token });
+
+  // A stranger may send one request; more waits for a reply.
+  assert.equal((await threadOf(cara.token, dev.user._id)).canMessage, 'request');
+  const first = await call('POST', `/messages/${dev.user._id}`, { token: cara.token, body: { text: 'Loved your thesis model, could we talk?' } });
+  assert.equal(first.request, true);
+  assert.equal((await threadOf(cara.token, dev.user._id)).canMessage, 'pending');
+  const waiting = await call('POST', `/messages/${dev.user._id}`, { token: cara.token, body: { text: 'Hello?' }, status: 403 });
+  assert.match(waiting.message, /waiting for a reply/);
+
+  // Dev sees it under requests, not chats; replying accepts it.
+  const ids = (list) => list.items.map((item) => item.user._id);
+  assert.ok(ids(await call('GET', '/messages?requests=true', { token: dev.token })).includes(cara.user._id));
+  assert.ok(!ids(await call('GET', '/messages', { token: dev.token })).includes(cara.user._id));
+  assert.ok(ids(await call('GET', '/messages', { token: cara.token })).includes(dev.user._id), 'the sender sees the chat as usual');
+  assert.equal((await threadOf(dev.token, cara.user._id)).canMessage, true);
+  await call('POST', `/messages/${cara.user._id}`, { token: dev.token, body: { text: 'Sure, studio at 5' } });
+  assert.ok(ids(await call('GET', '/messages', { token: dev.token })).includes(cara.user._id));
+  assert.equal((await call('GET', '/messages?requests=true', { token: dev.token })).items.length, 0);
+  assert.equal((await threadOf(cara.token, dev.user._id)).canMessage, true);
+
+  // Search within the chat, and unsend: only your own messages, gone for both, live.
+  const found = await call('GET', `/messages/${dev.user._id}/search?q=THESIS`, { token: cara.token });
+  assert.deepEqual(found.items.map((item) => item._id), [first._id]);
+  await call('GET', `/messages/${dev.user._id}/search?q=`, { token: cara.token, status: 400 });
+  await call('DELETE', `/messages/item/${first._id}`, { token: dev.token, status: 404 });
+  const devSocket = await socketOf('dev');
+  const removed = next(devSocket, 'message:deleted');
+  await call('DELETE', `/messages/item/${first._id}`, { token: cara.token });
+  assert.equal((await removed)._id, first._id);
+  devSocket.disconnect();
+  assert.ok(!(await threadOf(dev.token, cara.user._id)).items.some((item) => item._id === first._id));
+
+  // Blocking still stops everything, requests included.
+  const eve = await join('eve', 'Eve Kapoor', 'student');
+  await call('POST', `/users/${eve.user._id}/block`, { token: dev.token });
+  assert.equal((await threadOf(eve.token, dev.user._id)).canMessage, false);
+  await call('POST', `/messages/${dev.user._id}`, { token: eve.token, body: { text: 'hi' }, status: 403 });
+});
+
 test('searches people, projects, jobs, firms and questions in one go', async () => {
   const result = await call('GET', '/search?q=bilal', { token: people.asha.token });
   assert.equal(result.people[0].name, 'Bilal Khan');

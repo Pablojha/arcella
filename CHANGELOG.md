@@ -1,5 +1,24 @@
 # Changelog
 
+## November 2026: message requests, unsend and chat search
+
+- **Message requests:** anyone who isn't blocked can send one first message to a member they aren't connected with (Message on any profile). It waits under **Messages → Message requests** until the member replies, and the sender can't send more meanwhile. Connections, verified batchmates and existing chats work as before.
+- **Unsend** your own messages from the long-press menu; they disappear for both people at once, with any photo, video or voice note.
+- **Search a chat** from its menu.
+
+## November 2026: hashtags, mentions, following and notification choices
+
+- **#hashtags** in posts link to a feed of every post with that tag (`/tags/:tag`). **@username** in posts and comments notifies that member and links to their profile; only real members become links, and email addresses are never read as mentions.
+- **Edit a post's words** from its menu. Hashtags and mentions update, only newly mentioned members are told, and the post shows "edited".
+- **Follow** members without connecting: their posts join your My network feed and they're told. Profiles show followers. Blocking ends follows both ways.
+- **Notification choices** (Settings → Notifications): switch off likes, comments, mentions, network, posts, jobs or mentoring notices. Security alerts and verification results always arrive.
+
+## November 2026: photos that always show
+
+- Photos in formats the browser can open but the API doesn't store (AVIF, BMP, HEIC in Safari) are converted to JPEG before upload. iPhone HEIC photos are accepted with Cloudinary and delivered as JPEG.
+- Media lost before Cloudinary was set up (Render's free plan wipes its disk on every restart) no longer shows as broken: profile photos fall back to initials, and other photos and videos show an "unavailable" placeholder. In production the API refuses to start without Cloudinary, so this can't happen again.
+- The Create a post shortcuts wrap on wider screens instead of cutting off Job.
+
 ## November 2026: staff roles and the admin dashboard
 
 - **Roles:** support (read users and reports), moderator (resolve reports, suspend accounts, take down jobs), admin (verify, ban, colleges, firm badges, audit log) and super admin (hands out roles). Every admin route checks its permission on the server, and the dashboard shows only the tabs a role can use. Existing site admins became super admins (`ADMIN_EMAIL` addresses) or admins at start-up.

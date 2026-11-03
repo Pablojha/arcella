@@ -20,6 +20,8 @@ const messageSchema = new Schema(
     reactions: [reactionSchema],
     lastReaction: lastReactionSchema,
     read: { type: Boolean, default: false },
+    // A first message to someone the sender may not message yet; it waits in their Requests until they reply.
+    request: Boolean,
   },
   { timestamps: true },
 );

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ArrowBigUp, BadgeCheck, Bell, BriefcaseBusiness, CircleAlert, CircleCheck, HandHeart, Heart, MessageSquare, MessageSquareText, Repeat2, Reply, Shield, ShieldAlert, ShieldCheck, TriangleAlert, UserCheck, UserPlus } from 'lucide-react';
+import { ArrowBigUp, AtSign, BadgeCheck, Bell, BriefcaseBusiness, CircleAlert, CircleCheck, HandHeart, Heart, MessageSquare, MessageSquareText, Repeat2, Reply, Rss, Shield, ShieldAlert, ShieldCheck, TriangleAlert, UserCheck, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Logo from '../components/brand/Logo';
 import Avatar from '../components/ui/Avatar';
@@ -34,6 +34,8 @@ const TYPES = {
   answer: { icon: ArrowBigUp, text: 'answered your question' },
   accepted: { icon: CircleCheck, text: 'accepted your answer' },
   application: { icon: BriefcaseBusiness, text: 'applied to your role' },
+  mention: { icon: AtSign, text: 'mentioned you' },
+  follow: { icon: Rss, text: 'started following you' },
   application_status: { icon: BriefcaseBusiness, text: 'updated your application' },
   new_login: { icon: ShieldAlert, text: "Your account was signed in on a new device. If it wasn't you, reset your password.", detail: deviceName },
 };

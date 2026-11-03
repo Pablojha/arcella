@@ -6,6 +6,7 @@ import BlockedMembers from '../components/settings/BlockedMembers';
 import ChangePassword from '../components/settings/ChangePassword';
 import DataExport from '../components/settings/DataExport';
 import DeleteAccount from '../components/settings/DeleteAccount';
+import NotificationSettings from '../components/settings/NotificationSettings';
 import PushSetting from '../components/settings/PushSetting';
 import Security from '../components/settings/Security';
 import Button from '../components/ui/Button';
@@ -48,6 +49,7 @@ export default function Settings() {
       </Section>
       <Section title="Notifications" index={1}>
         <PushSetting />
+        <NotificationSettings />
       </Section>
       <Section title="Password" index={2}>
         <ChangePassword />

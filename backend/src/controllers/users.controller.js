@@ -1,9 +1,11 @@
 import { isObjectIdOrHexString } from 'mongoose';
 import Connection from '../models/Connection.js';
+import Follow from '../models/Follow.js';
 import User from '../models/User.js';
 import { CARD } from '../config/constants.js';
 import { deleteAccount, exportAccount } from '../services/account.js';
-import { hiddenIds } from '../services/blocks.js';
+import { hiddenIds, isBlockedBetween } from '../services/blocks.js';
+import { notify } from '../services/notify.js';
 import * as membership from '../services/membership.js';
 import { profileOf } from '../services/profile.js';
 import { removeFiles, saveFile } from '../services/storage.js';
@@ -54,7 +56,33 @@ export async function profile(req, res) {
     .populate('memberships.college', 'name short city')
     .lean();
   found(user, 'Profile');
-  res.json({ user, status: await Connection.statusOf(req.user._id, user._id), blocked: has(req.user.blocked, user._id) });
+  const [status, followersCount, following] = await Promise.all([
+    Connection.statusOf(req.user._id, user._id),
+    Follow.countDocuments({ following: user._id }),
+    Follow.exists({ follower: req.user._id, following: user._id }),
+  ]);
+  delete user.notificationsOff;
+  res.json({ user: { ...user, followersCount }, status, following: Boolean(following), blocked: has(req.user.blocked, user._id) });
+}
+
+/** Follows or unfollows a member. Blocks either way rule it out; the person followed is told. */
+export async function toggleFollow(req, res) {
+  const { id } = req.params;
+  if (same(id, req.user._id)) throw new ApiError(400, "You can't follow yourself");
+  found(await User.exists({ _id: id }), 'User');
+  const removed = await Follow.findOneAndDelete({ follower: req.user._id, following: id });
+  if (!removed) {
+    if (await isBlockedBetween(req.user._id, id)) throw new ApiError(403, "You can't follow this member");
+    await Follow.create({ follower: req.user._id, following: id });
+    await notify({ user: id, actor: req.user._id, type: 'follow', link: `/u/${req.user.username}` });
+  }
+  res.json({ following: !removed, followersCount: await Follow.countDocuments({ following: id }) });
+}
+
+export async function setNotifications(req, res) {
+  req.user.notificationsOff = req.body.off;
+  await req.user.save();
+  res.json({ user: await profileOf(req.user) });
 }
 
 export async function updateMe(req, res) {
@@ -78,6 +106,7 @@ export async function toggleBlock(req, res) {
   if (same(id, req.user._id)) throw new ApiError(400, "You can't block yourself");
   found(await User.exists({ _id: id }), 'User');
   const blocking = !has(req.user.blocked, id);
+  if (blocking) await Follow.deleteMany({ $or: [{ follower: req.user._id, following: id }, { follower: id, following: req.user._id }] });
   await User.updateOne({ _id: req.user._id }, blocking ? { $addToSet: { blocked: id } } : { $pull: { blocked: id } });
   if (blocking) await Connection.sever(req.user._id, id);
   res.json({ blocked: blocking });

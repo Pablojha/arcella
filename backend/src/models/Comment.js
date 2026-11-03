@@ -10,6 +10,7 @@ const commentSchema = new Schema(
     parent: ref('Comment', { default: null }),
     replyTo: ref('User'),
     likes: [ref('User')],
+    mentions: [ref('User')],
   },
   { timestamps: true },
 );

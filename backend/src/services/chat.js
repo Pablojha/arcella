@@ -11,12 +11,18 @@ export const pair = (a, b) => ({ $or: [{ from: a, to: b }, { from: b, to: a }] }
 const batchmates = (me, other) =>
   (me.memberships ?? []).some((mine) => mine.verified && mine.batch && (other.memberships ?? []).some((theirs) => theirs.verified && theirs.batch === mine.batch && same(theirs.college, mine.college)));
 
-/** Connections, verified batchmates, or people who already share a thread may message each other, unless either blocked the other. */
+/**
+ * Whether `me` may message `other`: `true` for connections, verified batchmates and chats the other person has written
+ * in (or that predate requests); `'request'` for anyone else, who may send one message request; `'pending'` while that
+ * request waits for a reply; `false` when either blocked the other.
+ */
 export async function canMessage(me, other) {
   if (await isBlockedBetween(me._id, other._id)) return false;
   if (batchmates(me, other)) return true;
   const ids = pair(me._id, other._id);
-  return Boolean((await Connection.exists({ ...ids, status: 'accepted' })) || (await Message.exists(ids)));
+  if (await Connection.exists({ ...ids, status: 'accepted' })) return true;
+  if (await Message.exists({ $or: [{ from: other._id, to: me._id }, { from: me._id, to: other._id, request: { $ne: true } }] })) return true;
+  return (await Message.exists({ from: me._id, to: other._id })) ? 'pending' : 'request';
 }
 
 /** The people whose chats this user has hidden from their list. */

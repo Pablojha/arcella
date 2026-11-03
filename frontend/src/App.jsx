@@ -34,6 +34,7 @@ const NewEvent = page(() => import('./pages/NewEvent'));
 const NewFirm = page(() => import('./pages/NewFirm'));
 const NewJob = page(() => import('./pages/NewJob'));
 const Applicants = page(() => import('./pages/Applicants'));
+const Tag = page(() => import('./pages/Tag'));
 const NewProject = page(() => import('./pages/NewProject'));
 const NotFound = page(() => import('./pages/NotFound'));
 const Notifications = page(() => import('./pages/Notifications'));
@@ -67,6 +68,7 @@ const INSTALLED_APP = window.matchMedia('(display-mode: standalone)').matches ||
 
 const PROTECTED = [
   ['posts/:id', PostPage],
+  ['tags/:tag', Tag],
   ['network', Network],
   ['u/:username', Profile],
   ['projects/new', NewProject],

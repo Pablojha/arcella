@@ -7,6 +7,7 @@ import { useApi } from '../../hooks/useApi';
 import { usePressGestures } from '../../hooks/usePressGestures';
 import api from '../../lib/api';
 import { plural, timeAgo } from '../../lib/format';
+import RichText from '../ui/RichText';
 import Avatar from '../ui/Avatar';
 import Sheet from '../ui/Sheet';
 import { Skeleton } from '../ui/Skeleton';
@@ -41,7 +42,7 @@ function CommentRow({ comment, thread, onLike, onReply, onActions }) {
               </Link>{' '}
             </>
           )}
-          {comment.text}
+          <RichText text={comment.text} mentions={comment.mentions} />
         </p>
         <p className="mt-1 flex items-center gap-3 text-xs font-medium text-muted">
           <span>{comment.pending ? 'Posting…' : timeAgo(comment.createdAt)}</span>
@@ -288,7 +289,7 @@ export default function CommentsSheet({ post, open, onClose, canModerate = false
                 <Link to={`/u/${post.author?.username}`} className="font-semibold hover:underline">
                   {post.author?.name}
                 </Link>{' '}
-                {post.text}
+                <RichText text={post.text} mentions={post.mentions} />
               </p>
               <p className="mt-1 text-xs font-medium text-muted">{timeAgo(post.createdAt)}</p>
             </div>

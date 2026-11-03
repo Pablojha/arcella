@@ -69,6 +69,8 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | POST | `/api/users/me/avatar` | member | updateImage |
 | POST | `/api/users/me/cover` | member | updateImage |
 | GET | `/api/users/:id` | member | profile |
+| POST | `/api/users/:id/follow` | member | follow or unfollow (`following`, `followersCount`); refused between blocked members |
+| PUT | `/api/users/me/notifications` | member | `off`: notification groups to switch off (`likes`, `comments`, `mentions`, `network`, `posts`, `jobs`, `mentoring`) |
 | POST | `/api/users/:id/block` | member | toggleBlock |
 | GET | `/api/connections` | member | list |
 | GET | `/api/connections/requests` | member | requests |
@@ -78,6 +80,7 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | GET | `/api/posts` | member | feed |
 | POST | `/api/posts` | member · write limit | create |
 | GET | `/api/posts/:id` | member | get |
+| PATCH | `/api/posts/:id` | the author · write limit | edit the `text`; hashtags and mentions are read again, newly mentioned members are told, `editedAt` is set |
 | DELETE | `/api/posts/:id` | member | remove |
 | POST | `/api/posts/:id/like` | member | like |
 | POST | `/api/posts/:id/save` | member | save |
@@ -157,7 +160,9 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | GET | `/api/verification/queue` | member | queue |
 | GET | `/api/verification/:id/document` | member | document |
 | POST | `/api/verification/:id/review` | member | review |
-| GET | `/api/messages` | member | conversations |
+| GET | `/api/messages` | member | conversations (`requests=true` lists message requests) |
+| DELETE | `/api/messages/item/:messageId` | the sender | unsend a message for both people (`message:deleted` over Socket.IO) |
+| GET | `/api/messages/:userId/search` | member | messages in that chat whose text matches `q` (30 newest) |
 | PUT | `/api/messages/reactions/:messageId` | member · write limit | react |
 | PATCH | `/api/messages/:userId/state` | member | setState |
 | GET | `/api/messages/:userId` | member | thread |

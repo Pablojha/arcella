@@ -5,9 +5,11 @@ import { CARD } from '../config/constants.js';
 import { hiddenIds, isBlockedBetween } from '../services/blocks.js';
 import { canMessage, pair } from '../services/chat.js';
 import { announceReaction, deliverMessage, emitTo, isOnline } from '../services/realtime.js';
+import { removeContent } from '../services/content.js';
 import { saveFile } from '../services/storage.js';
 import { ApiError, found } from '../utils/errors.js';
 import { has, same } from '../utils/shape.js';
+import { searchRegex } from '../utils/text.js';
 
 const PAGE = 30;
 const PIN_LIMIT = 3;
@@ -31,9 +33,13 @@ export async function conversations(req, res) {
         last: { $first: '$$ROOT' },
         reaction: { $top: { sortBy: { 'lastReaction.at': -1 }, output: { at: '$lastReaction.at', by: '$lastReaction.user', emoji: '$lastReaction.emoji', author: '$from' } } },
         unread: { $sum: { $cond: [{ $and: [{ $eq: ['$to', me] }, { $eq: ['$read', false] }] }, 1, 0] } },
+        sent: { $sum: { $cond: [{ $eq: ['$from', me] }, 1, 0] } },
+        requested: { $max: { $cond: [{ $and: [{ $ne: ['$from', me] }, { $eq: ['$request', true] }] }, true, false] } },
       },
     },
     { $match: { _id: people } },
+    // A chat someone started with a request, which the viewer hasn't answered, is listed under Requests only.
+    { $match: req.query.requests ? { requested: true, sent: 0 } : { $or: [{ requested: false }, { sent: { $gt: 0 } }] } },
     // Pinned chats sort first here too, so the 50-chat limit never drops one that hasn't been active lately.
     { $addFields: { activity: { $max: ['$last.createdAt', '$reaction.at'] }, pinned: { $in: ['$_id', pins.map((state) => state.other)] } } },
     { $sort: { pinned: -1, activity: -1 } },
@@ -131,29 +137,46 @@ export async function thread(req, res) {
   res.json({ items, hasMore, seenUntil: seen?._id ?? null, presence, ...details });
 }
 
-/** The person being messaged, if the viewer is allowed to message them. */
+/** The person being messaged, if the viewer may write to them, and whether this message goes as a request. */
 async function recipient(req) {
   const other = found(await User.findById(req.params.userId).select('memberships'), 'User');
   if (same(other._id, req.user._id)) throw new ApiError(400, "You can't message yourself");
-  if (!(await canMessage(req.user, other))) throw new ApiError(403, 'You can message your connections and verified batchmates');
-  return other;
+  const allowed = await canMessage(req.user, other);
+  if (allowed === 'pending') throw new ApiError(403, 'Your message request is waiting for a reply');
+  if (!allowed) throw new ApiError(403, "You can't message this member");
+  return { other, request: allowed === 'request' || undefined };
 }
 
 /** A text message or a GIF. */
 export async function send(req, res) {
-  const other = await recipient(req);
-  const message = await Message.create({ from: req.user._id, to: other._id, text: req.body.text, gif: req.body.gif });
+  const { other, request } = await recipient(req);
+  const message = await Message.create({ from: req.user._id, to: other._id, text: req.body.text, gif: req.body.gif, request });
   deliverMessage(message);
   res.status(201).json(message);
 }
 
 /** A photo, video or voice note; its size, length and waveform are measured by the sender's app. */
 export async function sendAttachment(req, res) {
-  const other = await recipient(req);
+  const { other, request } = await recipient(req);
   const { kind, width, height, duration, waveform } = req.body;
   const url = await saveFile(req.file, 'messages');
   const content = kind === 'voice' ? { voice: { url, duration, waveform } } : { media: { url, kind, width, height, duration } };
-  const message = await Message.create({ from: req.user._id, to: other._id, ...content });
+  const message = await Message.create({ from: req.user._id, to: other._id, ...content, request });
   deliverMessage(message);
   res.status(201).json(message);
+}
+
+/** Unsends one of the viewer's own messages, with its photo, video or voice note; it disappears for both people at once. */
+export async function unsend(req, res) {
+  const message = found(await Message.findOne({ _id: req.params.messageId, from: req.user._id }).select('from to').lean(), 'Message');
+  await removeContent('message', message._id);
+  [message.from, message.to].forEach((user) => emitTo(user, 'message:deleted', { _id: message._id }));
+  res.json({ ok: true });
+}
+
+/** Messages in one chat whose text matches `q`, newest first. */
+export async function search(req, res) {
+  found(await User.exists({ _id: req.params.userId }), 'User');
+  const items = await Message.find({ ...pair(req.user._id, req.params.userId), text: searchRegex(req.query.q) }).sort({ _id: -1 }).limit(30).select('from text createdAt').lean();
+  res.json({ items });
 }

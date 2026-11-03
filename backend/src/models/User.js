@@ -55,6 +55,8 @@ const userSchema = new Schema(
     mentor: { enabled: { type: Boolean, default: false }, topics: [String], slots: [String], about: String },
     blocked: { type: [ref('User')], select: false },
     passwordChangedAt: Date,
+    // Notification groups the member switched off (see services/notify.js).
+    notificationsOff: [String],
     // "Sign out other devices" ends tokens issued before this that have no device (those from before devices existed).
     signedOutAt: Date,
     // Two-factor sign-in with an authenticator app. Recovery codes are kept as SHA-256 hashes.

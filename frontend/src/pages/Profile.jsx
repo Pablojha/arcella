@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Ban, Camera, Flag, FolderPlus, GraduationCap, HandHeart, Link as LinkIcon, MapPin, Pencil, UserRoundX, Users } from 'lucide-react';
+import { Ban, Camera, Check, Flag, MessageCircle, FolderPlus, GraduationCap, HandHeart, Link as LinkIcon, MapPin, Pencil, Rss, UserRoundX, Users } from 'lucide-react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import PostCard from '../components/feed/PostCard';
 import RequestSession from '../components/mentors/RequestSession';
@@ -133,6 +133,14 @@ export default function Profile() {
   const toggleBlock = useBlock();
   const tab = params.get('tab') || 'about';
   const own = data?.status === 'self';
+  const toggleFollow = async () => {
+    try {
+      const { following, followersCount } = await api.post(`/users/${data.user._id}/follow`);
+      setData((current) => ({ ...current, following, user: { ...current.user, followersCount } }));
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
   const person = own ? { ...data.user, ...me } : data?.user;
   useTitle(person?.name);
 
@@ -197,7 +205,17 @@ export default function Profile() {
                       Unblock
                     </Button>
                   ) : (
-                    <ConnectButton key={data.status} person={person} status={data.status} size="md" />
+                    <>
+                      <ConnectButton key={data.status} person={person} status={data.status} size="md" />
+                      {data.status !== 'connected' && (
+                        <Button variant="secondary" icon={MessageCircle} to={`/messages/${person._id}`}>
+                          Message
+                        </Button>
+                      )}
+                      <Button variant="secondary" icon={data.following ? Check : Rss} onClick={toggleFollow} aria-pressed={data.following}>
+                        {data.following ? 'Following' : 'Follow'}
+                      </Button>
+                    </>
                   )}
                   <MoreMenu
                     label="Profile options"
@@ -237,6 +255,9 @@ export default function Profile() {
               )}
               <span className="flex items-center gap-1.5">
                 <Users size={15} /> {plural(person.connectionsCount, 'connection')}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Rss size={15} /> {plural(person.followersCount ?? 0, 'follower')}
               </span>
             </div>
           </motion.div>

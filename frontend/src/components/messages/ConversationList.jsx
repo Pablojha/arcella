@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, EyeOff, MessageCircle, Pin, SquarePen } from 'lucide-react';
+import { ArrowLeft, EyeOff, Inbox, MessageCircle, Pin, SquarePen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../hooks/useApi';
@@ -63,13 +63,17 @@ function ChatRow({ item, me, active, hidden, onActions, onUnhide }) {
 /** Your chats: pinned ones on top; long-press one to pin, unpin or hide it. Hidden chats live in their own list. */
 export default function ConversationList({ activeId }) {
   const { user } = useAuth();
-  const [showHidden, setShowHidden] = useState(false);
-  const { data, reload } = useApi('/messages', { hidden: showHidden });
+  // Which list shows: chats, hidden chats, or message requests from people the viewer isn't connected with.
+  const [list, setList] = useState('chats');
+  const showHidden = list === 'hidden';
+  const { data, reload } = useApi('/messages', { hidden: showHidden, requests: list === 'requests' });
+  const { data: requests, reload: reloadRequests } = useApi('/messages', { requests: true });
   const [composing, setComposing] = useState(false);
   const [actionsFor, setActionsFor] = useState(null);
   const settings = useChatSettings();
   usePoll(reload, 30_000);
   useSocketEvent('message:new', reload);
+  useSocketEvent('message:new', reloadRequests);
   useSocketEvent('message:update', reload);
 
   useEffect(() => {
@@ -80,21 +84,28 @@ export default function ConversationList({ activeId }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center justify-between gap-2 pb-3 md:px-4 md:pt-4">
-        {showHidden ? (
-          <button type="button" onClick={() => setShowHidden(false)} className="-ml-2 flex items-center gap-2 rounded-full py-1 pl-1 pr-3 font-display text-xl font-bold tracking-tight hover:bg-ink/5">
-            <ArrowLeft size={22} /> Hidden chats
+        {list !== 'chats' ? (
+          <button type="button" onClick={() => setList('chats')} className="-ml-2 flex items-center gap-2 rounded-full py-1 pl-1 pr-3 font-display text-xl font-bold tracking-tight hover:bg-ink/5">
+            <ArrowLeft size={22} /> {showHidden ? 'Hidden chats' : 'Message requests'}
           </button>
         ) : (
           <>
             <h1 className="font-display text-2xl font-bold tracking-tight">Messages</h1>
             <div className="flex items-center">
               <IconButton icon={SquarePen} label="New message" onClick={() => setComposing(true)} />
-              <MoreMenu label="Chat list options" items={[{ label: 'Hidden chats', icon: EyeOff, onClick: () => setShowHidden(true) }]} />
+              <MoreMenu label="Chat list options" items={[{ label: 'Hidden chats', icon: EyeOff, onClick: () => setList('hidden') }]} />
             </div>
           </>
         )}
       </div>
-      {!showHidden && <PushPrompt />}
+      {list === 'chats' && <PushPrompt />}
+      {list === 'chats' && requests?.items.length > 0 && (
+        <button type="button" onClick={() => setList('requests')} className="mb-2 flex w-full items-center gap-3 rounded-2xl border border-line px-3 py-2.5 text-left text-sm transition hover:bg-ink/5 md:mx-2 md:w-[calc(100%-1rem)]">
+          <Inbox size={18} className="text-brand" />
+          <span className="flex-1 font-medium">Message requests</span>
+          <span className="min-w-5 rounded-full bg-accent px-1.5 text-center text-[11px] font-semibold leading-5 text-on-accent">{requests.items.length}</span>
+        </button>
+      )}
       <div className="-mx-2 flex-1 overflow-y-auto md:mx-0 md:px-2">
         {!data && <ListSkeleton count={4} lines={0} />}
         {data?.items.map((item) => (
@@ -103,8 +114,14 @@ export default function ConversationList({ activeId }) {
         {data && !data.items.length && (
           <div className="flex flex-col items-center px-6 py-14 text-center text-muted">
             {showHidden ? <EyeOff size={28} className="mb-3" /> : <MessageCircle size={28} className="mb-3" />}
-            <p className="font-medium text-ink">{showHidden ? 'No hidden chats' : 'No conversations yet'}</p>
-            <p className="mt-1 text-sm">{showHidden ? 'Long-press a chat and choose Hide chat to move it here.' : 'Message a connection or a verified batchmate.'}</p>
+            <p className="font-medium text-ink">{showHidden ? 'No hidden chats' : list === 'requests' ? 'No message requests' : 'No conversations yet'}</p>
+            <p className="mt-1 text-sm">
+              {showHidden
+                ? 'Long-press a chat and choose Hide chat to move it here.'
+                : list === 'requests'
+                  ? "First messages from people you aren't connected with wait here until you reply."
+                  : 'Message a connection or a verified batchmate, or send anyone a message request.'}
+            </p>
           </div>
         )}
       </div>

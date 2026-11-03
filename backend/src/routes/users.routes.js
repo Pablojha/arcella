@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { USER_TYPES } from '../config/constants.js';
 import * as ctrl from '../controllers/users.controller.js';
+import { NOTIFICATION_GROUPS } from '../services/notify.js';
 import { auth } from '../middleware/auth.js';
 import { exportLimiter } from '../middleware/rateLimit.js';
 import { images } from '../middleware/upload.js';
@@ -45,6 +46,7 @@ router.get('/suggestions', ctrl.suggestions);
 router.patch('/me', validate(profileSchema), ctrl.updateMe);
 router.delete('/me', validate(z.object({ password: z.string().min(1).max(100) })), ctrl.deleteMe);
 router.get('/me/blocked', ctrl.blockedList);
+router.put('/me/notifications', validate(z.object({ off: z.array(z.enum(Object.keys(NOTIFICATION_GROUPS))).max(10) })), ctrl.setNotifications);
 router.get('/me/export', exportLimiter, ctrl.exportMe);
 router.post('/me/memberships', validate(newMembership), ctrl.addMembership);
 router.put('/me/memberships/:membershipId', validate(membershipChanges), ctrl.updateMembership);
@@ -54,5 +56,6 @@ router.post('/me/avatar', images.single('image'), ctrl.updateImage('avatar'));
 router.post('/me/cover', images.single('image'), ctrl.updateImage('cover'));
 router.get('/:id', ctrl.profile);
 router.post('/:id/block', ctrl.toggleBlock);
+router.post('/:id/follow', ctrl.toggleFollow);
 
 export default router;

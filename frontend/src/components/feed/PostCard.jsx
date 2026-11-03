@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ban, Flag, Repeat2, Trash, TriangleAlert } from 'lucide-react';
+import { Ban, Flag, Pencil, Repeat2, Trash, TriangleAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -8,7 +8,10 @@ import { usePostActions } from '../../hooks/usePostActions';
 import api from '../../lib/api';
 import { formatDate, longAgo, plural } from '../../lib/format';
 import ReportSheet from '../ReportSheet';
+import Button from '../ui/Button';
 import MoreMenu from '../ui/MoreMenu';
+import RichText from '../ui/RichText';
+import Sheet from '../ui/Sheet';
 import UserChip from '../ui/UserChip';
 import CommentsSheet from './CommentsSheet';
 import MediaCarousel from './MediaCarousel';
@@ -27,13 +30,13 @@ function shorten(text, { lines, chars }) {
 }
 
 /** Text cut short with "… more", which reveals the rest. `children` lead the text (the author's name on captions). */
-function MoreText({ text, limit, className, children }) {
+function MoreText({ text, mentions, limit, className, children }) {
   const [expanded, setExpanded] = useState(false);
   const short = expanded ? null : shorten(text, limit);
   return (
     <p className={`whitespace-pre-line break-words ${className}`}>
       {children}
-      {short ?? text}
+      <RichText text={short ?? text} mentions={mentions} />
       {short && (
         <button type="button" onClick={() => setExpanded(true)} className="text-muted hover:text-ink">
           … more
@@ -86,6 +89,10 @@ function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = fal
   const [commentsCount, setCommentsCount] = useState(post.commentsCount);
   const [slide, setSlide] = useState(0);
   const [reporting, setReporting] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [saved, setSaved] = useState(null);
+  // The post as last saved here (an edit replaces its words, hashtags and mentions).
+  const shown = saved ? { ...post, ...saved } : post;
   const { author } = post;
   const own = author?._id === user._id;
   const canDelete = own || user.isAdmin || canModerate;
@@ -106,6 +113,18 @@ function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = fal
       toast.success('Post deleted');
       onDeleted?.(post._id);
       if (repost) onDeleted?.(repost._id);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const saveEdit = async (event) => {
+    event.preventDefault();
+    try {
+      const { text, mentions, editedAt } = await api.patch(`/posts/${post._id}`, { text: editing });
+      setSaved({ text, mentions, editedAt });
+      setEditing(null);
+      toast.success('Post updated');
     } catch (error) {
       toast.error(error.message);
     }
@@ -134,6 +153,7 @@ function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = fal
         <MoreMenu
           label="Post options"
           items={[
+            own && { label: 'Edit post', icon: Pencil, onClick: () => setEditing(shown.text ?? '') },
             canDelete && { label: 'Delete post', icon: Trash, onClick: remove, danger: true },
             !own && { label: 'Report post', icon: Flag, onClick: () => setReporting({ type: 'post', id: post._id, label: 'post' }) },
             !own && author && { label: `Block ${author.name.split(' ')[0]}`, icon: Ban, onClick: blockAuthor },
@@ -143,7 +163,7 @@ function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = fal
 
       {post.images.length > 0 && <MediaCarousel images={post.images} aspect={post.aspect} onDoubleTap={likeByDoubleTap} onSlide={setSlide} />}
       {post.video && <ReelVideo post={post} onDoubleTap={likeByDoubleTap} />}
-      {!hasMedia && post.text && <MoreText text={post.text} limit={BODY} className="px-3 pb-1 text-[15px] leading-relaxed" />}
+      {!hasMedia && shown.text && <MoreText text={shown.text} mentions={shown.mentions} limit={BODY} className="px-3 pb-1 text-[15px] leading-relaxed" />}
       {post.repostOf !== undefined && (
         <div className="px-3 pt-1">
           <QuotedPost post={post.repostOf} />
@@ -159,8 +179,8 @@ function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = fal
       />
       <div className="space-y-1">
         <LikedBy likedBy={post.likedBy} like={actions.like} />
-        {hasMedia && post.text && (
-          <MoreText text={post.text} limit={CAPTION} className="px-3 text-sm">
+        {hasMedia && shown.text && (
+          <MoreText text={shown.text} mentions={shown.mentions} limit={CAPTION} className="px-3 text-sm">
             <Link to={`/u/${author?.username}`} className="font-semibold hover:underline">
               {author?.name}
             </Link>{' '}
@@ -173,6 +193,7 @@ function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = fal
         )}
         <time dateTime={post.createdAt} title={formatDate(post.createdAt)} className="block px-3 text-xs text-muted">
           {longAgo(post.createdAt)}
+          {shown.editedAt && ' · edited'}
         </time>
       </div>
 
@@ -185,6 +206,15 @@ function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = fal
         onReport={setReporting}
       />
       <ReportSheet target={reporting} onClose={() => setReporting(null)} />
+      <Sheet open={editing !== null} onClose={() => setEditing(null)} title="Edit post">
+        <form onSubmit={saveEdit} className="space-y-4">
+          <textarea value={editing ?? ''} onChange={(event) => setEditing(event.target.value)} rows={6} maxLength={3000} aria-label="Post text" className="input resize-none" />
+          <p className="text-xs text-muted">Use #hashtags to join a topic and @username to mention someone.</p>
+          <Button type="submit" size="lg" className="w-full">
+            Save
+          </Button>
+        </form>
+      </Sheet>
     </article>
   );
 }

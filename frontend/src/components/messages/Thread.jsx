@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock } from 'lucide-react';
+import { Lock, Trash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useBadges } from '../../context/BadgeContext';
@@ -18,6 +18,7 @@ import ReportSheet from '../ReportSheet';
 import Lightbox from '../ui/Lightbox';
 import ChatComposer from './ChatComposer';
 import ChatHeader from './ChatHeader';
+import ChatSearch from './ChatSearch';
 import MessageList from './MessageList';
 import ReactionMenu from './ReactionMenu';
 import ReactionsSheet from './ReactionsSheet';
@@ -41,6 +42,7 @@ export default function Thread({ userId }) {
   const [live, setLive] = useState(socket.connected);
   const [viewer, setViewer] = useState(null);
   const [reporting, setReporting] = useState(null);
+  const [searching, setSearching] = useState(false);
   const [menu, setMenu] = useState(null);
   const [reactionsOf, setReactionsOf] = useState(null);
   const latestSaved = useRef(null);
@@ -101,7 +103,8 @@ export default function Thread({ userId }) {
 
   const send = (item) => {
     const message = pendingMessage(item, { from: me._id, to: userId });
-    setThread((current) => ({ ...current, items: [...current.items, message] }));
+    // A message request is one message: the chat waits for a reply after it.
+    setThread((current) => ({ ...current, items: [...current.items, message], canMessage: current.canMessage === 'request' ? 'pending' : current.canMessage }));
     transmit(message);
   };
 
@@ -140,6 +143,7 @@ export default function Thread({ userId }) {
   });
   useSocketEvent('message:seen', ({ by, until }) => by === userId && setThread((current) => ({ ...current, seenUntil: until })));
   useSocketEvent('message:update', ({ _id, reactions }) => setReactions(_id, reactions));
+  useSocketEvent('message:deleted', ({ _id }) => setThread((current) => ({ ...current, items: current.items.filter((item) => item._id !== _id) })));
   useSocketEvent('typing', ({ from, typing: active }) => {
     if (from !== userId) return;
     clearTimeout(typingTimer.current);
@@ -147,6 +151,18 @@ export default function Thread({ userId }) {
     if (active) typingTimer.current = setTimeout(() => setTyping(false), TYPING_TIMEOUT_MS);
   });
   useEffect(() => () => clearTimeout(typingTimer.current), []);
+
+  /** Unsends one of your messages for both people (it is removed live on their screen too). */
+  const unsend = async (message) => {
+    if (!window.confirm('Unsend this message for everyone?')) return;
+    try {
+      await api.delete(`/messages/item/${message._id}`);
+      setThread((current) => ({ ...current, items: current.items.filter((item) => item._id !== message._id) }));
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+  const actionsFor = (message, mine) => [mine && !message.status && { label: 'Unsend', icon: Trash, onClick: () => unsend(message), danger: true }];
 
   const block = async () => {
     if ((await toggleBlock(thread.user, thread.blockedByMe)) !== null) load();
@@ -169,6 +185,7 @@ export default function Thread({ userId }) {
         }}
         onUnhide={() => settings.unhide(userId)}
         onReport={() => setReporting({ type: 'user', id: other._id, label: other.name })}
+        onSearch={() => setSearching(true)}
         onBlock={block}
       />
       {thread.error ? (
@@ -189,8 +206,13 @@ export default function Thread({ userId }) {
           onShowReactions={(message) => setReactionsOf(message)}
         />
       )}
+      {other && thread.canMessage === 'request' && (
+        <p className="shrink-0 border-t border-line px-4 pt-2 text-center text-xs text-muted">You aren't connected, so your first message goes to {firstName}'s message requests.</p>
+      )}
       {other &&
-        (thread.canMessage ? (
+        (thread.canMessage === 'pending' ? (
+          <p className="shrink-0 border-t border-line px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-sm text-muted">Your message request is waiting for {firstName} to reply.</p>
+        ) : thread.canMessage ? (
           <ChatComposer onSend={send} onTyping={(active) => socket.volatile.emit('typing', { to: userId, typing: active })} />
         ) : (
           <p className="flex shrink-0 items-center justify-center gap-2 border-t border-line px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-sm text-muted">
@@ -199,7 +221,8 @@ export default function Thread({ userId }) {
           </p>
         ))}
       <Lightbox items={gallery.map(({ media }) => ({ url: media.url, kind: media.kind }))} index={viewer} onChange={setViewer} />
-      <ReactionMenu target={menu} me={me._id} onReact={react} onCopy={copy} onClose={() => setMenu(null)} />
+      <ReactionMenu target={menu} me={me._id} onReact={react} onCopy={copy} actionsFor={actionsFor} onClose={() => setMenu(null)} />
+      <ChatSearch userId={userId} open={searching} onClose={() => setSearching(false)} me={me._id} other={other} />
       <ReactionsSheet message={thread.items.find((item) => item._id === reactionsOf?._id)} me={me} people={{ [me._id]: me, ...(other && { [other._id]: other }) }} onRemove={react} onClose={() => setReactionsOf(null)} />
       <ReportSheet target={reporting} onClose={() => setReporting(null)} />
     </div>

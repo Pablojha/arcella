@@ -1,5 +1,6 @@
 import Comment from '../models/Comment.js';
 import Connection from '../models/Connection.js';
+import Follow from '../models/Follow.js';
 import Post from '../models/Post.js';
 import User from '../models/User.js';
 import { CARD } from '../config/constants.js';
@@ -11,11 +12,12 @@ import { assertCanManage, assertMember, isModerator, memberCollegeIds, membersOf
 import { ApiError, found } from '../utils/errors.js';
 import { paginate, toggle } from '../utils/query.js';
 import { has, same, withCount } from '../utils/shape.js';
-import { excerpt } from '../utils/text.js';
+import { excerpt, tokensOf } from '../utils/text.js';
 
 const AUTHOR = { path: 'author', select: CARD };
+const MENTIONS = { path: 'mentions', select: 'username' };
 const REPLY_TO = { path: 'replyTo', select: 'name username' };
-const WITH_ORIGINAL = [AUTHOR, { path: 'repostOf', populate: AUTHOR }];
+const WITH_ORIGINAL = [AUTHOR, MENTIONS, { path: 'repostOf', populate: [AUTHOR, MENTIONS] }];
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Feed photos range from portrait 4:5 to landscape 1.91:1, like Instagram; anything beyond is cropped to fit.
 const MIN_ASPECT = 4 / 5;
@@ -67,6 +69,19 @@ async function announce(user, post) {
   await notifyMany({ users, actor: user._id, type: 'important', text: excerpt(post.text), link: `/posts/${post._id}` });
 }
 
+/** The hashtags in a text and the members it @mentions, leaving out people hidden from the writer by a block. */
+async function tagsAndMentions(user, text) {
+  const { tags, usernames } = tokensOf(text);
+  if (!usernames.length) return { tags, mentions: [] };
+  return { tags, mentions: await User.find({ username: { $in: usernames }, _id: { $nin: await hiddenIds(user) } }).distinct('_id') };
+}
+
+/** Tells newly @mentioned members, except in college group posts they can't read. */
+async function notifyMentions(user, users, { text, link, college }) {
+  const readers = college ? await User.find({ _id: { $in: users }, ...membersOf(college) }).distinct('_id') : users;
+  await notifyMany({ users: readers, actor: user._id, type: 'mention', text: excerpt(text), link });
+}
+
 /** Loads a post the viewer may see: public posts, or group posts of their own college. */
 async function readablePost(req) {
   const post = found(await Post.findById(req.params.id), 'Post');
@@ -75,11 +90,12 @@ async function readablePost(req) {
 }
 
 export async function feed(req, res) {
-  const { scope, author, college, saved, video } = req.query;
+  const { scope, author, college, saved, video, tag } = req.query;
   if (college) assertMember(req.user, college);
   const hidden = await hiddenIds(req.user);
   const filter = { college: college ?? null, author: { $nin: hidden } };
   if (video) filter.video = { $type: 'string' };
+  if (tag) filter.tags = tag.toLowerCase();
   if (saved) {
     filter.saves = req.user._id;
     // Saved group posts stay listed only while the viewer can still read that group.
@@ -87,7 +103,7 @@ export async function feed(req, res) {
     else filter.college = { $in: [null, ...memberCollegeIds(req.user)] };
   }
   if (author) filter.author.$eq = author;
-  else if (scope === 'network') filter.author.$in = [req.user._id, ...(await Connection.idsOf(req.user._id))];
+  else if (scope === 'network') filter.author.$in = [req.user._id, ...(await Connection.idsOf(req.user._id)), ...(await Follow.find({ follower: req.user._id }).distinct('following'))];
   const page = await paginate(Post.find(filter).sort({ _id: -1 }).populate(WITH_ORIGINAL), req.query);
   res.json({ ...page, items: await cards(req.user, page.items, hidden) });
 }
@@ -106,9 +122,12 @@ export async function create(req, res) {
   if (images.length && video) throw new ApiError(400, 'Add photos or one video, not both');
   if (college) assertMember(req.user, college);
   if (important) await assertCanFlag(req.user, college);
+  const { tags, mentions } = await tagsAndMentions(req.user, text);
   const post = await Post.create({
     author: req.user._id,
     text,
+    tags,
+    mentions,
     college,
     important,
     images: await saveFiles(images, 'posts'),
@@ -116,9 +135,26 @@ export async function create(req, res) {
     video: video && (await saveFile(video, 'posts')),
   });
   if (important) await announce(req.user, post);
-  await post.populate(AUTHOR);
+  await notifyMentions(req.user, mentions, { text, link: `/posts/${post._id}`, college });
+  await post.populate([AUTHOR, MENTIONS]);
   const [card] = await cards(req.user, [post.toObject()]);
   res.status(201).json(card);
+}
+
+/** The author edits a post's words; hashtags and mentions are read again, and only newly mentioned members are told. */
+export async function update(req, res) {
+  const post = found(await Post.findById(req.params.id), 'Post');
+  if (!same(post.author, req.user._id)) throw new ApiError(403, 'Only the author can edit a post');
+  const text = req.body.text || undefined;
+  if (!text && !post.images.length && !post.video && !post.repostOf) throw new ApiError(400, 'A post needs words, a photo or a video');
+  const { tags, mentions } = await tagsAndMentions(req.user, text);
+  const added = mentions.filter((id) => !post.mentions.some((old) => same(old, id)));
+  post.set({ text, tags, mentions, editedAt: new Date() });
+  await post.save();
+  await notifyMentions(req.user, added, { text, link: `/posts/${post._id}`, college: post.college });
+  await post.populate(WITH_ORIGINAL);
+  const [card] = await cards(req.user, [post.toObject()]);
+  res.json(card);
 }
 
 export async function remove(req, res) {
@@ -147,8 +183,10 @@ export async function repost(req, res) {
   const original = post.repostOf ? found(await Post.findById(post.repostOf), 'Post') : post;
   if (original.college) throw new ApiError(400, 'College group posts stay inside the group');
   const text = req.body.text || undefined;
+  const { tags, mentions } = await tagsAndMentions(req.user, text);
   if (!text && (await Post.exists({ author: req.user._id, repostOf: original._id, text: null }))) throw new ApiError(409, 'You already reposted this');
-  const created = await Post.create({ author: req.user._id, text, repostOf: original._id });
+  const created = await Post.create({ author: req.user._id, text, tags, mentions, repostOf: original._id });
+  await notifyMentions(req.user, mentions, { text, link: `/posts/${created._id}` });
   const { repostsCount } = await Post.findByIdAndUpdate(original._id, { $inc: { repostsCount: 1 } }, { new: true });
   await notify({ user: original.author, actor: req.user._id, type: 'repost', text: excerpt(text || original.text), link: `/posts/${text ? created._id : original._id}` });
   res.status(201).json({ repostsCount });
@@ -166,7 +204,7 @@ const commentCard = (viewer, comment) => withCount(comment, 'likes', viewer._id,
 /** Every comment and reply on a post, oldest first. Hidden people's comments go, with the replies under them. */
 export async function comments(req, res) {
   await readablePost(req);
-  const items = await Comment.find({ post: req.params.id, author: { $nin: await hiddenIds(req.user) } }).sort({ _id: 1 }).populate([AUTHOR, REPLY_TO]).lean();
+  const items = await Comment.find({ post: req.params.id, author: { $nin: await hiddenIds(req.user) } }).sort({ _id: 1 }).populate([AUTHOR, REPLY_TO, MENTIONS]).lean();
   const threads = new Set(items.filter((comment) => !comment.parent).map((comment) => String(comment._id)));
   res.json({ items: items.filter((comment) => !comment.parent || threads.has(String(comment.parent))).map((comment) => commentCard(req.user, comment)) });
 }
@@ -179,12 +217,16 @@ export async function addComment(req, res) {
   const post = await readablePost(req);
   const { text, parent: parentId } = req.body;
   const target = parentId && found(await Comment.findOne({ _id: parentId, post: post._id }).select('author parent').lean(), 'Comment');
-  const comment = await Comment.create({ post: post._id, author: req.user._id, text, parent: target ? (target.parent ?? target._id) : null, replyTo: target?.author });
+  const { mentions } = await tagsAndMentions(req.user, text);
+  const comment = await Comment.create({ post: post._id, author: req.user._id, text, mentions, parent: target ? (target.parent ?? target._id) : null, replyTo: target?.author });
   await Post.updateOne({ _id: post._id }, { $inc: { commentsCount: 1 } });
   const note = { actor: req.user._id, text: excerpt(text), link: `/posts/${post._id}` };
   if (target) await notify({ ...note, user: target.author, type: 'reply' });
   if (!target || !same(target.author, post.author)) await notify({ ...note, user: post.author, type: 'comment' });
-  await comment.populate([AUTHOR, REPLY_TO]);
+  // Mentioned people hear about it once: not again when they already got a comment or reply notice.
+  const told = [target?.author, post.author].filter(Boolean);
+  await notifyMentions(req.user, mentions.filter((id) => !told.some((other) => same(other, id))), { text, link: note.link, college: post.college });
+  await comment.populate([AUTHOR, REPLY_TO, MENTIONS]);
   res.status(201).json(commentCard(req.user, comment.toObject()));
 }
 
