@@ -23,7 +23,8 @@ Started 3 November 2026 from tag `v1.0-pre-hardening` (the live version before t
 - [x] axe-core WCAG 2.2 AA scan of every route: 6 rule failures fixed, now 0 (light and dark, phone and desktop)
 - [x] Per-page descriptions and canonical URLs; social image; JSON-LD; robots.txt; sitemap.xml; noindex on 404 and reset
 - [x] Immutable caching for hashed assets; vendor chunks; splash only for the installed app; landing page bundled
-- [ ] Lighthouse after deploy (baseline: performance 92/91, accessibility 100, best practices 100, SEO 91/92; largest paint 3.1 s)
+- [x] Lighthouse after deploy (mobile, live). Landing: performance 92 → 96, SEO 91 → 100, largest paint 3.1 s → 2.3 s. Explore: 91 → 89 (within run-to-run variance), SEO 92 → 100. Accessibility and best practices 100 everywhere. The cookie notice now paints with the page (it was the largest element on first visits).
+- [ ] Later: prerender the public pages (landing, policies, explore) to HTML at build time. This is the remaining big win for first paint and for social previews of individual pages.
 
 ## UI and responsiveness
 - [x] Sweep every route at 320, 375, 768 and 1280 px in light and dark: no overflow or runtime errors. The Playwright suite covers all 10 widths.
@@ -35,4 +36,4 @@ Started 3 November 2026 from tag `v1.0-pre-hardening` (the live version before t
 - [x] README, SECURITY.md, docs/API.md, CHANGELOG.md
 
 ## Deploy
-- [ ] Push and verify Render and Vercel (authorized: the owner asked to deploy everywhere)
+- [x] Pushed and verified: Render live, Vercel live, CI green (API tests, website build, Playwright), and a live smoke test of every public page (no console errors, nothing blocked by the CSP)

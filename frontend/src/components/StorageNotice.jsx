@@ -46,7 +46,8 @@ export default function StorageNotice() {
         {!choice && (
           <motion.section
             aria-labelledby="storage-notice-title"
-            initial={{ y: 24, opacity: 0 }}
+            // Shown at once (no fade in), so it paints with the page instead of delaying the first full view.
+            initial={false}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 24, opacity: 0 }}
             className={`fixed inset-x-3 z-[70] mx-auto max-w-lg rounded-3xl border border-line bg-card p-4 shadow-2xl md:inset-x-auto md:bottom-6 md:left-6 md:mx-0 ${user ? 'bottom-[calc(4.75rem+env(safe-area-inset-bottom))]' : 'bottom-[max(0.75rem,env(safe-area-inset-bottom))]'}`}
