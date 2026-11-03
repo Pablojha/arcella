@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { hueOf, initials, mediaUrl } from '../../lib/format';
 
 /** Relative luminance (WCAG) of an HSL colour: hue in degrees, saturation and lightness in percent. */
@@ -20,10 +21,16 @@ function backgroundOf(name) {
   return `hsl(${hue} 30% ${lightness}%)`;
 }
 
-/** A member's photo, or their initials on a colour of their own. Decorative: the name always appears beside it. */
+/**
+ * A member's photo, or their initials on a colour of their own, also when the photo can't be loaded (a lost upload).
+ * Decorative: the name always appears beside it.
+ */
 export default function Avatar({ user, size = 40, className = '' }) {
+  const [failed, setFailed] = useState(null);
   const style = { width: size, height: size };
-  if (user?.avatar) return <img src={mediaUrl(user.avatar, size > 48 ? 256 : 96)} alt="" loading="lazy" style={style} className={`shrink-0 rounded-full bg-line object-cover ${className}`} />;
+  if (user?.avatar && failed !== user.avatar) {
+    return <img src={mediaUrl(user.avatar, size > 48 ? 256 : 96)} alt="" loading="lazy" data-fallback="own" onError={() => setFailed(user.avatar)} style={style} className={`shrink-0 rounded-full bg-line object-cover ${className}`} />;
+  }
   return (
     <span
       aria-hidden="true"

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { newMember, prepare } from './helpers.js';
+import fs from 'node:fs';
+import { API, newMember, prepare } from './helpers.js';
 
 /** A 64×64 green 24-bit BMP: a format browsers open but the API doesn't store, so the app must convert it. */
 function bmp(size = 64) {
@@ -37,4 +38,30 @@ test('a photo in another format is converted, posted, and opens full screen', as
   await expect(full).toBeVisible();
   await expect(full).toHaveJSProperty('naturalWidth', 64);
   expect((await full.boundingBox()).width).toBeGreaterThan(60);
+});
+
+/** Uploads `field` as multipart, as the app does. */
+async function upload(member, path, fields) {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) form.append(key, value);
+  const res = await fetch(API + path, { method: 'POST', headers: { Authorization: `Bearer ${member.token}` }, body: form });
+  if (!res.ok) throw new Error(`${path}: ${res.status}`);
+  return res.json();
+}
+
+test('photos whose files are gone show initials or a placeholder, never a broken image', async ({ page }) => {
+  const member = await newMember('Lost Media');
+  const png = new Blob([fs.readFileSync('../frontend/assets/play-store-icon-512.png')], { type: 'image/png' });
+  member.user = (await upload(member, '/users/me/avatar', { image: new File([png], 'me.png') })).user;
+  await upload(member, '/posts', { text: 'Before the disk was wiped', images: new File([png], 'site.png') });
+  // As on a host that lost its disk: every uploaded file is gone.
+  await page.route('**/uploads/**', (route) => route.fulfill({ status: 404, body: 'Not found' }));
+  await prepare(page, member);
+  await page.goto(`/u/${member.user.username}`);
+  await expect(page.getByText('LM').first()).toBeVisible();
+  await page.goto('/');
+  const photo = page.locator('main article img[data-missing]').first();
+  await expect(photo).toHaveAttribute('src', /^data:image\/svg\+xml/);
+  await photo.scrollIntoViewIfNeeded();
+  await expect.poll(() => photo.evaluate((img) => img.complete && img.naturalWidth)).toBeGreaterThan(0);
 });

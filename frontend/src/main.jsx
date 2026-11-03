@@ -10,6 +10,9 @@ import { AuthProvider } from './context/AuthContext';
 import { BadgeProvider } from './context/BadgeContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
+import { showMissingMedia } from './lib/media';
+
+showMissingMedia();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

@@ -32,3 +32,9 @@ export const env = {
 };
 
 if (env.isProd && !e.JWT_SECRET) throw new Error('JWT_SECRET must be set in production');
+// Hosts like Render's free plan wipe the server's own disk on every restart, so production keeps uploads on Cloudinary.
+// Refusing to start makes a missing setting visible at deploy time (the previous version keeps running) instead of
+// silently losing every photo uploaded until the next restart.
+if (env.isProd && !e.UPLOAD_DIR && !Object.values(env.cloudinary).every(Boolean)) {
+  throw new Error('Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET (or UPLOAD_DIR on a persistent disk) in production');
+}
