@@ -23,6 +23,8 @@ export const env = {
   resendKey: e.RESEND_API_KEY,
   smtp: { host: e.SMTP_HOST, port: Number(e.SMTP_PORT) || 587, user: e.SMTP_USER, pass: e.SMTP_PASS },
   giphyKey: e.GIPHY_API_KEY,
+  // Claude API key for the AI assistant (server only). Without it the AI features stay switched off.
+  anthropicKey: e.ANTHROPIC_API_KEY,
   // Web Push keys (generate once with `npx web-push generate-vapid-keys`); the subject is a contact for push services.
   vapid: {
     publicKey: e.VAPID_PUBLIC_KEY,

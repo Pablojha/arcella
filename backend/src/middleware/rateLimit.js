@@ -15,4 +15,7 @@ export const otpLimiter = limiter(8, 15, 'Too many code requests. Please wait a 
 export const exportLimiter = limiter(5, 60, 'You can download your data a few times an hour. Please try again later.', perAccount);
 
 /** Anti-spam cap on posting, commenting, messaging and reporting. */
+/** Each AI request is billed, so members get a modest hourly allowance. */
+export const aiLimiter = limiter(20, 60, "You've used the AI assistant a lot this hour. Please try again later.", perAccount);
+
 export const writeLimiter = limiter(60, 1, "You're doing that too fast. Please slow down for a minute.", perAccount);

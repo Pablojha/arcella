@@ -183,6 +183,10 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | POST | `/api/notifications/read` | member | markRead |
 | GET | `/api/search` | member | search |
 | POST | `/api/reports` | member · write limit | create |
+| GET | `/api/ai/status` | member | `{ enabled }`: whether the AI assistant is switched on (ANTHROPIC_API_KEY set) |
+| POST | `/api/ai/improve` | member · AI limit | writing help: `kind` `post` (rewrites `draft`), `headline` or `about` (from the member's profile); returns `{ text }` |
+| POST | `/api/ai/resume-feedback` | member · AI limit | feedback on the saved PDF resume: `{ summary, strengths, improvements }` |
+| POST | `/api/ai/job-match/:jobId` | member · AI limit | `{ fit, matched, missing, advice }` for the member's profile against the role |
 | POST | `/api/support` | member · write limit | a support request: `topic` (account, verification, jobs, safety, problem, other), `subject`, `message`, and for problems the `page`; at most 5 open at once |
 | GET | `/api/support/mine` | member | the member's requests with replies |
 | POST | `/api/support/:id/replies` | the member who asked | follow up (reopens the request) |

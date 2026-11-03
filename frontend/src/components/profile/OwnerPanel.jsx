@@ -5,6 +5,7 @@ import { useApi } from '../../hooks/useApi';
 import api, { toFormData } from '../../lib/api';
 import { saveBlob } from '../../lib/files';
 import { ago, fileSize, plural } from '../../lib/format';
+import AiButton from '../ui/AiButton';
 import Button from '../ui/Button';
 import Sheet from '../ui/Sheet';
 import UserChip from '../ui/UserChip';
@@ -15,6 +16,7 @@ export default function OwnerPanel() {
   const { data: views } = useApi('/users/me/views');
   const { data, setData } = useApi('/users/me/resume');
   const [showViews, setShowViews] = useState(false);
+  const [feedback, setFeedback] = useState(null);
   const resume = data?.resume;
 
   const run = async (action, success) => {
@@ -55,6 +57,37 @@ export default function OwnerPanel() {
           <input type="file" accept=".pdf,.doc,.docx" hidden onChange={upload} aria-label="Resume file" />
         </label>
       </div>
+      {resume?.name.toLowerCase().endsWith('.pdf') && (
+        <div className="sm:col-span-2">
+          <AiButton request={() => api.post('/ai/resume-feedback')} onResult={setFeedback}>
+            Get AI feedback on my resume
+          </AiButton>
+        </div>
+      )}
+      <Sheet open={Boolean(feedback)} onClose={() => setFeedback(null)} title="Resume feedback">
+        {feedback && (
+          <div className="space-y-4 text-sm">
+            <p>{feedback.summary}</p>
+            <div>
+              <h3 className="mb-1 font-semibold">What works</h3>
+              <ul className="list-disc space-y-1 pl-5">
+                {feedback.strengths.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="mb-1 font-semibold">What to improve</h3>
+              <ol className="list-decimal space-y-1 pl-5">
+                {feedback.improvements.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ol>
+            </div>
+            <p className="text-xs text-muted">Written by AI from your saved resume. Check it against your own judgement.</p>
+          </div>
+        )}
+      </Sheet>
       <Sheet open={showViews} onClose={() => setShowViews(false)} title="Who viewed your profile">
         {views?.viewers.length ? (
           <ul className="space-y-3">

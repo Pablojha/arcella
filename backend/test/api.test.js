@@ -20,6 +20,36 @@ Object.assign(process.env, {
   CLOUDINARY_CLOUD_NAME: '',
   GIPHY_API_KEY: '',
 });
+// A stand-in for the Claude API, so the AI features are tested end to end without a real key or any cost. It
+// records each request and answers like the Messages API: JSON for structured outputs, text otherwise, and a refusal
+// when the prompt says REFUSE.
+const claudeRequests = [];
+const claudeStub = http.createServer((req, res) => {
+  let raw = '';
+  req.on('data', (chunk) => (raw += chunk));
+  req.on('end', () => {
+    const body = JSON.parse(raw);
+    claudeRequests.push({ path: req.url, headers: req.headers, body });
+    const prompt = JSON.stringify(body.messages);
+    const schema = body.output_config?.format?.schema?.properties ?? {};
+    const answer = 'fit' in schema
+      ? { fit: 72, matched: ['Revit'], missing: ['Site experience'], advice: 'Lead with your housing studio project.' }
+      : 'strengths' in schema
+        ? { summary: 'Clear and well organised.', strengths: ['Strong studio projects'], improvements: ['Add measurable outcomes'] }
+        : null;
+    const refused = prompt.includes('REFUSE');
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({
+      id: 'msg_stub', type: 'message', role: 'assistant', model: body.model,
+      content: refused ? [] : [{ type: 'text', text: answer ? JSON.stringify(answer) : 'A clearer version of your words.' }],
+      stop_reason: refused ? 'refusal' : 'end_turn', stop_sequence: null,
+      usage: { input_tokens: 10, output_tokens: 10 },
+    }));
+  });
+});
+await new Promise((resolve) => claudeStub.listen(0, resolve));
+Object.assign(process.env, { ANTHROPIC_API_KEY: 'test-key', ANTHROPIC_BASE_URL: `http://127.0.0.1:${claudeStub.address().port}` });
+
 const { default: webpush } = await import('web-push');
 const vapid = webpush.generateVAPIDKeys();
 Object.assign(process.env, { VAPID_PUBLIC_KEY: vapid.publicKey, VAPID_PRIVATE_KEY: vapid.privateKey });
@@ -101,6 +131,7 @@ function pushDevice(endpoint) {
 
 after(async () => {
   server?.close();
+  claudeStub.close();
   await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
   await fs.rm(process.env.UPLOAD_DIR, { recursive: true, force: true });
@@ -981,6 +1012,47 @@ test('takes support requests and problem reports, answered by support staff', as
   assert.deepEqual(closed.replies.map((reply) => reply.staff), [true, false]);
   assert.ok((await call('GET', '/admin/audit?action=support', { token: admin.token })).items.some((entry) => entry.action === 'support.reply'));
   await call('PATCH', `/admin/users/${sol.user._id}/role`, { token: admin.token, body: { role: 'user' } });
+});
+
+test('the AI assistant writes, reviews resumes and matches jobs through Claude, on the server only', async () => {
+  const [quinn, rhea] = await Promise.all([join('quinn', 'Quinn Das', 'student'), join('rhea', 'Rhea Kapoor', 'professional')]);
+  assert.deepEqual(await call('GET', '/ai/status', { token: quinn.token }), { enabled: true });
+  await call('GET', '/ai/status', { status: 401 });
+
+  // Writing help: one request to Claude Opus 5.5 with the server's key and the default refusal fallback.
+  const written = await call('POST', '/ai/improve', { token: quinn.token, body: { kind: 'post', draft: 'site visit today #housing' } });
+  assert.equal(written.text, 'A clearer version of your words.');
+  const sent = claudeRequests.at(-1);
+  assert.equal(sent.path, '/v1/messages');
+  assert.equal(sent.headers.authorization, 'Bearer test-key');
+  assert.match(sent.headers['anthropic-beta'], /server-side-fallback-2026-07-01/);
+  assert.equal(sent.body.model, 'claude-opus-5-5');
+  assert.equal(sent.body.fallbacks, 'default');
+  await call('POST', '/ai/improve', { token: quinn.token, body: { kind: 'post' }, status: 400 });
+  await call('POST', '/ai/improve', { token: quinn.token, body: { kind: 'poem' }, status: 400 });
+  const headline = await call('POST', '/ai/improve', { token: quinn.token, body: { kind: 'headline' } });
+  assert.ok(headline.text);
+  assert.match(JSON.stringify(claudeRequests.at(-1).body.messages), /Quinn Das/);
+  // A refusal reaches the member as a plain message, not an error page.
+  const refused = await call('POST', '/ai/improve', { token: quinn.token, body: { kind: 'post', draft: 'REFUSE this' }, status: 422 });
+  assert.match(refused.message, /couldn't help/);
+
+  // Resume feedback reads the saved PDF as a document, with a structured answer.
+  await call('POST', '/ai/resume-feedback', { token: quinn.token, status: 400 });
+  await call('PUT', '/users/me/resume', { token: quinn.token, form: { resume: file('quinn.pdf', 'application/pdf') } });
+  const feedback = await call('POST', '/ai/resume-feedback', { token: quinn.token });
+  assert.deepEqual(feedback.improvements, ['Add measurable outcomes']);
+  const review = claudeRequests.at(-1).body;
+  assert.equal(review.messages[0].content[0].type, 'document');
+  assert.equal(review.messages[0].content[0].source.media_type, 'application/pdf');
+  assert.equal(review.output_config.format.type, 'json_schema');
+
+  // Job match compares the profile with the role.
+  const job = await call('POST', '/jobs', { token: rhea.token, body: { title: 'Housing designer', type: 'full-time', company: 'Rhea Studio', skills: ['Revit'] } });
+  const match = await call('POST', `/ai/job-match/${job._id}`, { token: quinn.token });
+  assert.equal(match.fit, 72);
+  assert.match(JSON.stringify(claudeRequests.at(-1).body.messages), /Housing designer/);
+  await call('POST', '/ai/job-match/not-an-id', { token: quinn.token, status: 400 });
 });
 
 test('searches people, projects, jobs, firms and questions in one go', async () => {

@@ -3,6 +3,8 @@ import { Bookmark, BriefcaseBusiness, Building2, CalendarClock, Download, Extern
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ApplySheet from '../components/jobs/ApplySheet';
 import StatusChip, { downloadResume } from '../components/jobs/StatusChip';
+import AiButton from '../components/ui/AiButton';
+import Sheet from '../components/ui/Sheet';
 import Button from '../components/ui/Button';
 import EmptyState from '../components/ui/EmptyState';
 import FirmLogo from '../components/ui/FirmLogo';
@@ -23,6 +25,7 @@ export default function JobDetail() {
   const navigate = useNavigate();
   const { data: job, setData, loading, error } = useApi(`/jobs/${id}`);
   const [applying, setApplying] = useState(false);
+  const [match, setMatch] = useState(null);
 
   if (loading) return <Skeleton className="mx-auto h-80 max-w-3xl rounded-3xl" />;
   if (error) return <EmptyState icon={BriefcaseBusiness} title="This role is no longer available" text={error.message} />;
@@ -124,6 +127,11 @@ export default function JobDetail() {
           ))}
         </div>
         {job.description && <p className="whitespace-pre-line break-words leading-relaxed">{job.description}</p>}
+        {!job.canManage && (
+          <AiButton request={() => api.post(`/ai/job-match/${id}`)} onResult={setMatch}>
+            How well do I match?
+          </AiButton>
+        )}
         {job.skills?.length > 0 && (
           <div>
             <h2 className="mb-2 text-sm font-semibold text-muted">Skills</h2>
@@ -155,6 +163,38 @@ export default function JobDetail() {
           </div>
         </div>
       </article>
+      <Sheet open={Boolean(match)} onClose={() => setMatch(null)} title="How you match this role">
+        {match && (
+          <div className="space-y-4 text-sm">
+            <p className="font-display text-3xl font-bold tabular-nums">
+              {match.fit}
+              <span className="text-base font-medium text-muted"> / 100 fit</span>
+            </p>
+            {match.matched.length > 0 && (
+              <div>
+                <h3 className="mb-1 font-semibold">You already have</h3>
+                <ul className="list-disc space-y-1 pl-5">
+                  {match.matched.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {match.missing.length > 0 && (
+              <div>
+                <h3 className="mb-1 font-semibold">Worth building or showing</h3>
+                <ul className="list-disc space-y-1 pl-5">
+                  {match.missing.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <p>{match.advice}</p>
+            <p className="text-xs text-muted">Estimated by AI from your profile and this listing. It can't see everything about you.</p>
+          </div>
+        )}
+      </Sheet>
       <ApplySheet job={job} open={applying} onClose={() => setApplying(false)} onApplied={(sent) => update({ application: sent, applicationsCount: job.applicationsCount + 1 })} />
     </div>
   );

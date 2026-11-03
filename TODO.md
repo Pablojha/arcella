@@ -66,7 +66,7 @@ Started 3 November 2026 from tag `v1.0-pre-hardening` (the live version before t
 - [x] M6a Profiles: certifications, languages, saved resume, profile views, contact privacy
 - [x] M6b Companies: firm co-admins, company posts, analytics
 - [x] M7 Help Center, Contact Support, Report a problem
-- [ ] M8 AI features (**needs ANTHROPIC_API_KEY**)
+- [x] M8 AI features: built and tested; **off until ANTHROPIC_API_KEY is set on Render**
 - [ ] M9 Premium (**blocked on the owner:** payment provider and business details)
 
 ## Deploy

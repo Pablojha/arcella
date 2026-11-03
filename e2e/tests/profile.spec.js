@@ -36,8 +36,11 @@ test('a member adds languages, a certification and a public phone, sees who view
   await page.goto(`/u/${ira.user.username}`);
   await expect(page.getByText('1 profile view')).toBeVisible();
   await page.getByText('1 profile view').click();
-  await expect(page.getByRole('dialog', { name: 'Who viewed your profile' }).getByText(`Jay Viewer ${run}`)).toBeVisible();
+  const viewers = page.getByRole('dialog', { name: 'Who viewed your profile' });
+  await expect(viewers.getByText(`Jay Viewer ${run}`)).toBeVisible();
   await page.keyboard.press('Escape');
+  // Colours are measured once the sheet has finished fading out (slower machines, like CI, take longer).
+  await expect(viewers).toBeHidden();
   expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()).violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([]);
 
   // Save a resume once, then apply with it.

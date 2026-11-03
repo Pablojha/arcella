@@ -1,5 +1,13 @@
 # Changelog
 
+## November 2026: AI assistant (off until a key is set)
+
+- **Writing help:** "Improve with AI" in the post composer; "Suggest a headline" and "Draft/Improve with AI" for the About section in Edit profile. Facts, #hashtags and @mentions are kept, and nothing is invented.
+- **Resume feedback** on your saved PDF resume: a summary, strengths and improvements.
+- **How well do I match?** on job pages: a fit score, what you already have, what to build or show, and advice.
+- Runs on Claude Opus 5.5 through the official Anthropic SDK on the API server, with structured outputs for the analyses and Anthropic's default server-side fallback if the model declines. Needs `ANTHROPIC_API_KEY` on Render; until then every AI button stays hidden and the routes answer 503. 20 requests per member per hour.
+- Tests: an API test against a local stand-in for the Claude API (model, key, fallback, PDF document block, structured output, refusal) and browser tests for both the switched-off and switched-on app.
+
 ## November 2026: help and support
 
 - **Help** (More → Help and support): a Help center answering common questions from how Arcella works, **Contact support** by topic, and **My requests** with the team's replies and follow-ups.

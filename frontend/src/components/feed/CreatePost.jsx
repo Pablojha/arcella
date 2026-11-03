@@ -9,6 +9,7 @@ import api, { toFormData } from '../../lib/api';
 import { aspectOf } from '../../lib/media';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
+import AiButton from '../ui/AiButton';
 import ImagePicker from '../ui/ImagePicker';
 import Sheet from '../ui/Sheet';
 import UploadBar from '../ui/UploadBar';
@@ -98,6 +99,11 @@ export default function CreatePost({ open, onClose, onCreated, college, firm, on
           </div>
         </div>
         <textarea value={text} onChange={(event) => setText(event.target.value)} rows={5} maxLength={3000} placeholder="Share a sketch, a site visit, a jury moment…" className={`input resize-none ${important ? 'border-alert' : ''}`} />
+        {text.trim().length > 10 && (
+          <AiButton request={() => api.post('/ai/improve', { kind: 'post', draft: text })} onResult={({ text: better }) => setText(better.slice(0, 3000))}>
+            Improve with AI
+          </AiButton>
+        )}
         {video ? (
           <VideoPicker file={video} onChange={setVideo} />
         ) : (

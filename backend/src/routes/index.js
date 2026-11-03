@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import adminRoutes from './admin.routes.js';
+import aiRoutes from './ai.routes.js';
 import authRoutes from './auth.routes.js';
 import collegeRoutes from './colleges.routes.js';
 import connectionRoutes from './connections.routes.js';
@@ -47,5 +48,6 @@ router.use('/search', searchRoutes);
 router.use('/reports', reportRoutes);
 router.use('/support', supportRoutes);
 router.use('/admin', adminRoutes);
+router.use('/ai', aiRoutes);
 
 export default router;

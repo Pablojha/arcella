@@ -85,6 +85,7 @@ GitHub Actions runs all of it on every push and pull request (`.github/workflows
 | `MAIL_FROM` | with email | Sender, e.g. `Arcella <no-reply@yourdomain.in>` |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | for notifications | Web Push keys: generate the pair once with `npx web-push generate-vapid-keys` and never change it (new keys cancel everyone's notifications). The subject is a contact for push services, e.g. your site URL |
 | `GIPHY_API_KEY` | no | GIF search in chats (free key from developers.giphy.com) |
+| `ANTHROPIC_API_KEY` | no | AI assistant (Claude Opus 5.5): writing help, resume feedback, job match. Without it the AI buttons don't appear. Billed per request; 20 requests per member per hour |
 | `AUTH_RATE_LIMIT` | no | Sign-in, sign-up and code attempts per IP per 15 minutes, default 30. Raise it only for local testing |
 | `PORT` | no | Defaults to 5000 (Render sets it automatically) |
 

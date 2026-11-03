@@ -4,6 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import api from '../../lib/api';
 import { SKILLS, SOFTWARE, VISIBILITY } from '../../lib/constants';
 import CertificationsEditor from './CertificationsEditor';
+import AiButton from '../ui/AiButton';
 import Button from '../ui/Button';
 import Field from '../ui/Field';
 import Sheet from '../ui/Sheet';
@@ -69,9 +70,15 @@ export default function EditProfile({ open, onClose, onSaved }) {
         <Field label="Headline" hint="One line: “B.Arch, 4th year at CEPT” or “Architect at Studio Lotus”">
           <input value={form.headline} onChange={text('headline')} maxLength={120} className="input" />
         </Field>
+        <AiButton request={() => api.post('/ai/improve', { kind: 'headline', draft: form.headline })} onResult={({ text: suggestion }) => set('headline')(suggestion.slice(0, 120))}>
+          Suggest a headline
+        </AiButton>
         <Field label="About">
           <textarea value={form.bio} onChange={text('bio')} rows={4} maxLength={1500} className="input resize-none" placeholder="What kind of spaces excite you?" />
         </Field>
+        <AiButton request={() => api.post('/ai/improve', { kind: 'about', draft: form.bio })} onResult={({ text: suggestion }) => set('bio')(suggestion.slice(0, 1500))}>
+          {form.bio ? 'Improve with AI' : 'Draft with AI'}
+        </AiButton>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Location">
             <input value={form.location} onChange={text('location')} maxLength={80} className="input" placeholder="Ahmedabad" />
