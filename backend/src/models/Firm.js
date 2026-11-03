@@ -14,8 +14,12 @@ const firmSchema = new Schema(
     website: String,
     gallery: [String],
     owner: ref('User', { required: true }),
+    // People the owner trusts to post roles and see applicants. `team` is self-declared ("I work here"), so it grants nothing.
+    admins: [ref('User')],
     team: [ref('User')],
     followers: [ref('User')],
+    // Checked by Arcella's admins.
+    verified: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

@@ -34,3 +34,10 @@ export const codeEmail = (code, intro) => `
     <p style="font-size:32px;letter-spacing:8px;font-weight:700;margin:24px 0">${code}</p>
     <p style="color:#6f6a61;font-size:13px">It expires in 10 minutes. If you did not request it, you can ignore this email.</p>
   </div>`;
+
+/** A short account notice (no code), such as a new sign-in alert. */
+export const noticeEmail = (text) => `
+  <div style="font-family:Inter,Arial,sans-serif;max-width:440px;margin:auto;padding:32px;background:#f7f5f0;color:#1a1918">
+    <h2 style="margin:0 0 8px;color:#1d6b47">arcella.</h2>
+    <p>${escapeHtml(text)}</p>
+  </div>`;

@@ -36,8 +36,8 @@ const people = {};
 let server;
 let base;
 
-async function call(method, url, { token, body, form, status = [200, 201] } = {}) {
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+async function call(method, url, { token, body, form, status = [200, 201], headers: extra = {} } = {}) {
+  const headers = { ...extra, ...(token && { Authorization: `Bearer ${token}` }) };
   let payload;
   if (form) {
     payload = new FormData();
@@ -582,6 +582,206 @@ test('blocks members everywhere and lets people report content', async () => {
   assert.equal(reports.items[0].content.text, 'First jury done!');
   await call('POST', `/admin/reports/${reports.items[0]._id}/resolve`, { token: tokenOf('admin'), body: { action: 'remove' } });
   await call('GET', `/posts/${asha.post._id}`, { token: asha.token, status: 404 });
+});
+
+test('takes job applications with a private resume through a hiring pipeline', async () => {
+  const { asha, bilal, chitra } = people;
+  const firm = await call('POST', '/firms', { token: bilal.token, form: { name: 'Pipeline Studio', city: 'Pune' } });
+  // "I work here" is self-declared, so it doesn't let anyone post roles in the firm's name.
+  await call('POST', `/firms/${firm._id}/work`, { token: asha.token });
+  await call('POST', '/jobs', { token: asha.token, body: { title: 'Fake role', type: 'internship', firm: firm._id }, status: 403 });
+  assert.equal((await call('GET', '/firms?mine=true', { token: asha.token })).items.length, 0);
+
+  const job = await call('POST', '/jobs', { token: bilal.token, body: { title: 'Design intern', type: 'internship', firm: firm._id, workplace: 'hybrid', experience: 'fresher' } });
+  assert.equal(job.company, 'Pipeline Studio');
+  assert.equal(job.remote, false);
+  assert.ok((await call('GET', '/jobs?workplace=hybrid&experience=fresher', { token: asha.token })).items.some((item) => item._id === job._id));
+  assert.ok(!(await call('GET', '/jobs?workplace=remote', { token: asha.token })).items.some((item) => item._id === job._id));
+
+  assert.equal((await call('POST', `/jobs/${job._id}/save`, { token: asha.token })).saved, true);
+  assert.equal((await call('GET', `/jobs/${job._id}`, { token: asha.token })).saved, true);
+  assert.deepEqual((await call('GET', '/jobs?saved=true', { token: asha.token })).items.map((item) => item._id), [job._id]);
+
+  await call('POST', `/jobs/${job._id}/applications`, { token: asha.token, form: { note: 'Hello' }, status: 400 });
+  await call('POST', `/jobs/${job._id}/applications`, { token: asha.token, form: { resume: file('cv.exe', 'application/octet-stream') }, status: 400 });
+  const application = await call('POST', `/jobs/${job._id}/applications`, { token: asha.token, form: { note: 'I love section drawings', resume: file('asha-cv.pdf', 'application/pdf') } });
+  assert.equal(application.status, 'applied');
+  assert.equal('data' in application.resume, false);
+  await call('POST', `/jobs/${job._id}/applications`, { token: asha.token, form: { resume: file('asha-cv.pdf', 'application/pdf') }, status: 409 });
+  await call('POST', `/jobs/${job._id}/applications`, { token: bilal.token, form: { resume: file('cv.pdf', 'application/pdf') }, status: 400 });
+  assert.ok((await call('GET', '/notifications', { token: bilal.token })).items.some((note) => note.type === 'application' && note.link === `/jobs/${job._id}/applicants`));
+
+  // Only the people hiring see applicants and the resume; the applicant sees their own.
+  await call('GET', `/jobs/${job._id}/applications`, { token: asha.token, status: 403 });
+  const pipeline = await call('GET', `/jobs/${job._id}/applications`, { token: bilal.token });
+  assert.equal(pipeline.items[0].applicant.name, 'Asha Rao');
+  assert.equal(pipeline.counts.applied, 1);
+  await call('GET', `/jobs/applications/${application._id}/resume`, { token: chitra.token, status: 403 });
+  const resume = await call('GET', `/jobs/applications/${application._id}/resume`, { token: bilal.token });
+  assert.ok(resume.toString().startsWith('%PDF'));
+  await call('GET', `/jobs/applications/${application._id}/resume`, { token: asha.token });
+
+  await call('PATCH', `/jobs/applications/${application._id}`, { token: asha.token, body: { status: 'offered' }, status: 403 });
+  await call('PATCH', `/jobs/applications/${application._id}`, { token: bilal.token, body: { status: 'interview' }, status: 400 });
+  await call('PATCH', `/jobs/applications/${application._id}`, { token: bilal.token, body: { status: 'interview', interviewAt: '2030-01-15T10:30:00.000Z', interviewNote: 'Bring your portfolio' } });
+  const mine = await call('GET', '/jobs/applications', { token: asha.token });
+  assert.equal(mine.items[0].status, 'interview');
+  assert.equal(mine.items[0].job.title, 'Design intern');
+  assert.deepEqual(mine.items[0].history.map((step) => step.status), ['applied', 'interview']);
+  assert.ok((await call('GET', '/notifications', { token: asha.token })).items.some((note) => note.type === 'application_status' && /Interview scheduled/.test(note.text)));
+
+  await call('POST', `/jobs/applications/${application._id}/withdraw`, { token: asha.token });
+  await call('PATCH', `/jobs/applications/${application._id}`, { token: bilal.token, body: { status: 'shortlisted' }, status: 409 });
+  assert.equal((await call('GET', `/jobs/${job._id}`, { token: bilal.token })).applicationsCount, 0);
+
+  // Editing and closing: only the people hiring; a closed role takes no applications.
+  await call('PATCH', `/jobs/${job._id}`, { token: asha.token, body: { closed: true }, status: 403 });
+  await call('PATCH', `/jobs/${job._id}`, { token: bilal.token, body: { closed: true, workplace: 'remote' } });
+  const closed = await call('GET', `/jobs/${job._id}`, { token: asha.token });
+  assert.equal(closed.remote, true);
+  await call('POST', `/jobs/${job._id}/applications`, { token: asha.token, form: { resume: file('asha-cv.pdf', 'application/pdf') }, status: 404 });
+  assert.ok((await call('GET', '/jobs?hiring=true', { token: bilal.token })).items.some((item) => item._id === job._id));
+
+  const external = await call('POST', '/jobs', { token: chitra.token, body: { title: 'Site architect', type: 'full-time', company: 'Elsewhere', applyLink: 'jobs@elsewhere.in' } });
+  await call('POST', `/jobs/${external._id}/applications`, { token: asha.token, form: { resume: file('asha-cv.pdf', 'application/pdf') }, status: 400 });
+
+  await call('DELETE', `/jobs/${job._id}`, { token: bilal.token });
+  assert.equal((await call('GET', '/jobs/applications', { token: asha.token })).items.length, 0);
+});
+
+test('lists signed-in devices, signs them out one by one or all at once, and alerts on new ones', async () => {
+  const first = await join('devon', 'Devon Shah', 'student');
+  const login = (agent) => call('POST', '/auth/login', { body: { email: 'devon@test.arcella', password: 'password123' }, headers: { 'User-Agent': agent } });
+  const tablet = await login('Mozilla/5.0 (iPad) Safari/605');
+  const alerts = (await call('GET', '/notifications', { token: tablet.token })).items.filter((note) => note.type === 'new_login');
+  assert.equal(alerts.length, 1);
+  const laptop = await login('Mozilla/5.0 (iPad) Safari/605');
+  assert.equal((await call('GET', '/notifications', { token: laptop.token })).items.filter((note) => note.type === 'new_login').length, 1, 'a known device is not new');
+
+  const { items } = await call('GET', '/auth/devices', { token: tablet.token });
+  assert.equal(items.length, 3);
+  assert.equal(items.filter((device) => device.current).length, 1);
+  const firstDevice = items.find((device) => !device.current && device.agent === 'node');
+  await call('DELETE', `/auth/devices/${firstDevice._id}`, { token: tablet.token });
+  await call('GET', '/auth/me', { token: first.token, status: 401 });
+
+  // Tokens from before devices existed are signed out by "sign out other devices" too.
+  const { default: jwt } = await import('jsonwebtoken');
+  const legacy = jwt.sign({ id: first.user._id }, 'dev-only-secret', { algorithm: 'HS256', expiresIn: '1d' });
+  await call('GET', '/auth/me', { token: legacy });
+  const kept = await call('POST', '/auth/devices/sign-out-others', { token: tablet.token });
+  await Promise.all([legacy, laptop.token].map((token) => call('GET', '/auth/me', { token, status: 401 })));
+  await call('GET', '/auth/me', { token: kept.token });
+  assert.equal((await call('GET', '/auth/devices', { token: kept.token })).items.length, 1);
+
+  await call('POST', '/auth/logout', { token: kept.token });
+  await call('GET', '/auth/me', { token: kept.token, status: 401 });
+});
+
+test('locks an account after repeated wrong passwords and shows the attempts in its history', async () => {
+  const { token } = await join('locky', 'Lakshmi Iyer', 'student');
+  for (let attempt = 0; attempt < 5; attempt += 1) await call('POST', '/auth/login', { body: { email: 'locky@test.arcella', password: 'wrong-password' }, status: 401 });
+  const locked = await call('POST', '/auth/login', { body: { email: 'locky@test.arcella', password: 'password123' }, status: 429 });
+  assert.match(locked.message, /Too many failed sign-ins/);
+  const { items } = await call('GET', '/auth/history', { token });
+  assert.deepEqual(items.slice(0, 2).map((event) => event.reason), ['locked', 'password']);
+  assert.equal(items.at(-1).ok, true);
+  await call('GET', '/auth/history', { status: 401 });
+});
+
+test('turns on two-factor sign-in with an authenticator app and one-time recovery codes', async () => {
+  const { _codeAt } = await import('../src/services/totp.js');
+  const step = () => Math.floor(Date.now() / 30_000);
+  const { token } = await join('tara', 'Tara Bose', 'student');
+  const { secret, url } = await call('POST', '/auth/2fa/setup', { token });
+  assert.match(url, /^otpauth:\/\/totp\/Arcella%3Atara%40test\.arcella\?secret=/);
+  await call('POST', '/auth/2fa/enable', { token, body: { code: _codeAt(secret, step() + 5) }, status: 400 });
+  const enableCode = _codeAt(secret, step());
+  const { recoveryCodes } = await call('POST', '/auth/2fa/enable', { token, body: { code: enableCode } });
+  assert.equal(recoveryCodes.length, 8);
+  const me = await call('GET', '/auth/me', { token });
+  assert.equal(me.user.twoFactor.enabled, true);
+  assert.ok(!JSON.stringify(me).includes(secret), 'the secret never leaves the server again');
+
+  const credentials = { email: 'tara@test.arcella', password: 'password123' };
+  const pending = await call('POST', '/auth/login', { body: credentials });
+  assert.equal(pending.twoFactor, true);
+  assert.equal('token' in pending, false);
+  await call('POST', '/auth/2fa/login', { body: { ticket: pending.ticket, code: enableCode }, status: 401 });
+  const session = await call('POST', '/auth/2fa/login', { body: { ticket: pending.ticket, code: _codeAt(secret, step() + 1) } });
+  assert.ok(session.token);
+  // A ticket is only good for the second step, never as a session.
+  await call('GET', '/auth/me', { token: pending.ticket, status: 401 });
+
+  const again = await call('POST', '/auth/login', { body: credentials });
+  await call('POST', '/auth/2fa/login', { body: { ticket: again.ticket, code: recoveryCodes[0].toUpperCase() } });
+  await call('POST', '/auth/2fa/login', { body: { ticket: again.ticket, code: recoveryCodes[0] }, status: 401 });
+
+  await call('POST', '/auth/2fa/disable', { token, body: { password: 'nope-nope', code: recoveryCodes[1] }, status: 400 });
+  await call('POST', '/auth/2fa/disable', { token, body: { password: 'password123', code: recoveryCodes[1] } });
+  assert.ok((await call('POST', '/auth/login', { body: credentials })).token);
+});
+
+test('gives staff roles only the permissions they carry, suspends and bans accounts, and logs every action', async () => {
+  const { admin, asha, bilal } = people;
+  const sam = await join('sam', 'Sam Paul', 'student');
+  const me = (token) => call('GET', '/auth/me', { token }).then((data) => data.user);
+  assert.equal((await me(admin.token)).role, 'super_admin');
+  assert.deepEqual((await me(sam.token)).permissions, []);
+  await call('GET', '/admin/stats', { token: sam.token, status: 403 });
+
+  // Support reads; it can't moderate, see the audit log or hand out roles.
+  await call('PATCH', `/admin/users/${bilal.user._id}/role`, { token: admin.token, body: { role: 'support' } });
+  await call('GET', '/admin/stats', { token: bilal.token });
+  await call('GET', '/admin/users', { token: bilal.token });
+  await call('GET', '/admin/audit', { token: bilal.token, status: 403 });
+  await call('POST', `/admin/users/${sam.user._id}/status`, { token: bilal.token, body: { status: 'suspended', days: 1, reason: 'spam' }, status: 403 });
+  await call('PATCH', `/admin/users/${bilal.user._id}/role`, { token: bilal.token, body: { role: 'super_admin' }, status: 403 });
+  await call('PATCH', `/admin/users/${admin.user._id}/role`, { token: admin.token, body: { role: 'user' }, status: 400 });
+  await call('PATCH', `/admin/users/${sam.user._id}/role`, { token: admin.token, body: { role: 'emperor' }, status: 400 });
+
+  // A moderator suspends; the member is signed out and told why. Banning and outranked staff are off limits.
+  await call('PATCH', `/admin/users/${asha.user._id}/role`, { token: admin.token, body: { role: 'moderator' } });
+  assert.ok((await me(asha.token)).permissions.includes('users:suspend'));
+  await call('POST', `/admin/users/${sam.user._id}/status`, { token: asha.token, body: { status: 'suspended', reason: 'spam' }, status: 400 });
+  await call('POST', `/admin/users/${sam.user._id}/status`, { token: asha.token, body: { status: 'suspended', days: 3, reason: 'Posting spam links' } });
+  const signedOut = await call('GET', '/auth/me', { token: sam.token, status: 401 });
+  assert.match(signedOut.message, /suspended until/);
+  const refused = await call('POST', '/auth/login', { body: { email: 'sam@test.arcella', password: 'password123' }, status: 403 });
+  assert.match(refused.message, /Posting spam links/);
+  await call('POST', `/admin/users/${sam.user._id}/status`, { token: asha.token, body: { status: 'banned', reason: 'spam' }, status: 403 });
+  await call('POST', `/admin/users/${admin.user._id}/status`, { token: asha.token, body: { status: 'suspended', days: 1, reason: 'no' }, status: 403 });
+  const listed = await call('GET', '/admin/users?status=suspended', { token: asha.token });
+  assert.deepEqual(listed.items.map((item) => item.name), ['Sam Paul']);
+
+  // Admins ban and restore; a restored member signs in again.
+  await call('POST', `/admin/users/${sam.user._id}/status`, { token: admin.token, body: { status: 'banned', reason: 'Repeated spam' } });
+  await call('POST', `/admin/users/${sam.user._id}/status`, { token: asha.token, body: { status: 'active' }, status: 403 });
+  await call('POST', `/admin/users/${sam.user._id}/status`, { token: admin.token, body: { status: 'active' } });
+  // Suspending signed Sam out everywhere, so he signs in again.
+  const { token: samToken } = await call('POST', '/auth/login', { body: { email: 'sam@test.arcella', password: 'password123' } });
+
+  // Job and firm moderation.
+  const job = await call('POST', '/jobs', { token: samToken, body: { title: 'Too good to be true', type: 'freelance', company: 'Scam Co' } });
+  await call('DELETE', `/admin/jobs/${job._id}`, { token: bilal.token, body: { reason: 'Fraud' }, status: 403 });
+  await call('DELETE', `/admin/jobs/${job._id}`, { token: asha.token, body: { reason: 'Asks for a fee' } });
+  assert.ok((await call('GET', '/notifications', { token: samToken })).items.some((note) => note.type === 'job_removed' && /Asks for a fee/.test(note.text)));
+  const firm = await call('POST', '/firms', { token: samToken, form: { name: 'Badge Studio' } });
+  await call('PATCH', `/admin/firms/${firm._id}`, { token: asha.token, body: { verified: true }, status: 403 });
+  await call('PATCH', `/admin/firms/${firm._id}`, { token: admin.token, body: { verified: true } });
+  assert.equal((await call('GET', `/firms/${firm.slug}`, { token: samToken })).verified, true);
+
+  const stats = await call('GET', '/admin/stats', { token: admin.token });
+  assert.equal(stats.growth.length, 12);
+  assert.ok(stats.joined7 >= 1 && stats.growth.at(-1) >= 1 && stats.applications >= 0);
+
+  const { items } = await call('GET', '/admin/audit', { token: admin.token });
+  const actions = items.map((entry) => entry.action);
+  for (const action of ['user.role', 'user.suspend', 'user.ban', 'user.restore', 'job.remove', 'firm.verify']) assert.ok(actions.includes(action), action);
+  assert.equal(items.find((entry) => entry.action === 'user.suspend').actor.name, 'Asha Rao');
+
+  for (const key of ['asha', 'bilal']) await call('PATCH', `/admin/users/${people[key].user._id}/role`, { token: admin.token, body: { role: 'user' } });
+  await call('GET', '/admin/stats', { token: asha.token, status: 403 });
 });
 
 test('searches people, projects, jobs, firms and questions in one go', async () => {

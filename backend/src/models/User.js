@@ -2,6 +2,7 @@ import { Schema, model } from 'mongoose';
 import argon2 from 'argon2';
 import bcrypt from 'bcryptjs';
 import { COLLEGE_ROLES, DEGREE_LEVELS, USER_TYPES } from '../config/constants.js';
+import { ROLES, isAdminRole } from '../config/permissions.js';
 import { randomSlug } from '../utils/text.js';
 import { ref } from './types.js';
 
@@ -28,7 +29,13 @@ const userSchema = new Schema(
     emailVerified: { type: Boolean, default: false },
     password: { type: String, required: true, select: false },
     type: { type: String, enum: USER_TYPES, default: 'student' },
+    // Kept in step with `role` (admins and super admins), for the many ownership checks that use it.
     isAdmin: { type: Boolean, default: false },
+    role: { type: String, enum: ROLES, default: 'user' },
+    // Suspended accounts can't sign in until `suspendedUntil`; banned ones can't at all. The reason is shown to them.
+    status: { type: String, enum: ['active', 'suspended', 'banned'], default: 'active' },
+    suspendedUntil: Date,
+    statusReason: String,
     avatar: String,
     cover: String,
     headline: String,
@@ -48,6 +55,16 @@ const userSchema = new Schema(
     mentor: { enabled: { type: Boolean, default: false }, topics: [String], slots: [String], about: String },
     blocked: { type: [ref('User')], select: false },
     passwordChangedAt: Date,
+    // "Sign out other devices" ends tokens issued before this that have no device (those from before devices existed).
+    signedOutAt: Date,
+    // Two-factor sign-in with an authenticator app. Recovery codes are kept as SHA-256 hashes.
+    twoFactor: {
+      enabled: { type: Boolean, default: false },
+      secret: { type: String, select: false },
+      pending: { type: String, select: false },
+      lastStep: { type: Number, select: false },
+      recovery: { type: [String], select: false, default: undefined },
+    },
     lastActiveAt: Date,
     // When the member agreed to the Terms of Use and Privacy Policy at sign-up.
     termsAcceptedAt: Date,
@@ -57,6 +74,7 @@ const userSchema = new Schema(
     toJSON: {
       transform: (doc, ret) => {
         delete ret.password;
+        if (ret.twoFactor) ret.twoFactor = { enabled: Boolean(ret.twoFactor.enabled) };
         return ret;
       },
     },
@@ -65,6 +83,27 @@ const userSchema = new Schema(
 
 userSchema.index({ 'memberships.college': 1, 'memberships.verified': 1 });
 userSchema.index({ 'mentor.enabled': 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ status: 1 });
+
+userSchema.pre('save', function syncAdmin() {
+  if (this.isModified('role')) this.isAdmin = isAdminRole(this.role);
+});
+
+/** Why the account can't be used right now (suspended or banned), or null. */
+userSchema.methods.blockedReason = function blockedReason() {
+  const why = this.statusReason ? ` Reason: ${this.statusReason}` : '';
+  if (this.status === 'banned') return `This account has been banned.${why}`;
+  if (this.status === 'suspended' && this.suspendedUntil > new Date()) return `This account is suspended until ${this.suspendedUntil.toDateString()}.${why}`;
+  return null;
+};
+
+/** Gives site admins from before roles existed a role: super admin for ADMIN_EMAIL addresses, admin otherwise. */
+export async function migrateRoles(adminEmails) {
+  const supers = await model('User').updateMany({ email: { $in: adminEmails }, emailVerified: true, role: { $ne: 'super_admin' } }, { role: 'super_admin', isAdmin: true });
+  const admins = await model('User').updateMany({ isAdmin: true, role: { $in: ['user', null] } }, { role: 'admin' });
+  return supers.modifiedCount + admins.modifiedCount;
+}
 
 userSchema.pre('validate', function setUsername() {
   if (!this.username) this.username = randomSlug(this.name);

@@ -6,6 +6,10 @@ export const DOC_TYPES = ['id_card', 'marksheet', 'degree'];
 export const PROJECT_CATEGORIES = ['Residential', 'Commercial', 'Institutional', 'Urban Design', 'Landscape', 'Interior', 'Conservation', 'Thesis', 'Competition', 'Other'];
 export const CRITERIA = ['concept', 'planning', 'presentation', 'technical'];
 export const JOB_TYPES = ['internship', 'full-time', 'freelance', 'competition'];
+export const WORKPLACES = ['onsite', 'hybrid', 'remote'];
+export const EXPERIENCE = ['fresher', '1-2', '3-5', '5+'];
+/** An application's stages; `withdrawn` is set only by the applicant, the rest only by the people hiring. */
+export const APPLICATION_STATUSES = ['applied', 'shortlisted', 'interview', 'offered', 'rejected', 'withdrawn'];
 export const FIRM_SIZES = ['1-10', '11-50', '51-200', '200+'];
 export const EVENT_TYPES = ['site-visit', 'webinar', 'workshop', 'jury', 'competition'];
 export const SUBJECTS = ['Design', 'Structures', 'Thesis', 'Software', 'NATA', 'Careers'];

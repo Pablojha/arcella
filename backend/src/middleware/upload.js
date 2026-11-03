@@ -26,6 +26,7 @@ const uploader = (maxMb, types, storage = multer.memoryStorage()) =>
 
 export const images = uploader(8, IMAGES);
 export const proofDocument = uploader(5, [...IMAGES, 'pdf']);
+export const resumeFile = uploader(3, ['pdf', 'doc', 'docx']);
 export const resourceFile = uploader(25, ['pdf', 'dwg', 'dxf', 'xlsx', 'xls', 'zip', ...IMAGES]);
 
 // Post media is staged in temp files, so a video never sits in the server's memory.

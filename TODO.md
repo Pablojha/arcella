@@ -55,5 +55,18 @@ Started 3 November 2026 from tag `v1.0-pre-hardening` (the live version before t
 - [x] Group messages: photos, videos, voice notes, GIFs, reactions; live over Socket.IO college rooms with typing
 - [x] Same UI as DMs (bubbles, composer, reactions, lightbox, voice) plus sender names and admin badges; moderators can delete; full screen on phones
 
+## Round 3: full professional network (plan and audit: docs/ROADMAP.md)
+
+- [x] M0 Several colleges per member and group chat (above): committed in bea9362; full browser suite green on desktop and phone
+- [x] M1 Job applications: apply with resume, saved jobs, my applications, recruiter pipeline, statuses, notifications, edit jobs, workplace/experience filters
+- [x] M2 Account security: devices and sign-out all, login history, new-device alert, TOTP two-factor, lockout
+- [x] M3 Admin RBAC: staff roles and permissions, suspend/ban/restore, audit log, job and firm moderation, verified firms
+- [ ] M4 Social: edit posts, mentions, hashtags, follow, notification preferences
+- [ ] M5 Messaging: delete own message, search, message requests
+- [ ] M6 Profiles and companies: certifications, languages, resume, profile views, contact privacy; firm co-admins, posts, analytics
+- [ ] M7 Help Center, Contact Support, Report a problem
+- [ ] M8 AI features (**needs ANTHROPIC_API_KEY**)
+- [ ] M9 Premium (**blocked on the owner:** payment provider and business details)
+
 ## Deploy
 - [x] Pushed and verified: Render live, Vercel live, CI green (API tests, website build, Playwright), and a live smoke test of every public page (no console errors, nothing blocked by the CSP)

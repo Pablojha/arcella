@@ -102,7 +102,7 @@ export default function QuestionDetail() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <PageHeader title={question.subject} back="/qa" />
+      <PageHeader as="p" title={question.subject} back="/qa" />
       <article className="card flex gap-4 p-4 md:p-6">
         <Vote item={question} onVote={voteQuestion} />
         <div className="min-w-0 flex-1 space-y-3">

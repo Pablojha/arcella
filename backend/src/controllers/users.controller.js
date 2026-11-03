@@ -49,7 +49,7 @@ export async function profile(req, res) {
   const { id } = req.params;
   const filter = isObjectIdOrHexString(id) ? { _id: id } : { username: id.toLowerCase() };
   const user = await User.findOne({ ...filter, blocked: { $ne: req.user._id } })
-    .select('-email -passwordChangedAt')
+    .select('-email -passwordChangedAt -signedOutAt -twoFactor -status -suspendedUntil -statusReason')
     .populate('college', 'name short city')
     .populate('memberships.college', 'name short city')
     .lean();

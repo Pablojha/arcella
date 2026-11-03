@@ -45,7 +45,11 @@ export function AuthProvider({ children }) {
    */
   const logout = useCallback(
     ({ signedOut = false, expired = false } = {}) => {
-      disablePush({ signedOut, session: token.get() }).catch(() => {});
+      const session = token.get();
+      // The push subscription is removed first, while the session still works; then the session itself is ended.
+      disablePush({ signedOut, session })
+        .catch(() => {})
+        .finally(() => !signedOut && session && api.post('/auth/logout', null, { headers: { Authorization: `Bearer ${session}` } }).catch(() => {}));
       cache.clear();
       token.clear();
       setLeftOnPurpose(!expired);

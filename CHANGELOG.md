@@ -1,5 +1,33 @@
 # Changelog
 
+## November 2026: staff roles and the admin dashboard
+
+- **Roles:** support (read users and reports), moderator (resolve reports, suspend accounts, take down jobs), admin (verify, ban, colleges, firm badges, audit log) and super admin (hands out roles). Every admin route checks its permission on the server, and the dashboard shows only the tabs a role can use. Existing site admins became super admins (`ADMIN_EMAIL` addresses) or admins at start-up.
+- **Suspend, ban and restore** from Admin → Users, with a reason the member sees at sign-in. Suspending signs the account out everywhere. Staff can't act on themselves or on staff of their own rank or above.
+- **Audit log** (Admin → Audit log) of every staff action, kept for a year.
+- **Job and firm moderation:** search every job and firm, remove one with a reason (the owner is told), and give firms a verified badge that shows on their page and card.
+- **Overview:** members active this week, joined this week and month, suspended accounts, applications, firms and connections, plus a chart of weekly sign-ups for the last 12 weeks (with a table for screen readers).
+- Tests: a new API test for every permission boundary (28 in all) and a browser journey (promote, the moderator's tabs, suspend, the member's sign-in message, audit log, axe check) on desktop and phone.
+
+## November 2026: account security
+
+- **Where you're signed in** (Settings → Security): every device with when it was last active, sign out any one of them, or all except this one. Logging out now ends the session on the server too, and a signed-out device's live connection closes at once. Sessions from before this change keep working until the member signs out other devices or changes their password.
+- **Two-factor sign-in** with any authenticator app (TOTP): set up with a key or an otpauth link, confirmed with a code, plus 8 single-use recovery codes. Codes can't be reused, and the setup secret is never sent to the app again. A password reset doesn't switch it off, because it proves the inbox, not the phone.
+- **Lockout:** 5 failed sign-ins on an account within 15 minutes lock it for 15 minutes, on top of the per-IP limit.
+- **Recent sign-ins** list successful and failed attempts (kept 90 days). Signing in on a new device sends a notification, and an email once a mail provider is set.
+- Data export now includes signed-in devices and sign-in history; deleting an account removes both.
+- Tests: 3 new API tests (27 in all), including RFC 6238 vectors checked during development, and a browser journey (devices, two-factor setup, sign-in with a recovery code, server-side logout) on desktop and phone.
+
+## November 2026: job applications and hiring
+
+- **Apply in Arcella.** Roles without an external link take applications in the app: a resume (PDF or Word, up to 3 MB) and an optional note. Applicants follow each one under **Jobs → Applied**, see interview times on the role, get a notification at every stage, and can withdraw.
+- **Hiring pipeline.** The poster, the firm's owner and its admins see **Applicants** for each role: stage tabs with counts, the note, the resume, a Message button, and stage changes (shortlisted, interview with date and details, offered, not selected). **Jobs → Hiring** lists their roles with applicant counts. Roles can be edited, closed and reopened.
+- **Resumes are private.** They are stored in the database, not at a public URL, and only the applicant and the people hiring can download them. They are deleted with the role or the account and appear in data exports without the file.
+- **Saved jobs** (**Jobs → Saved**), and filters for workplace (on-site, hybrid, remote) and experience. Existing roles get their workplace from the old remote flag at start-up.
+- **Security fix:** "I work here" on a firm page is self-declared, but it let anyone post roles in the firm's name. Only the firm's owner and the admins it names can now post its roles or see their applicants.
+- **Accessibility fixes:** the job, event and question pages had two `h1` headings. The phone header's notification button now includes its unread count in its name (WCAG 2.5.3).
+- Tests: a new API test for the whole pipeline (24 in all) and a browser journey (post, filter, save, apply, download the resume, schedule an interview, notification) with axe checks, on desktop and phone.
+
 ## November 2026: several colleges and group chats like direct messages
 
 - **Several colleges per member.** Profiles have an **Education** section: each college with the member's role, degree level (undergraduate, postgraduate or advanced research), degree and years. Each one can be verified (college email or document) and opens that college's private group, so members belong to every group they verified. The **College** page switches between them, and members choose which college is their main one.

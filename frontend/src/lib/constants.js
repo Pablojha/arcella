@@ -37,6 +37,38 @@ export const JOB_TYPES = [
   { value: 'competition', label: 'Competition' },
 ];
 
+export const WORKPLACES = [
+  { value: 'onsite', label: 'On-site' },
+  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'remote', label: 'Remote' },
+];
+
+export const EXPERIENCE = [
+  { value: 'fresher', label: 'Fresher' },
+  { value: '1-2', label: '1–2 years' },
+  { value: '3-5', label: '3–5 years' },
+  { value: '5+', label: '5+ years' },
+];
+
+/** Application stages, with the chip colour each one shows in. */
+export const APPLICATION_STATUSES = [
+  { value: 'applied', label: 'Applied', tone: 'bg-ink/5 text-ink' },
+  { value: 'shortlisted', label: 'Shortlisted', tone: 'bg-brand/10 text-brand' },
+  { value: 'interview', label: 'Interview', tone: 'bg-alert text-on-alert' },
+  { value: 'offered', label: 'Offered', tone: 'bg-brand text-on-brand' },
+  { value: 'rejected', label: 'Not selected', tone: 'bg-accent/10 text-accent' },
+  { value: 'withdrawn', label: 'Withdrawn', tone: 'bg-ink/5 text-muted' },
+];
+
+/** Site staff roles, lowest first (the API's config/permissions.js is the source of truth). */
+export const STAFF_ROLES = [
+  { value: 'user', label: 'Member' },
+  { value: 'support', label: 'Support' },
+  { value: 'moderator', label: 'Moderator' },
+  { value: 'admin', label: 'Admin' },
+  { value: 'super_admin', label: 'Super admin' },
+];
+
 export const FIRM_SIZES = ['1-10', '11-50', '51-200', '200+'];
 
 export const EVENT_TYPES = [

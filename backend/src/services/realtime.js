@@ -26,6 +26,15 @@ const groupRoom = (collegeId) => `college:${collegeId}`;
 export const emitToGroup = (collegeId, event, payload) => io?.to(groupRoom(collegeId)).emit(event, { college: String(collegeId), ...payload });
 export const isOnline = (userId) => online.has(String(userId));
 
+/**
+ * Closes the live connections of signed-out devices. With `userId`, the account's connections from tokens without a
+ * device (from before devices existed) close too.
+ */
+export function disconnectDevices(deviceIds = [], userId) {
+  const rooms = [...deviceIds.map((id) => `device:${id}`), ...(userId ? [`legacy:${userId}`] : [])];
+  if (io && rooms.length) io.in(rooms).disconnectSockets(true);
+}
+
 /** A Cloudinary avatar as a small square image a notification can show (other images can't be reached by URL). */
 const notificationIcon = (avatar) => (avatar?.includes('/image/upload/') ? avatar.replace('/image/upload/', '/image/upload/c_fill,g_face,w_192,h_192,f_jpg/') : undefined);
 
@@ -89,7 +98,7 @@ export function startRealtime(server) {
     const id = String(user._id);
     const allowedUntil = new Map();
     let hidden = { rooms: [], until: 0 };
-    socket.join(`user:${id}`);
+    socket.join([`user:${id}`, user.$locals.device ? `device:${user.$locals.device}` : `legacy:${id}`]);
     online.set(id, (online.get(id) ?? 0) + 1);
     if (!screens.has(id)) screens.set(id, new Map());
 

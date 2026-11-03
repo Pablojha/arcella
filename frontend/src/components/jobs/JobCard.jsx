@@ -1,10 +1,11 @@
-import { Clock, IndianRupee, MapPin, Wifi } from 'lucide-react';
+import { Building2, Clock, IndianRupee, MapPin, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { JOB_TYPES } from '../../lib/constants';
+import { JOB_TYPES, WORKPLACES } from '../../lib/constants';
 import { formatDate, labelOf, timeAgo } from '../../lib/format';
 import FirmLogo from '../ui/FirmLogo';
 
-export default function JobCard({ job }) {
+/** A role in a list; `showStatus` adds what the people hiring need: applicants and whether it is closed. */
+export default function JobCard({ job, showStatus = false }) {
   return (
     <Link to={`/jobs/${job._id}`} className="card flex gap-3.5 p-4 transition hover:border-ink/25">
       <FirmLogo logo={job.firm?.logo} name={job.company} />
@@ -20,9 +21,9 @@ export default function JobCard({ job }) {
               <MapPin size={12} /> {job.location}
             </span>
           )}
-          {job.remote && (
+          {job.workplace && job.workplace !== 'onsite' && (
             <span className="flex items-center gap-1">
-              <Wifi size={12} /> Remote
+              <Building2 size={12} /> {labelOf(WORKPLACES, job.workplace)}
             </span>
           )}
           {job.compensation && (
@@ -30,6 +31,12 @@ export default function JobCard({ job }) {
               <IndianRupee size={12} /> {job.compensation}
             </span>
           )}
+          {showStatus && !job.applyLink && (
+            <span className="flex items-center gap-1 font-medium text-ink">
+              <Users size={12} /> {job.applicationsCount} applicant{job.applicationsCount === 1 ? '' : 's'}
+            </span>
+          )}
+          {showStatus && job.closed && <span className="font-semibold text-accent">Closed</span>}
           <span className="flex items-center gap-1">
             <Clock size={12} /> {job.deadline ? `Apply by ${formatDate(job.deadline, { day: 'numeric', month: 'short' })}` : timeAgo(job.createdAt)}
           </span>

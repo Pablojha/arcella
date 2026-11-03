@@ -1,8 +1,8 @@
 # arcella.
 
-A professional network for architecture students, alumni, faculty and firms in India: a feed of photo posts and vertical video reels with likes, comments, reposts, saves and Important alerts, portfolios with critiques, private college groups (members can verify several colleges: undergraduate, postgraduate and research degrees) with a group chat that works like direct messages and their own admin and co-admin, stories, jobs, firm pages, mentorship, events, Q&A, study resources and direct messages. It works as a website, an installable PWA and an Android app.
+A professional network for architecture students, alumni, faculty and firms in India: a feed of photo posts and vertical video reels with likes, comments, reposts, saves and Important alerts, portfolios with critiques, private college groups (members can verify several colleges: undergraduate, postgraduate and research degrees) with a group chat that works like direct messages and their own admin and co-admin, stories, jobs with in-app applications and a hiring pipeline (resumes, stages, interviews, saved jobs), firm pages with verified badges, mentorship, events, Q&A, study resources and direct messages. It works as a website, an installable PWA and an Android app.
 
-It also includes what a public launch needs: email verification with a one-time code at sign-up, search across the whole network, password reset by code, account deletion, reporting and blocking with an admin moderation queue, Terms, Privacy, Cookie, Refund, Community Guidelines, Copyright and Accessibility pages with a cookie notice, a "download your data" export, consent at sign-up, strict security headers, anti-spam rate limits, and automated accessibility (WCAG 2.2 AA), API and browser tests that run on every push.
+It also includes what a public launch needs: email verification with a one-time code at sign-up, two-factor sign-in, signed-in devices with sign-out anywhere, sign-in history and lockout, staff roles (support, moderator, admin, super admin) with suspensions, bans and an audit log, search across the whole network, password reset by code, account deletion, reporting and blocking with an admin moderation queue, Terms, Privacy, Cookie, Refund, Community Guidelines, Copyright and Accessibility pages with a cookie notice, a "download your data" export, consent at sign-up, strict security headers, anti-spam rate limits, and automated accessibility (WCAG 2.2 AA), API and browser tests that run on every push.
 
 Live at **[arcella-seven.vercel.app](https://arcella-seven.vercel.app)**.
 
@@ -12,7 +12,7 @@ Live at **[arcella-seven.vercel.app](https://arcella-seven.vercel.app)**.
 | `frontend/` | React 19, Vite, Tailwind CSS 4, Framer Motion, React Router, axios, lucide-react | Vercel (`vercel.json`) |
 | `e2e/` | Playwright with axe-core | GitHub Actions (`.github/workflows/ci.yml`) |
 
-More documentation: [SECURITY.md](SECURITY.md) (security model and incident steps), [docs/API.md](docs/API.md) (endpoints), [docs/COMPLIANCE.md](docs/COMPLIANCE.md) (legal and compliance status), [CHANGELOG.md](CHANGELOG.md), [docs/AUDIT.md](docs/AUDIT.md) (the November 2026 audit) and [APP.md](APP.md) (Android app).
+More documentation: [SECURITY.md](SECURITY.md) (security model and incident steps), [docs/API.md](docs/API.md) (endpoints), [docs/COMPLIANCE.md](docs/COMPLIANCE.md) (legal and compliance status), [CHANGELOG.md](CHANGELOG.md), [docs/AUDIT.md](docs/AUDIT.md) (the November 2026 audit), [docs/ROADMAP.md](docs/ROADMAP.md) (the plan towards a full professional network) and [APP.md](APP.md) (Android app).
 
 ## Run it locally
 
@@ -50,8 +50,8 @@ Register with an address in `ADMIN_EMAIL` and confirm it with the one-time code 
 
 | Suite | Command | Needs |
 | --- | --- | --- |
-| API (23 end-to-end tests: auth, admin rights, posts, comments, chat, reactions, push notifications, colleges, several colleges per member, group chat, moderation, data export, account deletion) | `cd backend && npm test` | MongoDB. Uses a separate `arcella_test` database (override with `MONGODB_TEST_URI`); email and Cloudinary are switched off, so nothing leaves your machine |
-| Browser (Playwright: public pages and SEO tags, cookie notice, sign-up/login/logout/password reset, access control, education and the college switcher, live group chat with reactions, 10 screen widths from 320 to 1920 px, WCAG 2.2 AA via axe-core in light and dark, internal links) | `cd e2e && npm test` | The API and a production build running (below) |
+| API (28 end-to-end tests: auth, two-factor, devices and lockout, staff roles and suspensions, job applications, admin rights, posts, comments, chat, reactions, push notifications, colleges, several colleges per member, group chat, moderation, data export, account deletion) | `cd backend && npm test` | MongoDB. Uses a separate `arcella_test` database (override with `MONGODB_TEST_URI`); email and Cloudinary are switched off, so nothing leaves your machine |
+| Browser (Playwright: public pages and SEO tags, cookie notice, sign-up/login/logout/password reset, two-factor and devices, the hiring pipeline, staff moderation, several colleges and group chat, access control, education and the college switcher, live group chat with reactions, 10 screen widths from 320 to 1920 px, WCAG 2.2 AA via axe-core in light and dark, internal links) | `cd e2e && npm test` | The API and a production build running (below) |
 
 To run the browser suite locally:
 
@@ -160,8 +160,8 @@ Anyone can mark one post a day as **Important** (site admins and college admins 
 ## Safety and accounts
 
 - **Report and block:** members can report posts, comments, projects, questions, answers and profiles, and block other members from a post, profile or conversation. Blocking hides posts, stories and comments both ways, stops messages and connection requests, and removes any existing connection.
-- **Moderation:** open reports appear in **Admin → Reports** with a preview. Admins can remove the content (or delete the account) or dismiss the report.
-- **Accounts:** new emails are confirmed with a 6-digit code. Codes expire after 10 minutes, allow 5 attempts and can be resent after 30 seconds. Password reset also uses a code. Passwords are hashed with Argon2id (older bcrypt hashes upgrade at the next sign-in). Changing your password signs out other devices and stops their notifications, and **Settings → Delete account** removes the member and everything they created.
+- **Moderation:** open reports appear in **Admin → Reports** with a preview. Moderators remove the content or dismiss the report; only admins can delete an account from a report. Staff roles, suspensions, bans, job and firm moderation and the audit log are described in [docs/API.md → Roles](docs/API.md#roles).
+- **Accounts:** new emails are confirmed with a 6-digit code. Codes expire after 10 minutes, allow 5 attempts and can be resent after 30 seconds. Password reset also uses a code. Passwords are hashed with Argon2id (older bcrypt hashes upgrade at the next sign-in). **Settings → Security** lists signed-in devices (sign out one or all others), recent sign-ins, and two-factor sign-in with an authenticator app and recovery codes; 5 failed sign-ins in 15 minutes lock an account for 15 minutes. Changing your password signs out other devices and stops their notifications, and **Settings → Delete account** removes the member and everything they created.
 - **Privacy controls:** members agree to the Terms and Privacy Policy at sign-up (the time is recorded). Arcella stores nothing for ads or analytics. The cookie notice and **Cookie settings** decide whether preferences such as dark mode are remembered across visits. **Settings → Your data** downloads a copy of everything Arcella stores about the member as a JSON file.
 - **Rate limits:** login, sign-up and password routes are limited per IP; codes, posts, comments, messages, connection requests and reports are limited per account.
 

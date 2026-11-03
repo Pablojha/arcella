@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { BadgeCheck, ShieldOff } from 'lucide-react';
+import { BadgeCheck, Ban, Clock, RotateCcw, ShieldOff } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useDebounce } from '../../hooks/useDebounce';
 import { usePaged } from '../../hooks/usePaged';
 import api from '../../lib/api';
-import { BATCH_YEARS, COLLEGE_ROLES, DEGREE_LEVELS } from '../../lib/constants';
+import { BATCH_YEARS, COLLEGE_ROLES, DEGREE_LEVELS, STAFF_ROLES } from '../../lib/constants';
+import { can } from '../../lib/permissions';
 import Button from '../ui/Button';
 import CollegeSelect from '../ui/CollegeSelect';
 import Field from '../ui/Field';
@@ -80,11 +82,54 @@ function VerifyUser({ user, onClose, onDone }) {
   );
 }
 
+const STATUSES = [
+  { value: '', label: 'Any status' },
+  { value: 'active', label: 'Active' },
+  { value: 'suspended', label: 'Suspended' },
+  { value: 'banned', label: 'Banned' },
+];
+
+const rankOf = (role) => STAFF_ROLES.findIndex((item) => item.value === (role ?? 'user'));
+
 export default function UsersAdmin() {
   const toast = useToast();
+  const { user: me } = useAuth();
   const [query, setQuery] = useState('');
-  const users = usePaged('/admin/users', { q: useDebounce(query), limit: 20 });
+  const [filters, setFilters] = useState({ role: '', status: '' });
+  const users = usePaged('/admin/users', { q: useDebounce(query), ...filters, limit: 20 });
   const [verifying, setVerifying] = useState(null);
+  const patch = (member, changes) => users.setItems((items) => items.map((item) => (item._id === member._id ? { ...item, ...changes } : item)));
+  // The API refuses actions on yourself or on staff of your rank or above; the controls follow the same rule.
+  const outranks = (member) => member._id !== me._id && rankOf(member.role) < rankOf(me.role);
+
+  const setRole = async (member, role) => {
+    try {
+      patch(member, await api.patch(`/admin/users/${member._id}/role`, { role }));
+      toast.success(`${member.name} is now: ${STAFF_ROLES.find((item) => item.value === role).label}`);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const setStatus = async (member, status) => {
+    const body = { status };
+    if (status === 'suspended') {
+      const days = Number(window.prompt(`Suspend ${member.name} for how many days (1 to 365)?`, '7'));
+      if (!Number.isInteger(days) || days < 1 || days > 365) return;
+      body.days = days;
+    }
+    if (status !== 'active') {
+      const reason = window.prompt('Reason (the member sees this when they try to sign in):');
+      if (!reason?.trim()) return;
+      body.reason = reason.trim();
+    } else if (!window.confirm(`Restore the account of ${member.name}?`)) return;
+    try {
+      patch(member, await api.post(`/admin/users/${member._id}/status`, body));
+      toast.success(status === 'active' ? 'Account restored' : status === 'banned' ? 'Account banned and signed out' : 'Account suspended and signed out');
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
 
   const revoke = async (user) => {
     if (!window.confirm(`Remove all of ${user.name}'s college verifications? Their education stays on their profile, unverified.`)) return;
@@ -99,21 +144,67 @@ export default function UsersAdmin() {
 
   return (
     <div className="space-y-3">
-      <SearchInput value={query} onChange={setQuery} placeholder="Search by name, email or username" />
+      <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+        <SearchInput value={query} onChange={setQuery} placeholder="Search by name, email or username" />
+        <select value={filters.role} onChange={(event) => setFilters((current) => ({ ...current, role: event.target.value }))} aria-label="Role" className="input">
+          <option value="">Any role</option>
+          {STAFF_ROLES.map(({ value, label }) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))} aria-label="Status" className="input">
+          {STATUSES.map(({ value, label }) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
       {users.items.map((user) => (
         <div key={user._id} className="card flex flex-wrap items-center gap-3 p-3.5">
           <div className="min-w-0 flex-1">
             <UserChip user={user} sub={`${user.email}${user.verified ? ` · ${user.college?.short ?? user.college?.name ?? ''}` : ''}`} />
           </div>
-          {user.isAdmin && <span className="chip">Admin</span>}
-          {user.verified && (
+          {user.status === 'suspended' && <span className="chip text-accent">Suspended until {new Date(user.suspendedUntil).toLocaleDateString()}</span>}
+          {user.status === 'banned' && <span className="chip text-accent">Banned</span>}
+          {can(me, 'roles:manage') && outranks(user) ? (
+            <select value={user.role ?? 'user'} onChange={(event) => setRole(user, event.target.value)} aria-label={`Role of ${user.name}`} className="input h-8 w-auto py-0 text-[13px]">
+              {STAFF_ROLES.filter(({ value }) => rankOf(value) < rankOf(me.role)).map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            rankOf(user.role) > 0 && <span className="chip">{STAFF_ROLES[rankOf(user.role)].label}</span>
+          )}
+          {outranks(user) && can(me, 'users:suspend') && (user.status ?? 'active') === 'active' && (
+            <Button size="sm" variant="secondary" icon={Clock} onClick={() => setStatus(user, 'suspended')}>
+              Suspend
+            </Button>
+          )}
+          {outranks(user) && can(me, 'users:ban') && user.status !== 'banned' && (
+            <Button size="sm" variant="danger" icon={Ban} onClick={() => setStatus(user, 'banned')}>
+              Ban
+            </Button>
+          )}
+          {outranks(user) && can(me, user.status === 'banned' ? 'users:ban' : 'users:suspend') && user.status && user.status !== 'active' && (
+            <Button size="sm" variant="secondary" icon={RotateCcw} onClick={() => setStatus(user, 'active')}>
+              Restore
+            </Button>
+          )}
+          {can(me, 'users:verify') && user.verified && (
             <Button size="sm" variant="danger" icon={ShieldOff} onClick={() => revoke(user)}>
               Revoke
             </Button>
           )}
-          <Button size="sm" variant="secondary" icon={BadgeCheck} onClick={() => setVerifying(user)}>
-            Verify
-          </Button>
+          {can(me, 'users:verify') && (
+            <Button size="sm" variant="secondary" icon={BadgeCheck} onClick={() => setVerifying(user)}>
+              Verify
+            </Button>
+          )}
         </div>
       ))}
       {users.loading && <ListSkeleton count={3} lines={0} />}

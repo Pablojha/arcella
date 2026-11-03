@@ -30,10 +30,11 @@ async function applyFiles(firm, files = {}) {
 export async function list(req, res) {
   const { q, city, mine } = req.query;
   const filter = {};
-  if (mine) filter.$or = [{ owner: req.user._id }, { team: req.user._id }];
+  // Firms the member can post roles for.
+  if (mine) filter.$or = [{ owner: req.user._id }, { admins: req.user._id }];
   if (q) filter.name = searchRegex(q);
   if (city) filter.city = searchRegex(city);
-  const query = Firm.find(filter).sort({ _id: -1 }).select('name slug logo city size followers');
+  const query = Firm.find(filter).sort({ _id: -1 }).select('name slug logo city size followers verified');
   res.json(await paginate(query, req.query, (firm) => withCount(firm, 'followers', req.user._id, 'following')));
 }
 
@@ -44,6 +45,7 @@ export async function get(req, res) {
     ...withCount(firm, 'followers', req.user._id, 'following'),
     working: has(firm.team, req.user._id),
     canEdit: same(firm.owner, req.user._id) || req.user.isAdmin,
+    canHire: same(firm.owner, req.user._id) || has(firm.admins, req.user._id) || req.user.isAdmin,
     jobs,
   });
 }

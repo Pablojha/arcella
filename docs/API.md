@@ -5,7 +5,7 @@ The REST API behind the website and app: Express 5 on Render, at `https://arcell
 ## Conventions
 
 - **Auth:** sign up or log in to get a token, then send `Authorization: Bearer <token>`. Tokens are HS256 JWTs valid for 30 days (`JWT_EXPIRES`), and they stop working when the password changes or the account is deleted. No cookies are used, so CSRF doesn't apply.
-- **Access** in the table below means: *public* (anyone), *member* (any signed-in account; ownership and role checks happen inside the handler), and *admin* (site admins only). College groups additionally require verified membership of that college.
+- **Access** in the table below means: *public* (anyone), *member* (any signed-in account; ownership and role checks happen inside the handler), and *admin* (site admins only). College groups additionally require verified membership of that college. *Staff* means a site role with the named permission (see [Roles](#roles)). *Hiring* means the person who posted the role, the owner or an admin of its firm, or a site admin.
 - **Input:** JSON bodies up to 1 MB, or multipart for uploads. Every route validates its input with zod, and unknown fields are dropped. A failed check returns `400` with one readable sentence, e.g. `{"message":"Name must be at least 2 characters"}`.
 - **Errors:** always `{"message": "..."}` with the usual status codes (`400`, `401`, `403`, `404`, `409`, `429`, `503`). Unexpected server errors return `500` with a generic message; details stay in the server log.
 - **Lists:** paged with `?page=` (from 1) and `?limit=` (up to 50), answering `{ items, hasMore }`.
@@ -40,13 +40,22 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | --- | --- | --- | --- |
 | GET | `/api/health` | public | health check |
 | POST | `/api/auth/register` | public · auth limit | register |
-| POST | `/api/auth/login` | public · auth limit | login |
+| POST | `/api/auth/login` | public · auth limit · account lockout | login; with two-factor on, returns `{ twoFactor, ticket }` instead of a session |
 | POST | `/api/auth/verify-email` | public · auth limit | verifyEmail |
 | POST | `/api/auth/resend-code` | public · auth limit | resendSignupCode |
 | POST | `/api/auth/forgot` | public · auth limit | forgotPassword |
 | POST | `/api/auth/reset` | public · auth limit | resetPassword |
 | GET | `/api/auth/me` | member | me |
 | PATCH | `/api/auth/password` | member · auth limit | changePassword |
+| POST | `/api/auth/2fa/login` | public · auth limit | second sign-in step: `ticket` from login plus an app code or recovery code |
+| POST | `/api/auth/2fa/setup` | member | start two-factor setup: `secret` and `url` (otpauth) |
+| POST | `/api/auth/2fa/enable` | member · auth limit | confirm with a `code`; returns 8 single-use `recoveryCodes` |
+| POST | `/api/auth/2fa/disable` | member · auth limit | turn off with `password` and a `code` |
+| GET | `/api/auth/devices` | member | signed-in devices, the caller's marked `current` |
+| DELETE | `/api/auth/devices/:id` | member | sign that device out |
+| POST | `/api/auth/devices/sign-out-others` | member | sign out every other device; returns a fresh `token` for this one |
+| POST | `/api/auth/logout` | member | end this device's session |
+| GET | `/api/auth/history` | member | the last 20 sign-in attempts (successful, wrong password, wrong code, locked) |
 | GET | `/api/users` | member | search |
 | GET | `/api/users/suggestions` | member | suggestions |
 | PATCH | `/api/users/me` | member | updateMe |
@@ -89,16 +98,24 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | PATCH | `/api/projects/:id` | member | update |
 | DELETE | `/api/projects/:id` | member | remove |
 | POST | `/api/projects/:id/appreciate` | member | appreciate |
-| GET | `/api/jobs` | member | list |
-| POST | `/api/jobs` | member | create |
-| GET | `/api/jobs/:id` | member | get |
-| DELETE | `/api/jobs/:id` | member | remove |
+| GET | `/api/jobs` | member | list (filters: `q`, `type`, `location`, `workplace`, `experience`, `firm`; `saved=true` or `hiring=true` for the viewer's saved roles or the roles they hire for) |
+| POST | `/api/jobs` | member (firm roles: the firm's owner or admins) | create; no `applyLink` means applications come in through Arcella |
+| GET | `/api/jobs/applications` | member | the viewer's own applications (`status` filter) |
+| POST | `/api/jobs/applications/:applicationId/withdraw` | the applicant | withdraw |
+| PATCH | `/api/jobs/applications/:applicationId` | hiring | set `status` (`applied`, `shortlisted`, `interview` with `interviewAt`, `offered`, `rejected`); the applicant is notified |
+| GET | `/api/jobs/applications/:applicationId/resume` | the applicant or hiring | the resume file (never at a public URL) |
+| GET | `/api/jobs/:id` | member | get, with `saved`, the viewer's `application` and `canManage` |
+| PATCH | `/api/jobs/:id` | hiring | update, including `closed` |
+| DELETE | `/api/jobs/:id` | hiring | remove, with its applications |
+| POST | `/api/jobs/:id/save` | member | toggle saved |
+| POST | `/api/jobs/:id/applications` | member | apply: multipart `resume` (PDF, DOC or DOCX, up to 3 MB) and an optional `note` |
+| GET | `/api/jobs/:id/applications` | hiring | applicants (`status` filter) and `counts` per stage |
 | GET | `/api/firms` | member | list |
 | POST | `/api/firms` | member | create |
 | GET | `/api/firms/:slug` | member | get |
 | PATCH | `/api/firms/:id` | member | update |
 | POST | `/api/firms/:id/follow` | member | follow |
-| POST | `/api/firms/:id/work` | member | work |
+| POST | `/api/firms/:id/work` | member | "I work here" (self-declared, so it grants no hiring rights) |
 | GET | `/api/mentorship/mentors` | member | mentors |
 | PUT | `/api/mentorship/settings` | member | settings |
 | GET | `/api/mentorship/sessions` | member | sessions |
@@ -155,11 +172,33 @@ Connect to the API origin with `auth: { token }`. Each socket joins its member's
 | POST | `/api/notifications/read` | member | markRead |
 | GET | `/api/search` | member | search |
 | POST | `/api/reports` | member · write limit | create |
-| GET | `/api/admin/stats` | admin | stats |
-| GET | `/api/admin/users` | admin | users |
-| POST | `/api/admin/users/:id/verify` | admin | verifyUser |
-| DELETE | `/api/admin/users/:id/verify` | admin | revokeUser |
-| GET | `/api/admin/colleges` | admin | colleges |
-| PATCH | `/api/admin/colleges/:id` | admin | updateCollege |
-| GET | `/api/admin/reports` | admin | reports |
-| POST | `/api/admin/reports/:id/resolve` | admin | resolveReport |
+| GET | `/api/admin/stats` | staff · `stats:read` | live counts, `joined7`, `joined30`, `active7` and 12 weeks of sign-ups (`growth`) |
+| GET | `/api/admin/users` | staff · `users:read` | users (`q`, `college`, `role`, `status`) |
+| GET | `/api/admin/users/:id` | staff · `users:read` | one member: account state, reports about them, recent sign-ins, staff actions |
+| PATCH | `/api/admin/users/:id/role` | staff · `roles:manage` | set `role`; never your own, never at or above your rank, never an `ADMIN_EMAIL` address |
+| POST | `/api/admin/users/:id/status` | staff · `users:suspend` (ban and unban: `users:ban`) | `status` `suspended` (with `days` 1 to 365), `banned` or `active`, plus a `reason`; signs the account out everywhere |
+| POST | `/api/admin/users/:id/verify` | staff · `users:verify` | verifyUser |
+| DELETE | `/api/admin/users/:id/verify` | staff · `users:verify` | revokeUser |
+| GET | `/api/admin/colleges` | staff · `colleges:manage` | colleges |
+| PATCH | `/api/admin/colleges/:id` | staff · `colleges:manage` | updateCollege |
+| GET | `/api/admin/reports` | staff · `reports:read` | reports |
+| POST | `/api/admin/reports/:id/resolve` | staff · `reports:resolve` (removing an account: `users:ban`) | resolveReport |
+| GET | `/api/admin/jobs` | staff · `jobs:moderate` | every job (`q`, `closed`) |
+| DELETE | `/api/admin/jobs/:id` | staff · `jobs:moderate` | remove with a `reason`, which the poster is told |
+| GET | `/api/admin/firms` | staff · `firms:moderate` | firms (`q`, `verified`) |
+| PATCH | `/api/admin/firms/:id` | staff · `firms:moderate` | set the `verified` badge |
+| DELETE | `/api/admin/firms/:id` | staff · `firms:moderate` | remove with a `reason`, which the owner is told |
+| GET | `/api/admin/audit` | staff · `audit:read` | the audit log (`action` prefix, `actor`, `target`) |
+
+## Roles
+
+Site staff roles, each with every permission of the roles before it (`backend/src/config/permissions.js`):
+
+| Role | Adds |
+|---|---|
+| `support` | `admin:access`, `users:read`, `reports:read`, `stats:read` |
+| `moderator` | `reports:resolve`, `users:suspend`, `jobs:moderate` |
+| `admin` | `users:verify`, `users:ban`, `colleges:manage`, `firms:moderate`, `audit:read` (and `isAdmin`, which ownership checks across the API use) |
+| `super_admin` | `roles:manage`. Addresses in `ADMIN_EMAIL` are always super admins. |
+
+Hiring isn't a site role: a job's poster and its firm's owner and admins manage that job's applicants. The signed-in member's `permissions` come with `/api/auth/me`.

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ArrowBigUp, BadgeCheck, Bell, CircleAlert, CircleCheck, HandHeart, Heart, MessageSquare, MessageSquareText, Repeat2, Reply, Shield, ShieldCheck, TriangleAlert, UserCheck, UserPlus } from 'lucide-react';
+import { ArrowBigUp, BadgeCheck, Bell, BriefcaseBusiness, CircleAlert, CircleCheck, HandHeart, Heart, MessageSquare, MessageSquareText, Repeat2, Reply, Shield, ShieldAlert, ShieldCheck, TriangleAlert, UserCheck, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Logo from '../components/brand/Logo';
 import Avatar from '../components/ui/Avatar';
@@ -12,7 +12,7 @@ import { ListSkeleton } from '../components/ui/Skeleton';
 import { useBadges } from '../context/BadgeContext';
 import { usePaged } from '../hooks/usePaged';
 import api from '../lib/api';
-import { timeAgo } from '../lib/format';
+import { deviceName, timeAgo } from '../lib/format';
 
 const TYPES = {
   like: { icon: Heart, text: 'liked your post' },
@@ -33,9 +33,12 @@ const TYPES = {
   mentor_update: { icon: HandHeart, text: 'updated your mentoring session' },
   answer: { icon: ArrowBigUp, text: 'answered your question' },
   accepted: { icon: CircleCheck, text: 'accepted your answer' },
+  application: { icon: BriefcaseBusiness, text: 'applied to your role' },
+  application_status: { icon: BriefcaseBusiness, text: 'updated your application' },
+  new_login: { icon: ShieldAlert, text: "Your account was signed in on a new device. If it wasn't you, reset your password.", detail: deviceName },
 };
 
-const SYSTEM = new Set(['verify_approved', 'verify_rejected']);
+const SYSTEM = new Set(['verify_approved', 'verify_rejected', 'new_login']);
 
 export default function Notifications() {
   const { refresh } = useBadges();
@@ -51,7 +54,7 @@ export default function Notifications() {
         <PageHeader title="Notifications" />
         <div className={items.length ? 'card divide-y divide-line overflow-hidden' : ''}>
           {items.map((note, index) => {
-            const { icon: Icon, text } = TYPES[note.type] ?? { icon: Bell, text: 'sent you an update' };
+            const { icon: Icon, text, detail = (value) => `“${value}”` } = TYPES[note.type] ?? { icon: Bell, text: 'sent you an update' };
             const system = SYSTEM.has(note.type) && !note.actor;
             return (
               <Reveal key={note._id} index={index}>
@@ -65,7 +68,7 @@ export default function Notifications() {
                   <span className="min-w-0 flex-1 text-sm">
                     {!SYSTEM.has(note.type) && <b>{note.actor?.name ?? 'Someone'} </b>}
                     {text}
-                    {note.text && <span className="mt-0.5 block truncate text-muted">“{note.text}”</span>}
+                    {note.text && <span className="mt-0.5 block truncate text-muted">{detail(note.text)}</span>}
                   </span>
                   <span className="shrink-0 text-xs text-muted">{timeAgo(note.createdAt)}</span>
                 </Link>

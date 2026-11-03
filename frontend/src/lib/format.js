@@ -88,3 +88,23 @@ export function calendarUrl({ title, description, start, end, venue, online, lin
   });
   return `https://calendar.google.com/calendar/render?${params}`;
 }
+
+/** "Edge on Windows" from a browser's user-agent string, for the devices and sign-ins in Settings. */
+export function deviceName(agent = '') {
+  const browser = [
+    [/Capacitor|wv\)/, 'Arcella app'],
+    [/Edg\//, 'Edge'],
+    [/OPR\//, 'Opera'],
+    [/Firefox\//, 'Firefox'],
+    [/Chrome\//, 'Chrome'],
+    [/Safari\//, 'Safari'],
+  ].find(([pattern]) => pattern.test(agent))?.[1];
+  const system = [
+    [/Android/, 'Android'],
+    [/iPhone|iPad/, 'iOS'],
+    [/Windows/, 'Windows'],
+    [/Mac OS X/, 'macOS'],
+    [/Linux/, 'Linux'],
+  ].find(([pattern]) => pattern.test(agent))?.[1];
+  return [browser, system].filter(Boolean).join(' on ') || 'Unknown device';
+}

@@ -9,6 +9,7 @@ import ThemeSwitch from '../components/ui/ThemeSwitch';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
 import { useAuth } from '../context/AuthContext';
 import { useBadges } from '../context/BadgeContext';
+import { can } from '../lib/permissions';
 import { useTitle } from '../hooks/useTitle';
 
 const MODULES = [
@@ -32,7 +33,7 @@ export default function More() {
   const modules = [
     ...MODULES,
     ...(user.moderates?.length ? [{ to: '/college?tab=review', label: 'Review requests', text: 'College verifications', icon: ShieldCheck }] : []),
-    ...(user.isAdmin ? [{ to: '/admin', label: 'Admin', text: 'Site management', icon: Shield }] : []),
+    ...(can(user, 'admin:access') ? [{ to: '/admin', label: 'Admin', text: 'Site management', icon: Shield }] : []),
   ];
 
   return (

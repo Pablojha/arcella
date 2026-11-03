@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import CodeStep from '../components/auth/CodeStep';
+import TwoFactorStep from '../components/auth/TwoFactorStep';
 import AuthLayout from '../components/layout/AuthLayout';
 import Button from '../components/ui/Button';
 import Field from '../components/ui/Field';
@@ -43,7 +44,7 @@ export default function Auth({ mode }) {
     setBusy(true);
     try {
       const result = await api.post(`/auth/${mode}`, register ? form : { email: form.email, password: form.password });
-      if (result.verify) setPending(result);
+      if (result.verify || result.twoFactor) setPending(result);
       else welcome(result);
     } catch (error) {
       toast.error(error.message);
@@ -51,6 +52,16 @@ export default function Auth({ mode }) {
       setBusy(false);
     }
   };
+
+  if (pending?.twoFactor) {
+    return (
+      <AuthLayout title="Two-factor sign-in" subtitle="One more step to confirm it's you.">
+        <div className="mt-7">
+          <TwoFactorStep onSubmit={async (code) => welcome(await api.post('/auth/2fa/login', { ticket: pending.ticket, code }))} onBack={() => setPending(null)} />
+        </div>
+      </AuthLayout>
+    );
+  }
 
   if (pending) {
     return (

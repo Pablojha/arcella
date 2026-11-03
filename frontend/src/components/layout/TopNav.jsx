@@ -8,7 +8,7 @@ import Logo from '../brand/Logo';
 import Wordmark from '../brand/Wordmark';
 import Avatar from '../ui/Avatar';
 import Button, { IconButton } from '../ui/Button';
-import CountBadge from '../ui/CountBadge';
+import CountBadge, { badgeText } from '../ui/CountBadge';
 
 const NAV = [
   { to: '/', label: 'Home', icon: House, end: true },
@@ -69,7 +69,7 @@ export default function TopNav({ hideOnMobile = false }) {
                 ))}
               </nav>
               <IconButton icon={Search} label="Search" className="lg:hidden" onClick={() => navigate('/search')} />
-              <IconButton icon={Bell} label="Notifications" className="md:hidden" onClick={() => navigate('/notifications')}>
+              <IconButton icon={Bell} label={badges.notifications ? `Notifications, ${badgeText(badges.notifications)} unread` : 'Notifications'} className="md:hidden" onClick={() => navigate('/notifications')}>
                 <CountBadge count={badges.notifications} className="right-1 top-1" />
               </IconButton>
               <Link to={`/u/${user.username}`} className="ml-1 rounded-full ring-brand/40 transition hover:ring-4">

@@ -2,7 +2,8 @@ import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTitle } from '../../hooks/useTitle';
 
-export default function PageHeader({ title, subtitle, action, back }) {
+/** Pass `as="p"` on detail pages, where the item's own title is the page's one h1 and this only names its kind. */
+export default function PageHeader({ title, subtitle, action, back, as: Title = 'h1' }) {
   useTitle(title);
   return (
     <header className="mb-5 flex items-start justify-between gap-3">
@@ -13,7 +14,7 @@ export default function PageHeader({ title, subtitle, action, back }) {
           </Link>
         )}
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold tracking-tight md:text-[28px]">{title}</h1>
+          <Title className="font-display text-2xl font-bold tracking-tight md:text-[28px]">{title}</Title>
           {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
         </div>
       </div>

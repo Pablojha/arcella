@@ -1,12 +1,15 @@
 import Answer from '../models/Answer.js';
+import Application from '../models/Application.js';
 import ChatState from '../models/ChatState.js';
 import Comment from '../models/Comment.js';
 import Connection from '../models/Connection.js';
 import Critique from '../models/Critique.js';
+import Device from '../models/Device.js';
 import Event from '../models/Event.js';
 import Firm from '../models/Firm.js';
 import GroupMessage from '../models/GroupMessage.js';
 import Job from '../models/Job.js';
+import LoginEvent from '../models/LoginEvent.js';
 import Message from '../models/Message.js';
 import Notification from '../models/Notification.js';
 import Post from '../models/Post.js';
@@ -48,6 +51,8 @@ const MENTIONS = [
   [Story, 'viewers'],
   [Firm, 'team'],
   [Firm, 'followers'],
+  [Firm, 'admins'],
+  [Job, 'savedBy'],
   [User, 'blocked'],
 ];
 
@@ -66,14 +71,24 @@ function countIds(Model, doc) {
 
 const PERSON = 'name username';
 
+/** Deletes a member's job applications, taking the active ones off each job's count. */
+async function removeApplications(userId) {
+  const active = await Application.find({ applicant: userId, status: { $ne: 'withdrawn' } }).distinct('job');
+  await Job.updateMany({ _id: { $in: active } }, { $inc: { applicationsCount: -1 } });
+  await Application.deleteMany({ applicant: userId });
+}
+
 /**
  * Everything Arcella stores about a member, for "Download your data": their account, what they created, their
  * conversations and settings. Passwords, push keys and verification document files are never included.
  */
 export async function exportAccount(userId) {
-  const [account, created, messages, groupMessages, connections, notifications, chatSettings, savedPosts, verifications, reports, devices] = await Promise.all([
+  const [account, created, applications, signedIn, signIns, messages, groupMessages, connections, notifications, chatSettings, savedPosts, verifications, reports, devices] = await Promise.all([
     User.findById(userId).select('+blocked').populate('blocked', PERSON).populate('memberships.college', 'name').lean(),
     Promise.all(OWNED.map(async ([type, Model, field]) => [`${type}s`, (await Model.find({ [field]: userId }).sort({ _id: 1 }).lean()).map((doc) => countIds(Model, doc))])),
+    Application.find({ applicant: userId }).sort({ _id: 1 }).populate('job', 'title company').lean(),
+    Device.find({ user: userId }).select('agent ip createdAt lastSeenAt').lean(),
+    LoginEvent.find({ user: userId }).sort({ _id: 1 }).select('ok reason agent ip createdAt').lean(),
     Message.find({ $or: [{ from: userId }, { to: userId }] }).sort({ _id: 1 }).populate('from to', PERSON).lean(),
     GroupMessage.find({ author: userId }).sort({ _id: 1 }).populate('college', 'name').lean(),
     Connection.find({ $or: [{ from: userId }, { to: userId }] }).populate('from to', PERSON).lean(),
@@ -88,6 +103,9 @@ export async function exportAccount(userId) {
     exportedAt: new Date().toISOString(),
     account,
     ...Object.fromEntries(created),
+    applications,
+    signedInDevices: signedIn,
+    signIns,
     messages,
     groupMessages,
     connections,
@@ -115,10 +133,13 @@ export async function deleteAccount(userId) {
     dropCollegeRoles(userId),
     removeMessages(GroupMessage, { author: userId }),
     Critique.deleteMany({ author: userId }),
+    removeApplications(userId),
     Connection.deleteMany({ $or: [{ from: userId }, { to: userId }] }),
     removeMessages(Message, { $or: [{ from: userId }, { to: userId }] }),
     ChatState.deleteMany({ $or: [{ user: userId }, { other: userId }] }),
     PushSubscription.deleteMany({ user: userId }),
+    Device.deleteMany({ user: userId }),
+    LoginEvent.deleteMany({ user: userId }),
     Notification.deleteMany({ $or: [{ user: userId }, { actor: userId }] }),
     Session.deleteMany({ $or: [{ mentor: userId }, { mentee: userId }] }),
     Verification.deleteMany({ user: userId }),

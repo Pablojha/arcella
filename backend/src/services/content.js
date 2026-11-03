@@ -1,4 +1,5 @@
 import Answer from '../models/Answer.js';
+import Application from '../models/Application.js';
 import Comment from '../models/Comment.js';
 import Critique from '../models/Critique.js';
 import Event from '../models/Event.js';
@@ -74,7 +75,7 @@ const REMOVE = {
     if (resource) await removeFiles([resource.file?.url]);
   },
   async job(id) {
-    await Job.findByIdAndDelete(id);
+    if (await Job.findByIdAndDelete(id)) await Application.deleteMany({ job: id });
   },
   async event(id) {
     const event = await Event.findByIdAndDelete(id);

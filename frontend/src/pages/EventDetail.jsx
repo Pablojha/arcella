@@ -48,7 +48,7 @@ export default function EventDetail() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title={labelOf(EVENT_TYPES, event.type)} back="/events" />
+      <PageHeader as="p" title={labelOf(EVENT_TYPES, event.type)} back="/events" />
       <article className="card overflow-hidden">
         {event.cover ? <img src={mediaUrl(event.cover, 1200)} alt="" className="max-h-80 w-full object-cover" /> : <div className="grid-paper h-28 bg-brand/10" />}
         <div className="space-y-5 p-5 md:p-7">

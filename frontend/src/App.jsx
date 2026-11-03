@@ -33,6 +33,7 @@ const Network = page(() => import('./pages/Network'));
 const NewEvent = page(() => import('./pages/NewEvent'));
 const NewFirm = page(() => import('./pages/NewFirm'));
 const NewJob = page(() => import('./pages/NewJob'));
+const Applicants = page(() => import('./pages/Applicants'));
 const NewProject = page(() => import('./pages/NewProject'));
 const NotFound = page(() => import('./pages/NotFound'));
 const Notifications = page(() => import('./pages/Notifications'));
@@ -74,6 +75,8 @@ const PROTECTED = [
   ['jobs', Jobs],
   ['jobs/new', NewJob],
   ['jobs/:id', JobDetail],
+  ['jobs/:id/edit', NewJob],
+  ['jobs/:id/applicants', Applicants],
   ['firms', Firms],
   ['firms/new', NewFirm],
   ['firms/:slug', FirmDetail],

@@ -14,6 +14,7 @@ import UserChip from '../components/ui/UserChip';
 import { useToast } from '../context/ToastContext';
 import { useApi } from '../hooks/useApi';
 import api from '../lib/api';
+import VerifiedBadge from '../components/ui/VerifiedBadge';
 import { mediaUrl, plural, safeHref } from '../lib/format';
 
 export default function FirmDetail() {
@@ -64,7 +65,10 @@ export default function FirmDetail() {
               </Button>
             </div>
           </div>
-          <h1 className="mt-3 font-display text-2xl font-bold tracking-tight md:text-3xl">{firm.name}</h1>
+          <h1 className="mt-3 flex items-center gap-2 font-display text-2xl font-bold tracking-tight md:text-3xl">
+            {firm.name}
+            {firm.verified && <VerifiedBadge size={22} title="Verified by Arcella" />}
+          </h1>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
             {firm.city && (
               <span className="flex items-center gap-1.5">
@@ -118,8 +122,8 @@ export default function FirmDetail() {
 
       {tab === 'roles' && (
         <div className="space-y-3">
-          {firm.working && (
-            <Button to="/jobs/new" icon={Plus} variant="secondary">
+          {firm.canHire && (
+            <Button to={`/jobs/new?firm=${firm._id}`} icon={Plus} variant="secondary">
               Post a role
             </Button>
           )}

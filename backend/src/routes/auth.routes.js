@@ -20,6 +20,11 @@ const loginSchema = z.object({ email, password: z.string().min(1).max(100) });
 const verifySchema = z.object({ email, code });
 const resetSchema = z.object({ email, code, password });
 const changeSchema = z.object({ current: z.string().min(1).max(100), password });
+// An authenticator code (6 digits) or a recovery code (xxxx-xxxx).
+const secondFactor = z.string().trim().regex(/^(\d{6}|[0-9a-f]{4}-[0-9a-f]{4})$/i, 'Enter the 6-digit code from your app, or a recovery code');
+const twoFactorLoginSchema = z.object({ ticket: z.string().min(1).max(1000), code: secondFactor });
+const enableSchema = z.object({ code: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code from your app') });
+const disableSchema = z.object({ password: z.string().min(1).max(100), code: secondFactor });
 
 const router = Router();
 
@@ -31,5 +36,14 @@ router.post('/forgot', authLimiter, validate(z.object({ email })), ctrl.forgotPa
 router.post('/reset', authLimiter, validate(resetSchema), ctrl.resetPassword);
 router.get('/me', auth, ctrl.me);
 router.patch('/password', auth, authLimiter, validate(changeSchema), ctrl.changePassword);
+router.post('/2fa/login', authLimiter, validate(twoFactorLoginSchema), ctrl.twoFactorLogin);
+router.post('/2fa/setup', auth, ctrl.setupTwoFactor);
+router.post('/2fa/enable', auth, authLimiter, validate(enableSchema), ctrl.enableTwoFactor);
+router.post('/2fa/disable', auth, authLimiter, validate(disableSchema), ctrl.disableTwoFactor);
+router.post('/logout', auth, ctrl.logout);
+router.get('/devices', auth, ctrl.devices);
+router.post('/devices/sign-out-others', auth, ctrl.signOutOthers);
+router.delete('/devices/:id', auth, ctrl.removeDevice);
+router.get('/history', auth, ctrl.history);
 
 export default router;
