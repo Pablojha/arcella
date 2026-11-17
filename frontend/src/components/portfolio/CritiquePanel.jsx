@@ -71,13 +71,10 @@ export default function CritiquePanel({ project, onChange }) {
   const mine = data?.items.find((item) => item.author?._id === user?._id);
 
   const toggleOpen = async (critiqueOpen) => {
-    try {
+    await toast.run(async () => {
       const updated = await api.patch(`/projects/${project._id}`, { critiqueOpen });
       onChange({ critiqueOpen: updated.critiqueOpen });
-      toast.success(critiqueOpen ? 'Your project is open for critique' : 'Critique closed');
-    } catch (error) {
-      toast.error(error.message);
-    }
+    }, critiqueOpen ? 'Your project is open for critique' : 'Critique closed');
   };
 
   return (

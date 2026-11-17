@@ -19,14 +19,7 @@ export default function OwnerPanel() {
   const [feedback, setFeedback] = useState(null);
   const resume = data?.resume;
 
-  const run = async (action, success) => {
-    try {
-      await action();
-      if (success) toast.success(success);
-    } catch (error) {
-      toast.error(error.message);
-    }
-  };
+  const { run } = toast;
   const upload = (event) => {
     const [file] = event.target.files;
     event.target.value = '';

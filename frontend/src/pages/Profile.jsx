@@ -177,12 +177,10 @@ export default function Profile() {
   const tab = params.get('tab') || 'about';
   const own = data?.status === 'self';
   const toggleFollow = async () => {
-    try {
+    await toast.run(async () => {
       const { following, followersCount } = await api.post(`/users/${data.user._id}/follow`);
       setData((current) => ({ ...current, following, user: { ...current.user, followersCount } }));
-    } catch (error) {
-      toast.error(error.message);
-    }
+    });
   };
   const person = own ? { ...data.user, ...me } : data?.user;
   useTitle(person?.name);
@@ -196,13 +194,10 @@ export default function Profile() {
     const [file] = event.target.files;
     event.target.value = '';
     if (!file) return;
-    try {
+    await toast.run(async () => {
       const { user: updated } = await api.post(`/users/me/${field}`, toFormData({ image: await compressImage(file, field === 'cover' ? 2400 : 800) }));
       setUser(updated);
-      toast.success(field === 'cover' ? 'Cover updated' : 'Photo updated');
-    } catch (uploadError) {
-      toast.error(uploadError.message);
-    }
+    }, field === 'cover' ? 'Cover updated' : 'Photo updated');
   };
 
   if (loading) return <Skeleton className="h-80 w-full rounded-3xl" />;

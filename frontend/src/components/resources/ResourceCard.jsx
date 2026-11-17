@@ -19,12 +19,10 @@ export default function ResourceCard({ resource, onDeleted }) {
   const Icon = ICONS[resource.file.ext] ?? File;
 
   const toggleBookmark = async () => {
-    try {
+    await toast.run(async () => {
       const result = await api.post(`/resources/${resource._id}/bookmark`);
       setBookmark({ active: result.bookmarked, count: result.bookmarksCount });
-    } catch (error) {
-      toast.error(error.message);
-    }
+    });
   };
 
   const download = async () => {
@@ -42,12 +40,10 @@ export default function ResourceCard({ resource, onDeleted }) {
 
   const remove = async () => {
     if (!window.confirm('Delete this resource?')) return;
-    try {
+    await toast.run(async () => {
       await api.delete(`/resources/${resource._id}`);
       onDeleted(resource._id);
-    } catch (error) {
-      toast.error(error.message);
-    }
+    });
   };
 
   return (

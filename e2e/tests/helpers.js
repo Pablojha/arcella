@@ -1,3 +1,5 @@
+import AxeBuilder from '@axe-core/playwright';
+
 export const API = (process.env.E2E_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
 export const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@e2e.arcella';
 export const PASSWORD = 'password123';
@@ -79,4 +81,20 @@ export function sideways() {
     })
     .slice(0, 5)
     .map((element) => `${element.tagName.toLowerCase()}.${String(element.className).split(' ').slice(0, 3).join('.')}`);
+}
+
+/** WCAG 2.2 AA, as automated by axe-core. */
+export const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+
+/** The page's axe-core violations, one line each ("rule: first element"); empty when it passes. */
+export const violations = async (page) =>
+  (await new AxeBuilder({ page }).withTags(WCAG).analyze()).violations.map((violation) => `${violation.id}: ${violation.nodes[0]?.target.join(' ')}`);
+
+/** POSTs `fields` (strings and files) as multipart, as the app does, and returns the JSON answer. */
+export async function upload(member, path, fields) {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) form.append(key, value);
+  const res = await fetch(API + path, { method: 'POST', headers: { Authorization: `Bearer ${member.token}` }, body: form });
+  if (!res.ok) throw new Error(`${path}: ${res.status}`);
+  return res.json();
 }

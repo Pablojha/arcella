@@ -24,24 +24,20 @@ export default function EventDetail() {
   if (error) return <EmptyState icon={CalendarX} title="Event not available" text={error.message} />;
 
   const rsvp = async () => {
-    try {
+    await toast.run(async () => {
       const result = await api.post(`/events/${id}/rsvp`);
       setData((current) => ({ ...current, ...result }));
       if (result.going) toast.success("You're going! Add it to your calendar so you don't miss it.");
-    } catch (rsvpError) {
-      toast.error(rsvpError.message);
-    }
+    });
   };
 
   const remove = async () => {
     if (!window.confirm('Cancel and delete this event?')) return;
-    try {
+    await toast.run(async () => {
       await api.delete(`/events/${id}`);
       toast.success('Event deleted');
       navigate('/events', { replace: true });
-    } catch (removeError) {
-      toast.error(removeError.message);
-    }
+    });
   };
 
   const past = new Date(event.end) < new Date();

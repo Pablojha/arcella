@@ -28,14 +28,7 @@ export default function Education({ person, own }) {
   const entries = [...(person.memberships ?? [])].sort(order);
   const underReview = (entry) => requests?.items?.some((request) => request.method === 'document' && idOf(request.college) === idOf(entry.college));
 
-  const run = async (request, message) => {
-    try {
-      setUser((await request()).user);
-      toast.success(message);
-    } catch (error) {
-      toast.error(error.message);
-    }
-  };
+  const run = (request, message) => toast.run(async () => setUser((await request()).user), message);
 
   const remove = (entry) => {
     const name = entry.college?.short ?? entry.college?.name;

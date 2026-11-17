@@ -3,7 +3,7 @@ import Firm from '../models/Firm.js';
 import Job, { openRoles } from '../models/Job.js';
 import { CARD } from '../config/constants.js';
 import { removeFiles, saveFile, saveFiles } from '../services/storage.js';
-import { assertCanManage } from '../utils/access.js';
+import { assertCanManage, firmsRunBy, runsFirm } from '../utils/access.js';
 import { notify } from '../services/notify.js';
 import { ApiError, found } from '../utils/errors.js';
 import { paginate, toggle } from '../utils/query.js';
@@ -33,7 +33,7 @@ export async function list(req, res) {
   const { q, city, mine } = req.query;
   const filter = {};
   // Firms the member can post roles for.
-  if (mine) filter.$or = [{ owner: req.user._id }, { admins: req.user._id }];
+  if (mine) Object.assign(filter, firmsRunBy(req.user._id));
   if (q) filter.name = searchRegex(q);
   if (city) filter.city = searchRegex(city);
   const query = Firm.find(filter).sort({ _id: -1 }).select('name slug logo city size followers verified');
@@ -43,7 +43,7 @@ export async function list(req, res) {
 export async function get(req, res) {
   const firm = found(await Firm.findOne({ slug: req.params.slug }).populate('team', CARD).lean(), 'Firm');
   const jobs = await Job.find({ firm: firm._id, ...openRoles() }).sort({ _id: -1 }).select('-description').lean();
-  const canHire = same(firm.owner, req.user._id) || has(firm.admins, req.user._id) || req.user.isAdmin;
+  const canHire = runsFirm(req.user, firm);
   res.json({
     ...withCount(firm, 'followers', req.user._id, 'following'),
     working: has(firm.team, req.user._id),

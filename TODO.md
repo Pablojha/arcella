@@ -67,6 +67,7 @@ Started 3 November 2026 from tag `v1.0-pre-hardening` (the live version before t
 - [x] M6b Companies: firm co-admins, company posts, analytics
 - [x] M7 Help Center, Contact Support, Report a problem
 - [x] M8 AI features: built and tested; **off until ANTHROPIC_API_KEY is set on Render**
+- [x] Cleanup pass: shared helpers for actions with toasts, private files, firm access and tests (no behaviour change)
 - [ ] M9 Premium (**blocked on the owner:** payment provider and business details)
 
 ## Deploy

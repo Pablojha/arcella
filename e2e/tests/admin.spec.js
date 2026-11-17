@@ -1,8 +1,6 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { PASSWORD, adminMember, api, newMember, prepare } from './helpers.js';
+import { PASSWORD, adminMember, api, newMember, prepare, violations } from './helpers.js';
 
-const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 test('a super admin makes a moderator, who suspends a member; the member is told why and the audit log records it', async ({ page, browser, baseURL }) => {
   test.setTimeout(180_000);
@@ -18,7 +16,7 @@ test('a super admin makes a moderator, who suspends a member; the member is told
   await expect(page.getByRole('figure', { name: 'New members per week' })).toBeVisible();
   await expect(page.getByText('Joined this week')).toBeVisible();
   await page.waitForTimeout(800);
-  expect((await new AxeBuilder({ page }).withTags(WCAG).analyze()).violations.map((violation) => violation.id)).toEqual([]);
+  expect(await violations(page)).toEqual([]);
 
   // Promote from the Users tab.
   await page.getByRole('tab', { name: 'Users' }).click();

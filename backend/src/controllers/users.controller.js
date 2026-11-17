@@ -13,6 +13,7 @@ import { profileOf } from '../services/profile.js';
 import { removeFiles, saveFile } from '../services/storage.js';
 import { memberCollegeIds, membersOf } from '../utils/access.js';
 import { ApiError, found } from '../utils/errors.js';
+import { fileInfo, sendPrivate } from '../utils/files.js';
 import { paginate } from '../utils/query.js';
 import { has, same } from '../utils/shape.js';
 import { escapeRegex, searchRegex } from '../utils/text.js';
@@ -168,23 +169,20 @@ export async function profileViews(req, res) {
   res.json({ count, viewers: recent.filter((view) => view.viewer).map((view) => ({ ...view.viewer, viewedAt: view.at })) });
 }
 
-const RESUME_MIME = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+const savedResume = (userId) => Resume.findOne({ user: userId }).select('name size updatedAt').lean();
 
 export async function myResume(req, res) {
-  res.json({ resume: await Resume.findOne({ user: req.user._id }).select('name size updatedAt').lean() });
+  res.json({ resume: await savedResume(req.user._id) });
 }
 
 export async function saveResume(req, res) {
   if (!req.file) throw new ApiError(400, 'Choose a PDF or Word file');
-  const name = req.file.originalname.split(/[\\/]/).pop();
-  const fields = { name, mime: RESUME_MIME[name.split('.').pop().toLowerCase()], size: req.file.size, data: req.file.buffer };
-  await Resume.updateOne({ user: req.user._id }, { $set: fields }, { upsert: true });
-  res.json({ resume: await Resume.findOne({ user: req.user._id }).select('name size updatedAt').lean() });
+  await Resume.updateOne({ user: req.user._id }, { $set: fileInfo(req.file) }, { upsert: true });
+  res.json({ resume: await savedResume(req.user._id) });
 }
 
 export async function downloadResume(req, res) {
-  const resume = found(await Resume.findOne({ user: req.user._id }).select('+data'), 'Resume');
-  res.set({ 'Cache-Control': 'no-store', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(resume.name)}`, 'X-Content-Type-Options': 'nosniff' }).type(resume.mime || 'application/octet-stream').send(resume.data);
+  sendPrivate(res, found(await Resume.findOne({ user: req.user._id }).select('+data'), 'Resume'));
 }
 
 export async function removeResume(req, res) {

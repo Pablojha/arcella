@@ -33,13 +33,10 @@ export default function CodeStep({ email, devCode, submitLabel, onSubmit, onRese
   };
 
   const resend = async () => {
-    try {
+    await toast.run(async () => {
       setShownCode((await onResend())?.devCode);
       setCooldown(RESEND_SECONDS);
-      toast.success(`A new code is on its way to ${email}`);
-    } catch (error) {
-      toast.error(error.message);
-    }
+    }, `A new code is on its way to ${email}`);
   };
 
   return (

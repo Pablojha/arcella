@@ -155,12 +155,10 @@ export default function Thread({ userId }) {
   /** Unsends one of your messages for both people (it is removed live on their screen too). */
   const unsend = async (message) => {
     if (!window.confirm('Unsend this message for everyone?')) return;
-    try {
+    await toast.run(async () => {
       await api.delete(`/messages/item/${message._id}`);
       setThread((current) => ({ ...current, items: current.items.filter((item) => item._id !== message._id) }));
-    } catch (error) {
-      toast.error(error.message);
-    }
+    });
   };
   const actionsFor = (message, mine) => [mine && !message.status && { label: 'Unsend', icon: Trash, onClick: () => unsend(message), danger: true }];
 

@@ -103,12 +103,9 @@ export default function UsersAdmin() {
   const outranks = (member) => member._id !== me._id && rankOf(member.role) < rankOf(me.role);
 
   const setRole = async (member, role) => {
-    try {
+    await toast.run(async () => {
       patch(member, await api.patch(`/admin/users/${member._id}/role`, { role }));
-      toast.success(`${member.name} is now: ${STAFF_ROLES.find((item) => item.value === role).label}`);
-    } catch (error) {
-      toast.error(error.message);
-    }
+    }, `${member.name} is now: ${STAFF_ROLES.find((item) => item.value === role).label}`);
   };
 
   const setStatus = async (member, status) => {
@@ -123,23 +120,18 @@ export default function UsersAdmin() {
       if (!reason?.trim()) return;
       body.reason = reason.trim();
     } else if (!window.confirm(`Restore the account of ${member.name}?`)) return;
-    try {
+    await toast.run(async () => {
       patch(member, await api.post(`/admin/users/${member._id}/status`, body));
-      toast.success(status === 'active' ? 'Account restored' : status === 'banned' ? 'Account banned and signed out' : 'Account suspended and signed out');
-    } catch (error) {
-      toast.error(error.message);
-    }
+    }, status === 'active' ? 'Account restored' : status === 'banned' ? 'Account banned and signed out' : 'Account suspended and signed out');
   };
 
   const revoke = async (user) => {
     if (!window.confirm(`Remove all of ${user.name}'s college verifications? Their education stays on their profile, unverified.`)) return;
-    try {
+    await toast.run(async () => {
       await api.delete(`/admin/users/${user._id}/verify`);
       toast.success('Verification removed');
       users.reload();
-    } catch (error) {
-      toast.error(error.message);
-    }
+    });
   };
 
   return (

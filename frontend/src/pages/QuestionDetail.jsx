@@ -53,14 +53,7 @@ export default function QuestionDetail() {
 
   const { question, answers } = data;
   const asker = question.author?._id === user._id;
-  const run = async (request) => {
-    try {
-      return await request();
-    } catch (requestError) {
-      toast.error(requestError.message);
-      return null;
-    }
-  };
+  const { run } = toast;
 
   const voteQuestion = async () => {
     const result = await run(() => api.post(`/questions/${id}/upvote`));

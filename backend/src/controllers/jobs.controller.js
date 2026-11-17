@@ -1,4 +1,3 @@
-import path from 'node:path';
 import Application from '../models/Application.js';
 import Firm from '../models/Firm.js';
 import Resume from '../models/Resume.js';
@@ -6,21 +5,19 @@ import Job, { openRoles } from '../models/Job.js';
 import { CARD } from '../config/constants.js';
 import { removeContent } from '../services/content.js';
 import { notify, notifyMany } from '../services/notify.js';
+import { firmsRunBy, runsFirm } from '../utils/access.js';
 import { ApiError, found } from '../utils/errors.js';
+import { fileInfo, sendPrivate } from '../utils/files.js';
 import { paginate } from '../utils/query.js';
 import { same } from '../utils/shape.js';
 import { searchRegex } from '../utils/text.js';
 
-const RESUME_MIME = { pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
 const STATUS_TEXT = { shortlisted: 'You were shortlisted', interview: 'Interview scheduled', offered: 'You have an offer', rejected: 'Not moving forward', applied: 'Back under review' };
-
-/** Firms the user may hire for: those they own or the owner made them an admin of. */
-const hiringFirms = (userId) => Firm.find({ $or: [{ owner: userId }, { admins: userId }] }).distinct('_id');
 
 /** The poster, the firm's owner and admins, and site admins see a job's applicants and can edit it. */
 async function canHire(user, job) {
   if (user.isAdmin || same(job.postedBy, user._id)) return true;
-  return Boolean(job.firm && (await Firm.exists({ _id: job.firm?._id ?? job.firm, $or: [{ owner: user._id }, { admins: user._id }] })));
+  return Boolean(job.firm && (await Firm.exists({ _id: job.firm?._id ?? job.firm, ...firmsRunBy(user._id) })));
 }
 
 async function assertCanHire(user, job) {
@@ -35,13 +32,13 @@ async function hiringTeam(job) {
 
 async function assertFirmPoster(user, firmId) {
   const firm = found(await Firm.findById(firmId).select('name owner admins'), 'Firm');
-  if (!user.isAdmin && !same(firm.owner, user._id) && !firm.admins.some((id) => same(id, user._id))) throw new ApiError(403, "Only the firm's owner and admins can post its roles");
+  if (!runsFirm(user, firm)) throw new ApiError(403, "Only the firm's owner and admins can post its roles");
   return firm;
 }
 
 export async function list(req, res) {
   const { q, type, location, remote, workplace, experience, firm, saved, hiring } = req.query;
-  const filter = hiring ? { $or: [{ postedBy: req.user._id }, { firm: { $in: await hiringFirms(req.user._id) } }] } : saved ? { savedBy: req.user._id } : openRoles();
+  const filter = hiring ? { $or: [{ postedBy: req.user._id }, { firm: { $in: await Firm.find(firmsRunBy(req.user._id)).distinct('_id') } }] } : saved ? { savedBy: req.user._id } : openRoles();
   if (type) filter.type = type;
   if (firm) filter.firm = firm;
   if (workplace) filter.workplace = workplace;
@@ -106,9 +103,7 @@ export async function apply(req, res) {
   const previous = await Application.findOne({ job: job._id, applicant: req.user._id });
   if (previous && previous.status !== 'withdrawn') throw new ApiError(409, 'You have already applied to this role');
   if (previous) await previous.deleteOne();
-  const resume = saved
-    ? { name: saved.name, mime: saved.mime, size: saved.size, data: saved.data }
-    : { name: path.basename(req.file.originalname), mime: RESUME_MIME[path.extname(req.file.originalname).slice(1).toLowerCase()], size: req.file.size, data: req.file.buffer };
+  const resume = saved ? { name: saved.name, mime: saved.mime, size: saved.size, data: saved.data } : fileInfo(req.file);
   const application = await Application.create({ job: job._id, applicant: req.user._id, note: req.body.note, resume, history: [{ status: 'applied' }] });
   await Job.updateOne({ _id: job._id }, { $inc: { applicationsCount: 1 } });
   await notifyMany({ users: await hiringTeam(job), actor: req.user._id, type: 'application', text: job.title, link: `/jobs/${job._id}/applicants` });
@@ -165,9 +160,5 @@ export async function setStatus(req, res) {
 export async function resume(req, res) {
   const application = found(await Application.findById(req.params.applicationId).select('+resume.data'), 'Application');
   if (!same(application.applicant, req.user._id)) await assertCanHire(req.user, found(await Job.findById(application.job).lean(), 'Job'));
-  const { name, mime, data } = application.resume;
-  res
-    .set({ 'Cache-Control': 'no-store', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(name)}`, 'X-Content-Type-Options': 'nosniff' })
-    .type(mime || 'application/octet-stream')
-    .send(data);
+  sendPrivate(res, application.resume);
 }

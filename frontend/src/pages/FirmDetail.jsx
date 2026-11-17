@@ -80,22 +80,17 @@ export default function FirmDetail() {
   if (error) return <EmptyState icon={Building} title="Firm not found" text={error.message} />;
 
   const act = async (path, update) => {
-    try {
+    await toast.run(async () => {
       const result = await api.post(`/firms/${firm._id}/${path}`);
       setData((current) => ({ ...current, ...update(result) }));
-    } catch (actionError) {
-      toast.error(actionError.message);
-    }
+    });
   };
 
   const setAdmin = async (member, adding) => {
-    try {
+    await toast.run(async () => {
       const { admins } = await (adding ? api.put : api.delete)(`/firms/${firm._id}/admins/${member._id}`);
       setData((current) => ({ ...current, admins }));
-      toast.success(adding ? `${member.name} is now an admin` : `${member.name} is no longer an admin`);
-    } catch (actionError) {
-      toast.error(actionError.message);
-    }
+    }, adding ? `${member.name} is now an admin` : `${member.name} is no longer an admin`);
   };
 
   const tabs = [

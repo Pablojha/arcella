@@ -1,6 +1,5 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { api, newMember, prepare } from './helpers.js';
+import { api, newMember, prepare, violations } from './helpers.js';
 
 const RESUME = { name: 'ira-resume.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF') };
 
@@ -41,7 +40,7 @@ test('a member adds languages, a certification and a public phone, sees who view
   await page.keyboard.press('Escape');
   // Colours are measured once the sheet has finished fading out (slower machines, like CI, take longer).
   await expect(viewers).toBeHidden();
-  expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()).violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([]);
+  expect(await violations(page)).toEqual([]);
 
   // Save a resume once, then apply with it.
   await page.getByLabel('Resume file').setInputFiles(RESUME);

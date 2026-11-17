@@ -55,13 +55,11 @@ export default function ProjectDetail() {
 
   const remove = async () => {
     if (!window.confirm('Delete this project and its critiques?')) return;
-    try {
+    await toast.run(async () => {
       await api.delete(`/projects/${id}`);
       toast.success('Project deleted');
       navigate(`/u/${user.username}?tab=portfolio`, { replace: true });
-    } catch (removeError) {
-      toast.error(removeError.message);
-    }
+    });
   };
 
   return (

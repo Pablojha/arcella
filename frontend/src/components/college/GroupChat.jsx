@@ -181,12 +181,10 @@ export default function GroupChat({ college, onClose }) {
 
   const remove = async (message) => {
     if (!window.confirm('Delete this message for everyone in the group?')) return;
-    try {
+    await toast.run(async () => {
       await api.delete(`${url}/${message._id}`);
       setChat((current) => ({ ...current, items: current.items.filter((item) => item._id !== message._id) }));
-    } catch (error) {
-      toast.error(error.message);
-    }
+    });
   };
 
   const copy = (text) =>

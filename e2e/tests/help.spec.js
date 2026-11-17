@@ -1,6 +1,5 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { adminMember, api, newMember, prepare } from './helpers.js';
+import { adminMember, api, newMember, prepare, violations } from './helpers.js';
 
 test('a member reports a problem from the page they were on; support answers and the member follows up', async ({ page, browser, baseURL }) => {
   test.setTimeout(150_000);
@@ -12,7 +11,7 @@ test('a member reports a problem from the page they were on; support answers and
   await page.goto('/help');
   await page.getByRole('button', { name: 'Who can message me?' }).click();
   await expect(page.getByText(/send you one message request/)).toBeVisible();
-  expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()).violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([]);
+  expect(await violations(page)).toEqual([]);
 
   // "Report a problem" from More carries the page along.
   await page.goto('/more');

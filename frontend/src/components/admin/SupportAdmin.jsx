@@ -26,14 +26,11 @@ export default function SupportAdmin() {
   const [drafts, setDrafts] = useState({});
 
   const answer = async (ticket, close) => {
-    try {
+    await toast.run(async () => {
       await api.post(`/support/${ticket._id}/answer`, { text: drafts[ticket._id]?.trim() || undefined, close });
       list.setItems((items) => items.filter((item) => item._id !== ticket._id));
       setDrafts((current) => ({ ...current, [ticket._id]: '' }));
-      toast.success(close ? 'Request closed' : 'Reply sent');
-    } catch (error) {
-      toast.error(error.message);
-    }
+    }, close ? 'Request closed' : 'Reply sent');
   };
 
   return (

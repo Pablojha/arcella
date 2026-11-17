@@ -22,7 +22,25 @@ export function ToastProvider({ children }) {
     [dismiss],
   );
 
-  const toast = useMemo(() => ({ success: (m, o) => push('success', m, o), error: (m, o) => push('error', m, o), info: (m, o) => push('info', m, o) }), [push]);
+  const toast = useMemo(
+    () => ({
+      success: (m, o) => push('success', m, o),
+      error: (m, o) => push('error', m, o),
+      info: (m, o) => push('info', m, o),
+      /** Runs an action, showing `success` if it worked or the error if not; returns its result, or null on failure. */
+      run: async (action, success) => {
+        try {
+          const result = await action();
+          if (success) push('success', success);
+          return result;
+        } catch (error) {
+          push('error', error.message);
+          return null;
+        }
+      },
+    }),
+    [push],
+  );
 
   useEffect(() => {
     const onSlow = () => toast.info('Waking up the server. Free hosting can take up to a minute on the first visit.');

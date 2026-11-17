@@ -1,4 +1,3 @@
-import path from 'node:path';
 import College from '../models/College.js';
 import User from '../models/User.js';
 import Verification from '../models/Verification.js';
@@ -8,9 +7,9 @@ import { notify, notifyMany } from '../services/notify.js';
 import { checkCode, resendCode } from '../services/otp.js';
 import { profileOf } from '../services/profile.js';
 import { assertModerator, runBy } from '../utils/access.js';
+import { fileInfo, sendPrivate } from '../utils/files.js';
 import { ApiError, found } from '../utils/errors.js';
 
-const DOC_MIME = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
 
 /** Members can verify several colleges, but each college and degree level only once. */
 function assertNotVerified(user, details) {
@@ -57,7 +56,7 @@ export async function uploadDocument(req, res) {
     user: req.user._id,
     method: 'document',
     docData: req.file.buffer,
-    docMime: DOC_MIME[path.extname(req.file.originalname).slice(1).toLowerCase()],
+    docMime: fileInfo(req.file).mime,
   });
   await notifyMany({ users: [college.admin, college.coAdmin].filter(Boolean), actor: req.user._id, type: 'verify_request', text: college.name, link: '/college?tab=review' });
   res.status(201).json({ verification: { _id: request._id, status: request.status, method: request.method, college: { _id: college._id, name: college.name } } });
@@ -75,7 +74,7 @@ export async function document(req, res) {
   const request = found(await Verification.findById(req.params.id).select('+docData'), 'Request');
   await assertModerator(req.user, request.college);
   if (!request.docData) throw new ApiError(410, 'This document was deleted after review');
-  res.set({ 'Cache-Control': 'no-store', 'Content-Disposition': 'inline' }).type(request.docMime).send(request.docData);
+  sendPrivate(res, { mime: request.docMime, data: request.docData }, 'inline');
 }
 
 /** Approves or rejects a document request; the document itself is deleted either way. */

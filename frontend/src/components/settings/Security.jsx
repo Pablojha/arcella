@@ -144,23 +144,17 @@ function Devices() {
   const items = data?.items ?? [];
 
   const signOut = async (device) => {
-    try {
+    await toast.run(async () => {
       await api.delete(`/auth/devices/${device._id}`);
       setData((current) => ({ items: current.items.filter((item) => item._id !== device._id) }));
-      toast.success('Signed out that device');
-    } catch (signOutError) {
-      toast.error(signOutError.message);
-    }
+    }, 'Signed out that device');
   };
   const signOutOthers = async () => {
     if (!window.confirm('Sign out every other device?')) return;
-    try {
+    await toast.run(async () => {
       await api.post('/auth/devices/sign-out-others');
       setData((current) => ({ items: current.items.filter((item) => item.current) }));
-      toast.success('Signed out your other devices');
-    } catch (signOutError) {
-      toast.error(signOutError.message);
-    }
+    }, 'Signed out your other devices');
   };
 
   if (error) return <p className="text-sm text-accent">{error.message}</p>;

@@ -107,13 +107,11 @@ function Requests() {
   const [drafts, setDrafts] = useState({});
 
   const followUp = async (ticket) => {
-    try {
+    await toast.run(async () => {
       const saved = await api.post(`/support/${ticket._id}/replies`, { text: drafts[ticket._id] });
       list.setItems((items) => items.map((item) => (item._id === saved._id ? { ...item, ...saved, replies: [...item.replies, { staff: false, text: drafts[ticket._id], at: new Date().toISOString() }] } : item)));
       setDrafts((current) => ({ ...current, [ticket._id]: '' }));
-    } catch (error) {
-      toast.error(error.message);
-    }
+    });
   };
 
   return (

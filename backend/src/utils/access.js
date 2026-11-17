@@ -33,6 +33,12 @@ export async function assertModerator(user, collegeId) {
   if (!(await isModerator(user, collegeId))) throw new ApiError(403, 'Only college admins can do this');
 }
 
+/** Filter for the firms a user runs: as owner, or as an admin the owner chose. */
+export const firmsRunBy = (userId) => ({ $or: [{ owner: userId }, { admins: userId }] });
+
+/** Whether the user runs this (loaded) firm, or is a site admin: they post its roles and see its applicants. */
+export const runsFirm = (user, firm) => user.isAdmin || same(firm.owner, user._id) || (firm.admins ?? []).some((id) => same(id, user._id));
+
 /** Owners and site admins may manage content; college admins too when it belongs to their college. */
 export async function assertCanManage(user, ownerId, collegeId) {
   if (same(user._id, ownerId) || (await isModerator(user, collegeId))) return;

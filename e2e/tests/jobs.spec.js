@@ -1,11 +1,8 @@
-import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { api, newMember, prepare } from './helpers.js';
+import { api, newMember, prepare, violations } from './helpers.js';
 
 const RESUME = { name: 'asha-resume.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF') };
-const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
-const violations = async (page) => (await new AxeBuilder({ page }).withTags(WCAG).analyze()).violations.map((violation) => `${violation.id}: ${violation.nodes[0]?.target.join(' ')}`);
 
 test('a recruiter posts a role, a member applies with a resume, and the application moves through interview', async ({ page, browser, baseURL }) => {
   test.setTimeout(180_000);

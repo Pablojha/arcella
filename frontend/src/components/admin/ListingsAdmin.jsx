@@ -16,13 +16,11 @@ import { ListSkeleton } from '../ui/Skeleton';
 async function removeWithReason(url, name, toast, onDone) {
   const reason = window.prompt(`Why is "${name}" being removed? The owner will see this.`);
   if (!reason?.trim()) return;
-  try {
+  await toast.run(async () => {
     await api.delete(url, { data: { reason: reason.trim() } });
     toast.success('Removed');
     onDone();
-  } catch (error) {
-    toast.error(error.message);
-  }
+  });
 }
 
 function Listing({ path, placeholder, icon, empty, children }) {
@@ -66,13 +64,10 @@ export function JobsAdmin() {
 export function FirmsAdmin() {
   const toast = useToast();
   const toggleBadge = async (firm, list) => {
-    try {
+    await toast.run(async () => {
       const { verified } = await api.patch(`/admin/firms/${firm._id}`, { verified: !firm.verified });
       list.setItems((items) => items.map((item) => (item._id === firm._id ? { ...item, verified } : item)));
-      toast.success(verified ? `${firm.name} is verified` : 'Badge removed');
-    } catch (error) {
-      toast.error(error.message);
-    }
+    }, verified ? `${firm.name} is verified` : 'Badge removed');
   };
   return (
     <Listing path="/admin/firms" placeholder="Search firms" icon={Building} empty="No firms match">

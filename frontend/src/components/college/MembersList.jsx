@@ -21,12 +21,9 @@ export default function MembersList({ college, onRolesChange }) {
   const myBatches = entriesAt(user, college._id).map((entry) => entry.batch).filter(Boolean);
 
   const assign = async (role, member) => {
-    try {
+    await toast.run(async () => {
       onRolesChange(await api.patch(`/colleges/${college._id}/roles`, { role, user: member?._id ?? null }));
-      toast.success(member ? `${member.name} is now the ${GROUP_ROLES[role].toLowerCase()}` : `${GROUP_ROLES[role]} removed`);
-    } catch (error) {
-      toast.error(error.message);
-    }
+    }, member ? `${member.name} is now the ${GROUP_ROLES[role].toLowerCase()}` : `${GROUP_ROLES[role]} removed`);
   };
 
   if (loading) return <ListSkeleton count={3} lines={0} />;

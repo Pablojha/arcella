@@ -109,26 +109,21 @@ function PostBody({ post, repost, onDeleted, onAuthorBlocked, showComments = fal
 
   const remove = async () => {
     if (!window.confirm('Delete this post?')) return;
-    try {
+    await toast.run(async () => {
       await api.delete(`/posts/${post._id}`);
       toast.success('Post deleted');
       onDeleted?.(post._id);
       if (repost) onDeleted?.(repost._id);
-    } catch (error) {
-      toast.error(error.message);
-    }
+    });
   };
 
   const saveEdit = async (event) => {
     event.preventDefault();
-    try {
+    await toast.run(async () => {
       const { text, mentions, editedAt } = await api.patch(`/posts/${post._id}`, { text: editing });
       setSaved({ text, mentions, editedAt });
       setEditing(null);
-      toast.success('Post updated');
-    } catch (error) {
-      toast.error(error.message);
-    }
+    }, 'Post updated');
   };
 
   return (

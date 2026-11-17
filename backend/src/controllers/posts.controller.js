@@ -9,7 +9,7 @@ import { hiddenIds } from '../services/blocks.js';
 import { removeContent } from '../services/content.js';
 import { notify, notifyMany } from '../services/notify.js';
 import { saveFile, saveFiles } from '../services/storage.js';
-import { assertCanManage, assertMember, isModerator, memberCollegeIds, membersOf } from '../utils/access.js';
+import { assertCanManage, assertMember, firmsRunBy, isModerator, memberCollegeIds, membersOf } from '../utils/access.js';
 import { ApiError, found } from '../utils/errors.js';
 import { paginate, toggle } from '../utils/query.js';
 import { has, same, withCount } from '../utils/shape.js';
@@ -125,7 +125,7 @@ export async function get(req, res) {
 export async function create(req, res) {
   const { text, college, important, aspect, firm } = req.body;
   if (firm && college) throw new ApiError(400, 'Firm posts are public, not for a college group');
-  if (firm && !req.user.isAdmin && !(await Firm.exists({ _id: firm, $or: [{ owner: req.user._id }, { admins: req.user._id }] }))) {
+  if (firm && !req.user.isAdmin && !(await Firm.exists({ _id: firm, ...firmsRunBy(req.user._id) }))) {
     throw new ApiError(403, "Only the firm's owner and admins can post as the firm");
   }
   const { images = [], video: [video] = [] } = req.files ?? {};

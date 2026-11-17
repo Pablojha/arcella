@@ -68,24 +68,19 @@ function Viewer({ groups, index, onIndex, onSeen, onDeleted }) {
 
   const sendReply = async (event) => {
     event.preventDefault();
-    try {
+    await toast.run(async () => {
       await api.post(`/stories/${story._id}/reply`, { text: reply });
       setReply('');
-      toast.success(`Reply sent to ${group.author.name.split(' ')[0]}`);
-    } catch (error) {
-      toast.error(error.message);
-    }
+    }, `Reply sent to ${group.author.name.split(' ')[0]}`);
   };
 
   const remove = async () => {
-    try {
+    await toast.run(async () => {
       await api.delete(`/stories/${story._id}`);
       toast.success('Story deleted');
       onDeleted();
       onIndex(null);
-    } catch (error) {
-      toast.error(error.message);
-    }
+    });
   };
 
   return (

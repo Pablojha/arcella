@@ -1,15 +1,13 @@
 import fs from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { API, api, newMember, prepare } from './helpers.js';
+import { api, newMember, prepare, upload } from './helpers.js';
 
 test('a firm owner makes a team member admin, who posts as the firm; followers see it in their feed', async ({ page, browser, baseURL, isMobile }) => {
   test.setTimeout(150_000);
   const run = Date.now().toString(36);
   const [owner, admin, fan] = await Promise.all([newMember(`Owen Owner ${run}`), newMember(`Ada Admin ${run}`), newMember(`Fay Follower ${run}`)]);
-  const form = new FormData();
-  form.append('name', `Courtyard Studio ${run}`);
-  form.append('logo', new File([fs.readFileSync('../frontend/assets/play-store-icon-512.png')], 'logo.png', { type: 'image/png' }));
-  const firm = await (await fetch(`${API}/firms`, { method: 'POST', headers: { Authorization: `Bearer ${owner.token}` }, body: form })).json();
+  const logo = new File([fs.readFileSync('../frontend/assets/play-store-icon-512.png')], 'logo.png', { type: 'image/png' });
+  const firm = await upload(owner, '/firms', { name: `Courtyard Studio ${run}`, logo });
   await api('POST', `/firms/${firm._id}/work`, { token: admin.token });
   await api('POST', `/firms/${firm._id}/follow`, { token: fan.token });
 

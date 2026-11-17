@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
-import { API, newMember, prepare } from './helpers.js';
+import { newMember, prepare, upload } from './helpers.js';
 
 /** A 64×64 green 24-bit BMP: a format browsers open but the API doesn't store, so the app must convert it. */
 function bmp(size = 64) {
@@ -40,14 +40,6 @@ test('a photo in another format is converted, posted, and opens full screen', as
   expect((await full.boundingBox()).width).toBeGreaterThan(60);
 });
 
-/** Uploads `field` as multipart, as the app does. */
-async function upload(member, path, fields) {
-  const form = new FormData();
-  for (const [key, value] of Object.entries(fields)) form.append(key, value);
-  const res = await fetch(API + path, { method: 'POST', headers: { Authorization: `Bearer ${member.token}` }, body: form });
-  if (!res.ok) throw new Error(`${path}: ${res.status}`);
-  return res.json();
-}
 
 test('photos whose files are gone show initials or a placeholder, never a broken image', async ({ page }) => {
   const member = await newMember('Lost Media');

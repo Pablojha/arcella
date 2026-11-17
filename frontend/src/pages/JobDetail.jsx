@@ -31,14 +31,7 @@ export default function JobDetail() {
   if (error) return <EmptyState icon={BriefcaseBusiness} title="This role is no longer available" text={error.message} />;
 
   const update = (changes) => setData((current) => ({ ...current, ...changes }));
-  const run = async (action, success) => {
-    try {
-      await action();
-      if (success) toast.success(success);
-    } catch (actionError) {
-      toast.error(actionError.message);
-    }
-  };
+  const { run } = toast;
 
   const remove = () =>
     window.confirm('Remove this job post? Its applications are deleted too.') &&

@@ -1,10 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { MEMBER_PAGES, PUBLIC_PAGES, newMember, prepare } from './helpers.js';
+import { MEMBER_PAGES, PUBLIC_PAGES, WCAG, newMember, prepare } from './helpers.js';
 
-// WCAG 2.2 AA, as automated by axe-core. It can't judge everything (meaning, flow, captions), but nothing it finds
-// may ship.
-const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+// axe-core can't judge everything (meaning, flow, captions), but nothing it finds may ship.
 
 async function violationsOn(page, path) {
   await page.goto(path, { waitUntil: 'networkidle' });
@@ -16,7 +14,7 @@ async function violationsOn(page, path) {
     { timeout: 10_000 },
   );
   await page.waitForTimeout(300);
-  const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+  const { violations } = await new AxeBuilder({ page }).withTags(WCAG).analyze();
   return violations.map((violation) => `${path}: ${violation.id} (${violation.nodes.length}) ${violation.nodes[0]?.target.join(' ')}`);
 }
 

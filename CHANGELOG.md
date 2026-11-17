@@ -1,5 +1,13 @@
 # Changelog
 
+## November 2026: code cleanup
+
+- One `toast.run(action, successMessage)` replaces 31 hand-written try/catch/toast blocks and local `run` helpers across the app.
+- One private-file helper (`backend/src/utils/files.js`) serves resumes and verification documents, replacing three copies of the headers and file-type maps.
+- Firm access ("runs this firm": owner or chosen admin) is defined once in `utils/access.js`, next to the college equivalents, instead of five ways in three controllers.
+- The browser tests share one accessibility scan and one upload helper.
+- About 60 fewer lines, no change in behaviour: 34 API tests and the full browser suite pass.
+
 ## November 2026: AI assistant (off until a key is set)
 
 - **Writing help:** "Improve with AI" in the post composer; "Suggest a headline" and "Draft/Improve with AI" for the About section in Edit profile. Facts, #hashtags and @mentions are kept, and nothing is invented.
